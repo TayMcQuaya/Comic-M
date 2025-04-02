@@ -620,17 +620,33 @@ class ComicCreator {
         // Save panel states
         currentPage.panelStates = Array.from(document.querySelectorAll('.comic-panel')).map(panel => {
             const img = panel.querySelector('img');
-            if (!img) return { imageId: null };
+            if (!img) return { 
+                imageId: null,
+                backgroundStyle: panel.dataset.backgroundStyle || 'classic-white'
+            };
+            
+            // Ensure we're saving the actual image ID from the panel
+            const imageId = panel.dataset.imageId || img.dataset.imageId;
             
             return {
-                imageId: panel.dataset.imageId,
-                transform: img.style.transform,
+                imageId: imageId,
+                transform: img.style.transform || 'translate(-50%, -50%) scale(1)',
                 left: img.style.left || '50%',
                 top: img.style.top || '50%',
-                initialScale: panel.dataset.initialScale,
-                currentScale: panel.dataset.currentScale
+                initialScale: panel.dataset.initialScale || '1',
+                currentScale: panel.dataset.currentScale || '1',
+                backgroundStyle: panel.dataset.backgroundStyle || 'classic-white'
             };
         });
+
+        // Save canvas background style
+        const canvas = document.querySelector('#comic-canvas');
+        if (canvas) {
+            currentPage.canvasBackgroundStyle = Array.from(canvas.classList)
+                .find(cls => ['classic-white', 'vintage-paper', 'dotted-pattern', 
+                             'halftone', 'graph-paper', 'gradient-fade'].includes(cls)) 
+                || 'classic-white';
+        }
     }
 
     setupEventListeners() {
@@ -718,9 +734,10 @@ class ComicCreator {
         });
     }
 
-    createComic() {
-        const layout = this.getLayoutConfig(this.selectedLayout);
-        if (!layout) return;
+    createComic(layout = null) {
+        // Use provided layout or get from selected layout
+        const layoutConfig = layout || this.getLayoutConfig(this.selectedLayout);
+        if (!layoutConfig) return;
 
         // Navigate to editor page
         document.querySelector('#layout-page').classList.remove('active');
@@ -779,32 +796,29 @@ class ComicCreator {
         const canvasContainer = canvas.parentElement;
         if (canvasContainer && canvasContainer.classList.contains('comic-canvas-container')) {
             canvasContainer.style.padding = '2rem';
-            canvasContainer.style.paddingTop = '120px'; // Add more top padding
+            canvasContainer.style.paddingTop = '120px';
             canvasContainer.style.display = 'flex';
             canvasContainer.style.justifyContent = 'center';
             canvasContainer.style.alignItems = 'flex-start';
             canvasContainer.style.minHeight = 'calc(100vh - 100px)';
         }
 
-        // Calculate the available space for panels (accounting for padding)
-        const panelAreaWidth = 620; // 700px - (40px * 2) padding
-        const panelAreaHeight = 620; // 700px - (40px * 2) padding
+        // Calculate the available space for panels
+        const panelAreaWidth = 620;
+        const panelAreaHeight = 620;
+        const panelGap = 12;
 
-        // Define panel spacing
-        const panelGap = 12; // Increased from 10px for better spacing at larger size
-
-        layout.panels.forEach(panel => {
+        layoutConfig.panels.forEach(panel => {
             const div = document.createElement('div');
             div.className = 'comic-panel';
             
-            // Calculate base positions (as percentages of the available area)
+            // Calculate base positions
             const baseX = panel.x * panelAreaWidth / 100;
             const baseY = panel.y * panelAreaHeight / 100;
             const baseWidth = panel.width * panelAreaWidth / 100;
             const baseHeight = panel.height * panelAreaHeight / 100;
 
-            // Add spacing between panels by reducing their size slightly
-            // and adjusting their positions to maintain relative layout
+            // Add spacing between panels
             const adjustedX = baseX + 40 + (panel.x > 0 ? panelGap / 2 : 0);
             const adjustedY = baseY + 40 + (panel.y > 0 ? panelGap / 2 : 0);
             const adjustedWidth = baseWidth - panelGap;
@@ -818,8 +832,10 @@ class ComicCreator {
             canvas.appendChild(div);
         });
 
-        // Save the current page state
-        this.saveCurrentPageState();
+        // Only save state if this is a new page creation
+        if (!layout) {
+            this.saveCurrentPageState();
+        }
     }
 
     getLayoutConfig(layoutName) {
@@ -880,21 +896,32 @@ class ComicCreator {
     }
 
     addNewPage(layoutId) {
+        // Save current page state before creating new page
+        this.saveCurrentPageState();
+        
         // Create new page with the selected layout
         this.pages.push({
             layout: this.layouts[layoutId],
-            panelStates: []
+            panelStates: [],
+            canvasBackgroundStyle: 'classic-white' // Default background style
         });
         
-        // Switch to new page
-        this.navigateToPage(this.pages.length - 1);
+        // Update current page index
+        this.currentPageIndex = this.pages.length - 1;
+        
+        // Set the layout for the new page
+        this.selectedLayout = layoutId;
+        
+        // Create panels for new layout
+        this.createComic(this.layouts[layoutId]);
+        
+        // Update page indicator and navigation buttons
+        this.updatePageIndicator();
+        this.updateNavigationButtons();
         
         // Show editor page
         document.getElementById('layout-page').classList.remove('active');
         document.getElementById('editor-page').classList.add('active');
-        
-        // Create panels for new layout
-        this.createComic(this.layouts[layoutId]);
     }
 
     navigateToPage(index) {
@@ -906,29 +933,7 @@ class ComicCreator {
         // Update current page index
         this.currentPageIndex = index;
         
-        // Load the target page
-        this.loadPage(index);
-        
-        // Update page indicator
-        this.updatePageIndicator();
-        
-        // Update navigation buttons state
-        this.updateNavigationButtons();
-    }
-
-    updateNavigationButtons() {
-        const prevBtn = document.getElementById('prevPage');
-        const nextBtn = document.getElementById('nextPage');
-        
-        if (prevBtn) {
-            prevBtn.disabled = this.currentPageIndex === 0;
-        }
-        if (nextBtn) {
-            nextBtn.disabled = this.currentPageIndex === this.pages.length - 1;
-        }
-    }
-
-    loadPage(index) {
+        // Get the target page
         const page = this.pages[index];
         if (!page || !page.layout) return;
         
@@ -944,25 +949,60 @@ class ComicCreator {
         if (page.panelStates && page.panelStates.length > 0) {
             const panels = document.querySelectorAll('.comic-panel');
             page.panelStates.forEach((state, i) => {
-                if (state.imageId) {
-                    const image = this.uploadedImages.find(img => img.id.toString() === state.imageId);
-                    if (image && panels[i]) {
-                        this.addImageToPanel(panels[i], image);
-                        const img = panels[i].querySelector('img');
-                        if (img) {
-                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
+                if (panels[i]) {
+                    // Apply background style to panel
+                    panels[i].dataset.backgroundStyle = state.backgroundStyle || 'classic-white';
+                    
+                    if (state.imageId) {
+                        // Find the image by ID, ensuring string comparison
+                        const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                        if (image) {
+                            // Create and add the image
+                            const img = document.createElement('img');
+                            img.src = image.src;
+                            img.alt = image.name;
+                            img.style.position = 'absolute';
                             img.style.left = state.left || '50%';
                             img.style.top = state.top || '50%';
-                        }
-                        if (state.initialScale) {
-                            panels[i].dataset.initialScale = state.initialScale;
-                        }
-                        if (state.currentScale) {
-                            panels[i].dataset.currentScale = state.currentScale;
+                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
+                            
+                            // Clear panel and add new image
+                            panels[i].innerHTML = '';
+                            panels[i].appendChild(img);
+                            
+                            // Set data attributes
+                            panels[i].dataset.imageId = state.imageId;
+                            img.dataset.imageId = state.imageId;
+                            panels[i].dataset.initialScale = state.initialScale || '1';
+                            panels[i].dataset.currentScale = state.currentScale || '1';
+                            
+                            // Setup image dragging
+                            this.setupImageDragging(img);
                         }
                     }
                 }
             });
+        }
+        
+        // Restore canvas background style
+        if (page.canvasBackgroundStyle) {
+            this.applyBackgroundStyle(page.canvasBackgroundStyle);
+        }
+        
+        // Update page indicator and navigation buttons
+        this.updatePageIndicator();
+        this.updateNavigationButtons();
+    }
+
+    updateNavigationButtons() {
+        const prevBtn = document.getElementById('prevPage');
+        const nextBtn = document.getElementById('nextPage');
+        
+        if (prevBtn) {
+            prevBtn.disabled = this.currentPageIndex === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = this.currentPageIndex === this.pages.length - 1;
         }
     }
 
