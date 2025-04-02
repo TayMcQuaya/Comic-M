@@ -861,9 +861,14 @@ class ComicCreator {
                     <i class="fas fa-chevron-right"></i>
                 </button>
             </div>
-            <button class="primary-btn" id="addPage">
-                <i class="fas fa-plus"></i> Add New Page
-            </button>
+            <div class="page-actions">
+                <button class="primary-btn" id="addPage">
+                    <i class="fas fa-plus"></i> Add New Page
+                </button>
+                <button class="danger-btn" id="deletePage">
+                    <i class="fas fa-trash"></i> Delete Page
+                </button>
+            </div>
         `;
         editorHeader.appendChild(pageNavigation);
 
@@ -875,10 +880,12 @@ class ComicCreator {
         const addPageBtn = document.getElementById('addPage');
         const prevPageBtn = document.getElementById('prevPage');
         const nextPageBtn = document.getElementById('nextPage');
+        const deletePageBtn = document.getElementById('deletePage');
 
         addPageBtn.addEventListener('click', () => this.showLayoutSelection());
         prevPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex - 1));
         nextPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex + 1));
+        deletePageBtn.addEventListener('click', () => this.deleteCurrentPage());
     }
 
     showLayoutSelection() {
@@ -1073,7 +1080,7 @@ class ComicCreator {
                     
                     // Create canvas from the comic page
                     const canvas = await html2canvas(document.querySelector('#comic-canvas'), {
-                        backgroundColor: 'white',
+                        backgroundColor: null, // Remove white background override
                         scale: 2, // Higher quality
                         logging: false,
                         removeContainer: false,
@@ -1083,6 +1090,22 @@ class ComicCreator {
                                 panel.classList.remove('selected', 'drop-target');
                                 panel.style.boxShadow = 'none';
                             });
+
+                            // Ensure background styles are preserved
+                            const clonedCanvas = clonedDoc.querySelector('#comic-canvas');
+                            if (clonedCanvas) {
+                                // Copy all background-related classes
+                                const originalCanvas = document.querySelector('#comic-canvas');
+                                const backgroundClasses = [
+                                    'classic-white', 'vintage-paper', 'dotted-pattern',
+                                    'halftone', 'graph-paper', 'gradient-fade'
+                                ];
+                                backgroundClasses.forEach(cls => {
+                                    if (originalCanvas.classList.contains(cls)) {
+                                        clonedCanvas.classList.add(cls);
+                                    }
+                                });
+                            }
                         }
                     });
                     
@@ -1140,6 +1163,102 @@ class ComicCreator {
 
         // Save the current page state
         this.saveCurrentPageState();
+    }
+
+    deleteCurrentPage() {
+        console.log('Delete page clicked. Current page index:', this.currentPageIndex);
+        console.log('Total pages before deletion:', this.pages.length);
+
+        // Don't delete if there's only one page
+        if (this.pages.length <= 1) {
+            alert('Cannot delete the last page. Add a new page first.');
+            return;
+        }
+
+        // Store the current page index before deletion
+        const currentIndex = this.currentPageIndex;
+        
+        // Remove the current page from the pages array
+        this.pages.splice(currentIndex, 1);
+        console.log('Page deleted. Remaining pages:', this.pages.length);
+
+        // After deleting the current page, we want to show the next page
+        // If we deleted the last page, go to the new last page
+        // Otherwise, stay at the same index which will show the next page
+        let newPageIndex;
+        if (currentIndex >= this.pages.length) {
+            // If we deleted the last page, go to the new last page
+            newPageIndex = this.pages.length - 1;
+            console.log('Deleted last page, navigating to new last page');
+        } else {
+            // If we deleted any page (including first), stay at the same index
+            // This will automatically show the next page
+            newPageIndex = currentIndex;
+            console.log('Deleted current page, navigating to next page');
+        }
+
+        // Update the current page index before navigation
+        this.currentPageIndex = newPageIndex;
+        
+        // Get the target page
+        const page = this.pages[newPageIndex];
+        if (!page || !page.layout) return;
+        
+        // Set the current layout
+        this.selectedLayout = Object.entries(this.layouts).find(
+            ([_, layout]) => layout === page.layout
+        )?.[0];
+        
+        // Create panels with the saved layout
+        this.createComic(page.layout);
+        
+        // Restore panel states
+        if (page.panelStates && page.panelStates.length > 0) {
+            const panels = document.querySelectorAll('.comic-panel');
+            page.panelStates.forEach((state, i) => {
+                if (panels[i]) {
+                    // Apply background style to panel
+                    panels[i].dataset.backgroundStyle = state.backgroundStyle || 'classic-white';
+                    
+                    if (state.imageId) {
+                        // Find the image by ID, ensuring string comparison
+                        const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                        if (image) {
+                            // Create and add the image
+                            const img = document.createElement('img');
+                            img.src = image.src;
+                            img.alt = image.name;
+                            img.style.position = 'absolute';
+                            img.style.left = state.left || '50%';
+                            img.style.top = state.top || '50%';
+                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
+                            
+                            // Clear panel and add new image
+                            panels[i].innerHTML = '';
+                            panels[i].appendChild(img);
+                            
+                            // Set data attributes
+                            panels[i].dataset.imageId = state.imageId;
+                            img.dataset.imageId = state.imageId;
+                            panels[i].dataset.initialScale = state.initialScale || '1';
+                            panels[i].dataset.currentScale = state.currentScale || '1';
+                            
+                            // Setup image dragging
+                            this.setupImageDragging(img);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Restore canvas background style
+        if (page.canvasBackgroundStyle) {
+            this.applyBackgroundStyle(page.canvasBackgroundStyle);
+        }
+        
+        // Update page indicator and navigation buttons
+        this.updatePageIndicator();
+        this.updateNavigationButtons();
     }
 }
 

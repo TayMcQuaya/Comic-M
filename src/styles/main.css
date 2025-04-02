@@ -229,10 +229,12 @@ body {
     grid-template-columns: 250px 1fr 250px;
     gap: 0.75rem;
     padding: 0.5rem;
-    height: calc(100vh - 70px);
+    height: calc(100vh - 80px);
     align-items: start;
-    overflow-y: auto;
+    overflow: hidden;
     min-height: 900px;
+    position: relative;
+    padding-bottom: 0.5rem;
 }
 
 .editor-sidebar {
@@ -240,13 +242,13 @@ body {
     padding: 0.75rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
+    height: calc(100vh - 100px);
+    overflow-y: auto;
     position: sticky;
     top: 0;
-    max-height: calc(100vh - 80px);
 }
 
 .editor-sidebar h3 {
@@ -259,7 +261,7 @@ body {
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: flex-start;
@@ -360,37 +362,31 @@ body {
 
 .panel-controls {
     background: white;
-    padding: 0.75rem;
-    border-radius: 10px;
+    padding: 0.4rem;
+    border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    max-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    height: calc(100vh - 140px);
     overflow-y: auto;
-    overflow-x: hidden;
+    position: sticky;
+    top: 0;
+    transform: scale(0.95);
+    transform-origin: top right;
 }
 
 .control-group {
-    background: var(--background-color);
-    padding: 0.75rem;
-    border-radius: 5px;
-    margin-bottom: 1rem;
-    position: relative;
-}
-
-.control-group:last-child {
-    margin-bottom: 1rem;
+    background: #f8f9fa;
+    padding: 0.3rem;
+    border-radius: 6px;
+    margin-bottom: 0.2rem;
 }
 
 .control-group h4 {
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.2rem;
     color: var(--secondary-color);
-    font-size: 0.95rem;
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 0.25rem;
-}
-
-.zoom-control {
-    width: 100%;
-    margin: 0.5rem 0;
+    font-size: 0.85rem;
 }
 
 .position-controls {
@@ -399,26 +395,27 @@ body {
         ". up ."
         "left . right"
         ". down .";
-    gap: 0.2rem;
-    width: 120px;
-    margin: 0.5rem auto;
+    gap: 0.15rem;
+    width: 90px;
+    margin: 0.2rem auto;
     background: white;
-    padding: 0.5rem;
-    border-radius: 5px;
+    padding: 0.3rem;
+    border-radius: 4px;
 }
 
 .position-btn {
-    padding: 0.6rem;
+    padding: 0.3rem;
     border: 1px solid var(--border-color);
     background: white;
-    border-radius: 4px;
+    border-radius: 3px;
     cursor: pointer;
     transition: all 0.2s ease;
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 0.8rem;
 }
 
 .position-btn:hover {
@@ -437,12 +434,12 @@ body {
 .editor-sidebar .thumbnails-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: 0.5rem;
+    gap: 0.6rem;
+    padding: 0.4rem;
     background: var(--background-color);
     border-radius: 8px;
     overflow-y: auto;
-    max-height: calc(100vh - 160px);
+    max-height: calc(100vh - 180px);
 }
 
 .editor-sidebar .thumbnail-container {
@@ -456,7 +453,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.4rem;
     transition: all 0.3s ease;
 }
 
@@ -501,7 +498,7 @@ body {
     height: auto;
     object-fit: contain;
     border-radius: 4px;
-    margin-bottom: 1.75rem; /* Space for the filename overlay */
+    margin-bottom: 1.5rem;
 }
 
 .editor-sidebar .image-name {
@@ -631,16 +628,19 @@ body {
 .page-navigation {
     display: flex;
     align-items: center;
-    gap: 2rem;
+    gap: 20px;
 }
 
 .page-controls {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    background: var(--background-color);
-    padding: 0.5rem 1rem;
-    border-radius: 5px;
+    gap: 10px;
+}
+
+.page-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .page-indicator {
@@ -722,14 +722,7 @@ body {
 
 /* Update zoom group styling */
 .zoom-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.zoom-group label {
-    font-size: 0.9rem;
-    color: var(--secondary-color);
+    margin-top: 0.5rem;
 }
 
 .loading-indicator {
@@ -755,17 +748,17 @@ body {
 .background-styles {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    margin-bottom: 1rem;
+    gap: 4px;
+    margin-bottom: 0.4rem;
 }
 
 .style-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px;
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
     background: white;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -782,11 +775,11 @@ body {
 }
 
 .style-btn .preview {
-    width: 60px;
-    height: 40px;
+    width: 40px;
+    height: 30px;
     border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 4px;
+    border-radius: 3px;
+    margin-bottom: 2px;
 }
 
 /* Background Styles */
@@ -876,8 +869,50 @@ body {
 /* Ensure the step size control stays with position controls */
 .step-size-control {
     background: white;
-    padding: 0.5rem;
-    border-radius: 5px;
-    margin-bottom: 0.5rem;
+    padding: 0.3rem;
+    border-radius: 4px;
+    margin-bottom: 0.2rem;
     text-align: center;
+    font-size: 0.85rem;
+}
+
+/* Update scrollbar styles to be more visible */
+.panel-controls::-webkit-scrollbar {
+    width: 4px;
+}
+
+.panel-controls::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+.panel-controls::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 2px;
+}
+
+.panel-controls::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.danger-btn {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.danger-btn:hover {
+    background-color: #c82333;
+}
+
+.danger-btn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
 }
