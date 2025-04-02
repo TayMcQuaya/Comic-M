@@ -1953,24 +1953,13 @@ class ComicCreator {
         popup.id = 'text-format-popup';
         popup.className = 'text-format-popup';
         
-        // Position the popup near the text box but ensure it's visible
-        const rect = textBox.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const viewportWidth = window.innerWidth;
+        // Get properties panel position for docking
+        const propertiesPanel = document.querySelector('.properties-panel');
+        const propRect = propertiesPanel.getBoundingClientRect();
         
-        // Default position below the textbox
-        let top = rect.bottom + 10;
-        let left = rect.left;
-        
-        // Adjust if too close to bottom
-        if (top + 300 > viewportHeight) {
-            top = rect.top - 310; // Place above
-        }
-        
-        // Adjust if too close to right edge
-        if (left + 300 > viewportWidth) {
-            left = viewportWidth - 310;
-        }
+        // Position the popup to the left of the properties panel
+        const top = propRect.top;
+        const left = propRect.left - 310; // 300px width + 10px margin
         
         popup.style.top = `${top}px`;
         popup.style.left = `${left}px`;
