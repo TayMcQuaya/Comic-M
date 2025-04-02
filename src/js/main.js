@@ -488,7 +488,7 @@ class ComicCreator {
                             <i class="fas fa-undo"></i> Reset
                         </button>
                     </div>
-                    <input type="range" class="zoom-control" min="50" max="200" value="100">
+                    <input type="range" class="zoom-control" min="50" max="300" value="100">
                     <span class="zoom-value">100%</span>
                 </div>
             </div>
