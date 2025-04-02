@@ -1161,10 +1161,35 @@ class ComicCreator {
 
     async downloadComic() {
         this.saveCurrentPageState();
+
+        // Show loading indicator
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'loading-indicator';
+        loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+        document.body.appendChild(loadingIndicator);
+
+        // Store current UI state
+        const selectedPanel = document.querySelector('.comic-panel.selected');
+        const selectedTextBoxes = document.querySelectorAll('.text-bubble.selected-text');
         
+        // Temporarily hide UI elements for the export
+        if (selectedPanel) {
+            selectedPanel.classList.remove('selected');
+        }
+        
+        selectedTextBoxes.forEach(textBox => {
+            textBox.classList.remove('selected-text');
+        });
+
+        // Add export class to hide all editor UI elements
+        document.getElementById('comic-canvas').classList.add('exporting');
+
         // Use html2canvas to capture each page
         const promises = this.pages.map((page, index) => {
             return new Promise(async (resolve) => {
+                // Update loading message
+                loadingIndicator.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Capturing page ${index + 1} of ${this.pages.length}...`;
+                
                 // Save current page index
                 const currentIndex = this.currentPageIndex;
                 
@@ -1173,6 +1198,18 @@ class ComicCreator {
                 
                 // Get the comic canvas
                 const canvas = document.getElementById('comic-canvas');
+                
+                // Add export class to this page too
+                canvas.classList.add('exporting');
+                
+                // Hide any selected elements on this page too
+                canvas.querySelectorAll('.comic-panel.selected').forEach(panel => {
+                    panel.classList.remove('selected');
+                });
+                
+                canvas.querySelectorAll('.text-bubble.selected-text').forEach(textBox => {
+                    textBox.classList.remove('selected-text');
+                });
                 
                 try {
                     // Use html2canvas to convert to canvas
@@ -1200,11 +1237,15 @@ class ComicCreator {
         
         // Handle all pages and create PDF
         Promise.all(promises).then(results => {
+            // Update loading message
+            loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating PDF...';
+            
             // Filter out failed pages
             const validResults = results.filter(result => result !== null);
             
             if (validResults.length === 0) {
                 console.error('Failed to generate any page images');
+                loadingIndicator.remove();
                 return;
             }
             
@@ -1238,6 +1279,37 @@ class ComicCreator {
             
             // Save the PDF
             pdf.save('my-comic.pdf');
+            
+            // Remove loading indicator
+            loadingIndicator.remove();
+            
+            // Remove export class
+            document.getElementById('comic-canvas').classList.remove('exporting');
+            
+            // Restore UI state after export is complete
+            if (selectedPanel) {
+                selectedPanel.classList.add('selected');
+            }
+            
+            selectedTextBoxes.forEach(textBox => {
+                textBox.classList.add('selected-text');
+            });
+        }).catch(error => {
+            console.error('Error generating PDF:', error);
+            // Remove loading indicator in case of error
+            loadingIndicator.remove();
+            
+            // Remove export class
+            document.getElementById('comic-canvas').classList.remove('exporting');
+            
+            // Restore UI state
+            if (selectedPanel) {
+                selectedPanel.classList.add('selected');
+            }
+            
+            selectedTextBoxes.forEach(textBox => {
+                textBox.classList.add('selected-text');
+            });
         });
     }
 

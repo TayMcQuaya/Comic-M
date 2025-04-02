@@ -355,32 +355,143 @@ export class ComicCreator {
     }
 
     async downloadComic() {
-        const canvas = document.createElement('canvas');
-        canvas.width = this.canvasWidth;
-        canvas.height = this.canvasHeight;
-        const ctx = canvas.getContext('2d');
-
-        // Draw background
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Convert the comic canvas to an image
-        const comicCanvas = document.getElementById('comic-canvas');
-        const data = await html2canvas(comicCanvas);
-        ctx.drawImage(data, 0, 0);
-
-        // Create PDF
-        const pdf = new jsPDF({
-            orientation: 'portrait',
-            unit: 'px',
-            format: [this.canvasWidth, this.canvasHeight]
+        alert("testing hotswap");
+        console.log("testing hotswap");
+        this.saveCurrentPageState();
+        
+        // Store references to the current selected elements
+        const currentSelectedPanel = this.currentPanel;
+        const currentSelectedTextBoxes = document.querySelectorAll('.text-bubble.selected-text');
+        
+        // Hide editor interface elements before starting the export process
+        this.hideEditorInterface();
+        
+        // Use html2canvas to capture each page
+        const promises = this.pages.map((page, index) => {
+            return new Promise(async (resolve) => {
+                // Save current page index
+                const currentIndex = this.currentPageIndex;
+                
+                // Load the page to display
+                this.navigateToPage(index, false);
+                
+                // Hide editor interfaces on the newly loaded page as well
+                this.hideEditorInterface();
+                
+                // Get the comic canvas
+                const canvas = document.getElementById('comic-canvas');
+                
+                try {
+                    // Use html2canvas to convert to canvas
+                    const h2c = await html2canvas(canvas, {
+                        allowTaint: true,
+                        useCORS: true,
+                        scale: 2, // Higher quality
+                        backgroundColor: null,
+                        logging: false
+                    });
+                    
+                    resolve({
+                        canvas: h2c,
+                        index: index
+                    });
+                } catch (error) {
+                    console.error('Error converting page to image:', error);
+                    resolve(null);
+                } finally {
+                    // Restore the original page
+                    this.navigateToPage(currentIndex, false);
+                }
+            });
         });
+        
+        // Handle all pages and create PDF
+        Promise.all(promises).then(results => {
+            // Filter out failed pages
+            const validResults = results.filter(result => result !== null);
+            
+            if (validResults.length === 0) {
+                console.error('Failed to generate any page images');
+                // Restore the editor interface elements even if export failed
+                this.restoreEditorInterface(currentSelectedPanel, currentSelectedTextBoxes);
+                return;
+            }
+            
+            // Sort by page index
+            validResults.sort((a, b) => a.index - b.index);
+            
+            // Create PDF
+            const pdf = new jspdf.jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
+                format: [700, 700]
+            });
+            
+            // Add pages
+            validResults.forEach((result, i) => {
+                // Add a new page for each page after the first
+                if (i > 0) {
+                    pdf.addPage();
+                }
+                
+                // Add the image to the PDF
+                pdf.addImage(
+                    result.canvas.toDataURL('image/jpeg', 0.85),
+                    'JPEG',
+                    0,
+                    0,
+                    700,
+                    700
+                );
+            });
+            
+            // Save the PDF
+            pdf.save('my-comic.pdf');
+            
+            // Restore the editor interface elements after successful export
+            this.restoreEditorInterface(currentSelectedPanel, currentSelectedTextBoxes);
+        });
+    }
 
-        // Add the image to PDF
-        pdf.addImage(canvas.toDataURL('image/jpeg'), 'JPEG', 0, 0, this.canvasWidth, this.canvasHeight);
+    // Helper method to hide editor interface elements
+    hideEditorInterface() {
+        // Hide active panel highlight by removing selected class
+        const selectedPanels = document.querySelectorAll('.comic-panel.selected');
+        selectedPanels.forEach(panel => {
+            panel.classList.remove('selected');
+        });
+        
+        // Hide text box controls by removing selected-text class
+        const selectedTextBoxes = document.querySelectorAll('.text-bubble.selected-text');
+        selectedTextBoxes.forEach(textBox => {
+            textBox.classList.remove('selected-text');
+        });
+    }
 
-        // Download the PDF
-        pdf.save('my-comic.pdf');
+    // Helper method to restore editor interface elements
+    restoreEditorInterface(selectedPanel, selectedTextBoxes) {
+        // Restore panel selection if it still exists in the DOM
+        if (selectedPanel && document.body.contains(selectedPanel)) {
+            selectedPanel.classList.add('selected');
+            this.currentPanel = selectedPanel;
+        }
+        
+        // Restore text box selection if they still exist in the DOM
+        if (selectedTextBoxes && selectedTextBoxes.length > 0) {
+            selectedTextBoxes.forEach(textBox => {
+                if (document.body.contains(textBox)) {
+                    textBox.classList.add('selected-text');
+                    // Set the last one as current if there are multiple
+                    this.currentTextBox = textBox;
+                }
+            });
+            
+            // Make sure text properties panel is visible if we restored any text boxes
+            const textProperties = document.getElementById('text-properties');
+            if (textProperties && this.currentTextBox) {
+                textProperties.style.display = 'block';
+            }
+        }
     }
 }
 

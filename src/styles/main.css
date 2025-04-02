@@ -2372,3 +2372,32 @@ select.font-family option {
         min-height: 30px;
     }
 }
+
+/* Export mode - hide all editing UI elements */
+.exporting .comic-panel {
+    border: 3px solid #000000 !important; /* Black border for all panels during export */
+    box-shadow: 5px 5px 0 var(--shadow-color) !important;
+}
+
+.exporting .comic-panel.selected {
+    border-color: #000000 !important; /* Black border for selected panels too */
+}
+
+.exporting .text-bubble .drag-handle,
+.exporting .text-bubble .resize-handle,
+.exporting .text-bubble .format-text-btn,
+.exporting .text-bubble .delete-text-btn {
+    display: none !important; /* Hide all text handles during export */
+}
+
+.exporting .text-bubble.selected-text {
+    border-color: inherit !important; /* No highlight borders during export */
+}
+
+/* Special handling for comic panels */
+.exporting .comic-panel:focus,
+.exporting .comic-panel:focus-visible {
+    outline: none !important;
+    border-color: #000000 !important;
+    box-shadow: 5px 5px 0 var(--shadow-color) !important;
+}
