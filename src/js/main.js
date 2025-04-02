@@ -1065,126 +1065,101 @@ class ComicCreator {
     }
 
     async downloadComic() {
-        // Save current page and panel state
-        const currentPageIndex = this.currentPageIndex;
-        const currentSelectedPanel = this.currentPanel;
-        
-        // Create a loading indicator
+        const zip = new JSZip();
         const loadingIndicator = document.createElement('div');
         loadingIndicator.className = 'loading-indicator';
         loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating comic...';
         document.body.appendChild(loadingIndicator);
 
         try {
-            // Temporarily remove selection
-            if (this.currentPanel) {
-                this.currentPanel.classList.remove('selected');
-                this.currentPanel = null;
-            }
+            // Create a folder for individual page images
+            const pagesFolder = zip.folder("pages");
+            const canvasPromises = [];
+            const pageCanvases = [];
 
-            // Add a temporary style to hide selection styles and shadows during download
-            const tempStyle = document.createElement('style');
-            tempStyle.innerHTML = `
-                .comic-panel { 
-                    border-color: #2c3e50 !important; 
-                    box-shadow: none !important;
-                    transform: none !important;
-                }
-                .comic-panel:hover { 
-                    border-color: #2c3e50 !important;
-                    box-shadow: none !important;
-                }
-                .comic-panel.selected { 
-                    border-color: #2c3e50 !important;
-                    box-shadow: none !important;
-                }
-                .comic-panel img {
-                    cursor: default !important;
-                }
-                #comic-canvas {
-                    box-shadow: none !important;
-                }
-            `;
-            document.head.appendChild(tempStyle);
+            // Create PDF document
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "px",
+                format: [700, 700]
+            });
+            let isFirstPage = true;
 
-            // Create a zip file for multiple pages
-            const zip = new JSZip();
-            
-            // Download each page
+            // Store current page index to restore later
+            const currentPageIndex = this.currentPageIndex;
+
+            // Process each page
             for (let i = 0; i < this.pages.length; i++) {
-                // Navigate to the page (without saving state since we already saved)
-                this.navigateToPage(i);
+                const canvas = document.createElement('canvas');
+                canvas.width = 700;
+                canvas.height = 700;
+                const ctx = canvas.getContext('2d');
                 
-                try {
-                    // Wait for any images to load
-                    await new Promise(resolve => setTimeout(resolve, 100));
-                    
-                    // Create canvas from the comic page
-                    const canvas = await html2canvas(document.querySelector('#comic-canvas'), {
-                        backgroundColor: null, // Remove white background override
-                        scale: 2, // Higher quality
-                        logging: false,
-                        removeContainer: false,
-                        onclone: (clonedDoc) => {
-                            // Remove any selection styles from the cloned document
-                            clonedDoc.querySelectorAll('.comic-panel').forEach(panel => {
-                                panel.classList.remove('selected', 'drop-target');
-                                panel.style.boxShadow = 'none';
-                            });
+                // Set white background
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-                            // Ensure background styles are preserved
-                            const clonedCanvas = clonedDoc.querySelector('#comic-canvas');
-                            if (clonedCanvas) {
-                                // Copy all background-related classes
-                                const originalCanvas = document.querySelector('#comic-canvas');
-                                const backgroundClasses = [
-                                    'classic-white', 'vintage-paper', 'dotted-pattern',
-                                    'halftone', 'graph-paper', 'gradient-fade'
-                                ];
-                                backgroundClasses.forEach(cls => {
-                                    if (originalCanvas.classList.contains(cls)) {
-                                        clonedCanvas.classList.add(cls);
-                                    }
-                                });
-                            }
-                        }
+                // Switch to this page to render it
+                await this.navigateToPage(i);
+                
+                // Wait a moment for the page to render
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Capture the comic canvas
+                const comicCanvas = document.querySelector('#comic-canvas');
+                const promise = html2canvas(comicCanvas, {
+                    scale: 2,
+                    backgroundColor: null
+                }).then(renderedCanvas => {
+                    // Draw the rendered canvas onto our prepared canvas
+                    ctx.drawImage(renderedCanvas, 0, 0, canvas.width, canvas.height);
+                    
+                    // Store canvas for PDF generation
+                    pageCanvases.push(canvas);
+                    
+                    // Add to zip as PNG
+                    return new Promise(resolve => {
+                        canvas.toBlob(blob => {
+                            pagesFolder.file(`page_${i + 1}.png`, blob);
+                            resolve();
+                        }, 'image/png');
                     });
-                    
-                    // Convert canvas to blob
-                    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                    
-                    // Add to zip file
-                    zip.file(`page-${i + 1}.png`, blob);
-                    
-                } catch (error) {
-                    console.error(`Error capturing page ${i + 1}:`, error);
+                });
+                
+                canvasPromises.push(promise);
+            }
+
+            // Wait for all pages to be processed
+            await Promise.all(canvasPromises);
+
+            // Add pages to PDF
+            pageCanvases.forEach((canvas, index) => {
+                if (!isFirstPage) {
+                    pdf.addPage([700, 700], 'portrait');
                 }
-            }
-            
-            // Generate zip file
-            const content = await zip.generateAsync({type: 'blob'});
-            
-            // Create download link
+                pdf.addImage(canvas, 'PNG', 0, 0, 700, 700);
+                isFirstPage = false;
+            });
+
+            // Add PDF to zip
+            zip.file("comic.pdf", pdf.output('blob'));
+
+            // Generate and download zip
+            const content = await zip.generateAsync({type: "blob"});
             const link = document.createElement('a');
-            link.download = 'my-comic.zip';
             link.href = URL.createObjectURL(content);
+            link.download = 'comic_export.zip';
             link.click();
-            
-            // Cleanup
             URL.revokeObjectURL(link.href);
-            document.head.removeChild(tempStyle);
-            
+
+            // Return to the original page
+            await this.navigateToPage(currentPageIndex);
         } catch (error) {
-            console.error('Error creating zip file:', error);
+            console.error('Error generating comic:', error);
+            alert('There was an error generating your comic. Please try again.');
         } finally {
-            // Remove loading indicator
-            document.body.removeChild(loadingIndicator);
-            
-            // Restore original page and selection state
-            this.navigateToPage(currentPageIndex);
-            if (currentSelectedPanel) {
-                this.selectPanel(currentSelectedPanel);
-            }
+            loadingIndicator.remove();
         }
     }
 
