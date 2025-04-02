@@ -1,0 +1,125 @@
+import { layouts } from './layouts.js';
+
+class ComicCreator {
+    constructor() {
+        this.uploadedImages = [];
+        this.pages = [{
+            layout: null,
+            panelStates: [] // Will store image positions and transforms for each panel
+        }];
+        this.currentPageIndex = 0;
+        this.layouts = layouts; // Store layouts in the instance
+        this.init();
+    }
+
+    init() {
+        this.setupUploadArea();
+        this.setupLayoutSelection();
+        this.setupComicEditor();
+        this.setupEventListeners();
+        this.initializeUI();
+    }
+
+    setupImageDragging(img) {
+        let isDragging = false;
+        let startX, startY;
+        let startLeft, startTop;
+
+        const onMouseDown = (e) => {
+            // Initialize dragging state
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // Get the current position values (defaulting to 50% if not set)
+            startLeft = parseFloat(img.style.left) || 50;
+            startTop = parseFloat(img.style.top) || 50;
+            
+            // Set cursor and visual feedback
+            img.style.cursor = 'grabbing';
+            
+            e.preventDefault();
+            e.stopPropagation();
+        };
+
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+
+            // Ensure opacity stays at 1 during drag
+            img.style.opacity = '1';
+
+            // Calculate the distance moved
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+
+            // Convert pixel movement to percentage based on panel size
+            const panel = img.parentElement;
+            const percentX = (deltaX / panel.offsetWidth) * 100;
+            const percentY = (deltaY / panel.offsetHeight) * 100;
+
+            // Update image position
+            img.style.left = `${startLeft + percentX}%`;
+            img.style.top = `${startTop + percentY}%`;
+        };
+
+        const onMouseUp = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            img.style.cursor = 'grab';
+            img.style.opacity = '1';
+            
+            // Save the current page state when we finish dragging
+            this.saveCurrentPageState();
+        };
+
+        // Add mouse event listeners
+        img.style.cursor = 'grab';
+        img.style.pointerEvents = 'auto'; // Enable pointer events for dragging
+        img.style.opacity = '1'; // Ensure initial opacity is 1
+        img.draggable = false; // Disable native dragging
+        
+        img.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+        
+        // Prevent default drag behavior
+        img.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+    }
+
+    getLayoutConfig(layoutName) {
+        if (!layoutName) {
+            console.error("No layout name provided to getLayoutConfig");
+            return null;
+        }
+        
+        // If layoutName is already an object (a layout configuration), return it directly
+        if (typeof layoutName === 'object' && layoutName !== null) {
+            return layoutName;
+        }
+        
+        // If it's a string, look it up in the layouts object
+        if (typeof layoutName === 'string' && this.layouts[layoutName]) {
+            return this.layouts[layoutName];
+        }
+        
+        console.error(`Layout not found: ${layoutName}`);
+        
+        // Return the first available layout as fallback
+        const firstLayout = Object.values(this.layouts)[0];
+        if (firstLayout) {
+            console.warn(`Using fallback layout: ${Object.keys(this.layouts)[0]}`);
+            return firstLayout;
+        }
+        
+        return null;
+    }
+}
+
+// Initialize the comic creator when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.comicCreator = new ComicCreator();
+}); 

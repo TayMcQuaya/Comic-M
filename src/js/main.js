@@ -1,5 +1,22 @@
 import { layouts } from './layouts.js';
 
+// Global helper function to convert RGB to Hex
+function globalRgbToHex(rgb) {
+    // Convert rgb(r, g, b) to #rrggbb
+    if (!rgb) return '#000000';
+    
+    if (rgb.startsWith('#')) return rgb;
+    
+    const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+    if (!match) return '#000000';
+    
+    const r = parseInt(match[1]).toString(16).padStart(2, '0');
+    const g = parseInt(match[2]).toString(16).padStart(2, '0');
+    const b = parseInt(match[3]).toString(16).padStart(2, '0');
+    
+    return `#${r}${g}${b}`;
+}
+
 class ComicCreator {
     constructor() {
         this.uploadedImages = [];
@@ -258,64 +275,87 @@ class ComicCreator {
     }
 
     addImageToPanel(panel, image) {
+        if (!panel || !image) {
+            console.error('Cannot add image to panel: invalid panel or image', { panel, image });
+            return;
+        }
+        
         console.log('Adding image to panel:', image); // Debug log
         
-        const img = document.createElement('img');
-        img.src = image.src;
-        img.alt = image.name;
-        
-        // Clear existing content and add new image
-        panel.innerHTML = '';
-        panel.appendChild(img);
-        
-        // Set initial image styles
-        img.style.position = 'absolute';
-        img.style.left = '50%';
-        img.style.top = '50%';
-        img.style.transform = 'translate(-50%, -50%) scale(1)';
-
-        // Calculate initial scale to fit the panel while maintaining aspect ratio
-        img.onload = () => {
-            console.log('Image loaded, calculating scale...'); // Debug log
-            const panelWidth = panel.offsetWidth;
-            const panelHeight = panel.offsetHeight;
-            const imageWidth = img.naturalWidth;
-            const imageHeight = img.naturalHeight;
-
-            console.log('Panel dimensions:', panelWidth, panelHeight); // Debug log
-            console.log('Image dimensions:', imageWidth, imageHeight); // Debug log
-
-            const scaleX = panelWidth / imageWidth;
-            const scaleY = panelHeight / imageHeight;
-            const scale = Math.max(scaleX, scaleY);
-
-            img.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        try {
+            const img = document.createElement('img');
+            img.src = image.src;
+            img.alt = image.name;
             
-            panel.dataset.initialScale = scale;
-            panel.dataset.currentScale = scale;
+            // Clear existing content and add new image
+            panel.innerHTML = '';
+            panel.appendChild(img);
             
-            console.log('Applied scale:', scale); // Debug log
-        };
-        
-        // Store image data and update visual states
-        panel.dataset.imageId = image.id.toString();
-        this.updateImageLibrary(); // Update thumbnail states
-        
-        this.setupImageDragging(img);
-        this.selectPanel(panel);
+            // Set initial image styles
+            img.style.position = 'absolute';
+            img.style.left = '50%';
+            img.style.top = '50%';
+            img.style.transform = 'translate(-50%, -50%) scale(1)';
+    
+            // Calculate initial scale to fit the panel while maintaining aspect ratio
+            img.onload = () => {
+                console.log('Image loaded, calculating scale...'); // Debug log
+                const panelWidth = panel.offsetWidth;
+                const panelHeight = panel.offsetHeight;
+                const imageWidth = img.naturalWidth;
+                const imageHeight = img.naturalHeight;
+    
+                console.log('Panel dimensions:', panelWidth, panelHeight); // Debug log
+                console.log('Image dimensions:', imageWidth, imageHeight); // Debug log
+    
+                const scaleX = panelWidth / imageWidth;
+                const scaleY = panelHeight / imageHeight;
+                const scale = Math.max(scaleX, scaleY);
+    
+                img.style.transform = `translate(-50%, -50%) scale(${scale})`;
+                
+                panel.dataset.initialScale = scale;
+                panel.dataset.currentScale = scale;
+                
+                console.log('Applied scale:', scale); // Debug log
+            };
+            
+            // Store image data and update visual states
+            panel.dataset.imageId = image.id.toString();
+            this.updateImageLibrary(); // Update thumbnail states
+            
+            this.setupImageDragging(img);
+            this.selectPanel(panel);
+        } catch (error) {
+            console.error('Error adding image to panel:', error);
+        }
     }
 
     setupImageDragging(img) {
+        if (!img) {
+            console.error("setupImageDragging called with undefined image");
+            return;
+        }
+        
         let isDragging = false;
         let startX, startY;
         let startLeft, startTop;
 
         const onMouseDown = (e) => {
-            container.classList.add('dragging');
-            // Set both data types for compatibility
-            e.dataTransfer.setData('image/id', image.id.toString());
-            e.dataTransfer.setData('reorder/id', image.id.toString());
-            e.dataTransfer.effectAllowed = 'copyMove';
+            // Initialize dragging state
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // Get the current position values (defaulting to 50% if not set)
+            startLeft = parseFloat(img.style.left) || 50;
+            startTop = parseFloat(img.style.top) || 50;
+            
+            // Set cursor and visual feedback
+            img.style.cursor = 'grabbing';
+            
+            e.preventDefault();
+            e.stopPropagation();
         };
 
         const onMouseMove = (e) => {
@@ -330,6 +370,8 @@ class ComicCreator {
 
             // Convert pixel movement to percentage based on panel size
             const panel = img.parentElement;
+            if (!panel) return;
+            
             const percentX = (deltaX / panel.offsetWidth) * 100;
             const percentY = (deltaY / panel.offsetHeight) * 100;
 
@@ -339,9 +381,14 @@ class ComicCreator {
         };
 
         const onMouseUp = () => {
+            if (!isDragging) return;
+            
             isDragging = false;
             img.style.cursor = 'grab';
             img.style.opacity = '1';
+            
+            // Save the current page state when we finish dragging
+            this.saveCurrentPageState();
         };
 
         // Add mouse event listeners
@@ -630,12 +677,40 @@ class ComicCreator {
     }
 
     saveCurrentPageState() {
-        console.log('Saving current page state');
+        console.log(`Saving current page state for page ${this.currentPageIndex}`);
         const currentPage = this.pages[this.currentPageIndex];
-        if (!currentPage) return;
+        if (!currentPage) {
+            console.error("Cannot save state - current page not found");
+            return;
+        }
+        
+        // Preserve existing layout (should be an ID)
+        const existingLayout = currentPage.layout;
+        if (!existingLayout) {
+            // If somehow layout got lost, restore it from selectedLayout
+            currentPage.layout = this.selectedLayout;
+            console.log(`Restored missing layout ID: ${this.selectedLayout}`);
+        } else if (typeof existingLayout === 'object') {
+            // Convert object to ID if we have an old format
+            try {
+                const layoutId = Object.entries(this.layouts).find(
+                    ([id, layout]) => JSON.stringify(layout) === JSON.stringify(existingLayout)
+                )?.[0];
+                
+                if (layoutId) {
+                    currentPage.layout = layoutId;
+                    console.log(`Converted layout object to ID: ${layoutId}`);
+                } else {
+                    console.warn("Could not match layout object to an ID");
+                }
+            } catch (e) {
+                console.error("Error trying to find layout ID:", e);
+            }
+        }
         
         // Save panel states
-        currentPage.panelStates = Array.from(document.querySelectorAll('.comic-panel')).map(panel => {
+        const panels = Array.from(document.querySelectorAll('.comic-panel'));
+        currentPage.panelStates = panels.map(panel => {
             const img = panel.querySelector('img');
             const panelState = {
                 backgroundStyle: panel.dataset.backgroundStyle || 'classic-white',
@@ -644,8 +719,8 @@ class ComicCreator {
             
             // Save image data if present
             if (img) {
-            const imageId = panel.dataset.imageId || img.dataset.imageId;
-            
+                const imageId = panel.dataset.imageId || img.dataset.imageId;
+                
                 panelState.imageId = imageId;
                 panelState.transform = img.style.transform || 'translate(-50%, -50%) scale(1)';
                 panelState.left = img.style.left || '50%';
@@ -706,6 +781,8 @@ class ComicCreator {
                              'halftone', 'graph-paper', 'gradient-fade'].includes(cls)) 
                 || 'classic-white';
         }
+        
+        console.log(`Saved page ${this.currentPageIndex} with ${currentPage.panelStates.length} panel states and layout ID ${currentPage.layout}`);
     }
 
     setupEventListeners() {
@@ -805,7 +882,12 @@ class ComicCreator {
     createComic(layout = null) {
         // Use provided layout or get from selected layout
         const layoutConfig = layout || this.getLayoutConfig(this.selectedLayout);
-        if (!layoutConfig) return;
+        if (!layoutConfig) {
+            console.error('No layout configuration found.');
+            return;
+        }
+
+        console.log('Creating comic with layout:', layoutConfig.name || 'Unnamed Layout');
 
         // Navigate to editor page
         document.querySelector('#layout-page').classList.remove('active');
@@ -875,6 +957,7 @@ class ComicCreator {
         const panelAreaHeight = 620;
         const panelGap = 12;
 
+        // Create panels according to the layout
         layoutConfig.panels.forEach(panel => {
             const div = document.createElement('div');
             div.className = 'comic-panel';
@@ -904,14 +987,42 @@ class ComicCreator {
             this.applyBackgroundStyle('classic-white');
         }
 
-        // Only save state if this is a new page creation
-        if (!layout) {
+        // Only save state if this is a new page creation and not loading an existing page
+        // This is important to avoid overriding existing page states
+        // Check if we're creating a new page vs loading an existing one
+        const currentPage = this.pages[this.currentPageIndex];
+        if (!layout && (!currentPage.panelStates || currentPage.panelStates.length === 0)) {
+            console.log("Creating new page state from scratch");
             this.saveCurrentPageState();
         }
     }
 
     getLayoutConfig(layoutName) {
-        return this.layouts[layoutName]; // Use the instance property instead of window.comicLayouts
+        if (!layoutName) {
+            console.error("No layout name provided to getLayoutConfig");
+            return null;
+        }
+        
+        // If layoutName is already an object (a layout configuration), return it directly
+        if (typeof layoutName === 'object' && layoutName !== null) {
+            return layoutName;
+        }
+        
+        // If it's a string, look it up in the layouts object
+        if (typeof layoutName === 'string' && this.layouts[layoutName]) {
+            return this.layouts[layoutName];
+        }
+        
+        console.error(`Layout not found: ${layoutName}`);
+        
+        // Return the first available layout as fallback
+        const firstLayout = Object.values(this.layouts)[0];
+        if (firstLayout) {
+            console.warn(`Using fallback layout: ${Object.keys(this.layouts)[0]}`);
+            return firstLayout;
+        }
+        
+        return null;
     }
 
     initializeUI() {
@@ -975,12 +1086,14 @@ class ComicCreator {
     }
 
     addNewPage(layoutId) {
+        console.log(`Adding new page with layout: ${layoutId}`);
+        
         // Save current page state before creating new page
         this.saveCurrentPageState();
         
         // Create new page with the selected layout
         this.pages.push({
-            layout: this.layouts[layoutId],
+            layout: layoutId, // Store just the layout ID, not the layout object
             panelStates: [],
             canvasBackgroundStyle: 'classic-white' // Default background style
         });
@@ -1010,9 +1123,12 @@ class ComicCreator {
             return;
         }
         
+        console.log(`Navigating from page ${this.currentPageIndex} to page ${pageIndex}`);
+        
         // Save current page state if requested
         if (saveCurrentState) {
-        this.saveCurrentPageState();
+            console.log(`Saving state of current page ${this.currentPageIndex} before navigation`);
+            this.saveCurrentPageState();
         }
         
         // Update current page index
@@ -1030,9 +1146,40 @@ class ComicCreator {
         const page = this.pages[pageIndex];
         if (!page || !page.layout) return false;
         
+        console.log(`Loading page ${pageIndex} with layout: ${page.layout}`);
+        
         // Set the current layout and create the comic structure
-        this.selectedLayout = page.layout;
-        this.createComic(this.layouts[page.layout]);
+        this.selectedLayout = page.layout; // This is now the layout ID
+        
+        // We need to check if page.layout is an ID string or a layout object
+        let layoutConfig;
+        if (typeof page.layout === 'string') {
+            // It's an ID, look it up in this.layouts
+            layoutConfig = this.layouts[page.layout];
+        } else if (typeof page.layout === 'object') {
+            // It's an object, use it directly (this handles legacy data)
+            layoutConfig = page.layout;
+            // Fix the page to store the ID for next time
+            try {
+                const layoutId = Object.entries(this.layouts).find(
+                    ([id, layout]) => JSON.stringify(layout) === JSON.stringify(page.layout)
+                )?.[0];
+                if (layoutId) {
+                    page.layout = layoutId;
+                    console.log(`Updated page layout to use ID: ${layoutId}`);
+                }
+            } catch (e) {
+                console.error("Error trying to find layout ID:", e);
+            }
+        }
+        
+        // Only proceed if we have a valid layout config
+        if (!layoutConfig) {
+            console.error(`Failed to find layout configuration for page ${pageIndex}`);
+            return false;
+        }
+        
+        this.createComic(layoutConfig);
         
         // Set canvas background style
         const canvas = document.querySelector('#comic-canvas');
@@ -1042,11 +1189,19 @@ class ComicCreator {
         }
         
         // Restore panel states
-            const panels = document.querySelectorAll('.comic-panel');
+        const panels = document.querySelectorAll('.comic-panel');
         
-        if (page.panelStates && panels.length === page.panelStates.length) {
-            page.panelStates.forEach((state, index) => {
+        // Check if we have panel states stored and if they match the layout's panel count
+        if (page.panelStates && page.panelStates.length > 0) {
+            // Make sure we only process as many panels as we have in the layout
+            const processablePanels = Math.min(panels.length, page.panelStates.length);
+            
+            console.log(`Restoring ${processablePanels} panel states`);
+            
+            // Restore each panel's state
+            for (let index = 0; index < processablePanels; index++) {
                 const panel = panels[index];
+                const state = page.panelStates[index];
                 
                 // Set panel background style
                 if (state.backgroundStyle) {
@@ -1055,20 +1210,32 @@ class ComicCreator {
                 }
                 
                 // Restore image if it exists
-                    if (state.imageId) {
-                        const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
-                        if (image) {
-                        this.addImageToPanel(panel, image);
+                if (state.imageId) {
+                    const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                    if (image) {
+                        // For images, we need to clear the panel first
+                        panel.innerHTML = '';
                         
-                        // Apply saved image transformations
-                        const img = panel.querySelector('img');
-                        if (img) {
-                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
-                            img.style.left = state.left || '50%';
-                            img.style.top = state.top || '50%';
-                            panel.dataset.initialScale = state.initialScale || '1';
-                            panel.dataset.currentScale = state.currentScale || '1';
-                        }
+                        // Create and add the image
+                        const img = document.createElement('img');
+                        img.src = image.src;
+                        img.alt = image.name || 'Panel image';
+                        img.style.position = 'absolute';
+                        img.style.left = state.left || '50%';
+                        img.style.top = state.top || '50%';
+                        img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
+                        
+                        // Set data attributes
+                        panel.dataset.imageId = state.imageId;
+                        img.dataset.imageId = state.imageId;
+                        panel.dataset.initialScale = state.initialScale || '1';
+                        panel.dataset.currentScale = state.currentScale || '1';
+                        
+                        // Add the image to the panel
+                        panel.appendChild(img);
+                        
+                        // Setup image dragging
+                        this.setupImageDragging(img);
                     }
                 }
                 
@@ -1125,7 +1292,7 @@ class ComicCreator {
                         textElement.style.textShadow = style.textShadow;
                     });
                 }
-            });
+            }
         }
         
         return true;
@@ -1160,7 +1327,10 @@ class ComicCreator {
     }
 
     async downloadComic() {
+        // Save the current page state before generating the PDF
         this.saveCurrentPageState();
+        
+        console.log('Starting PDF generation for all pages...');
 
         // Show loading indicator
         const loadingIndicator = document.createElement('div');
@@ -1168,7 +1338,10 @@ class ComicCreator {
         loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
         document.body.appendChild(loadingIndicator);
 
-        // Store current UI state
+        // Store current UI state and page index
+        const currentPageIndex = this.currentPageIndex;
+        console.log(`Current page index before export: ${currentPageIndex}`);
+        
         const selectedPanel = document.querySelector('.comic-panel.selected');
         const selectedTextBoxes = document.querySelectorAll('.text-bubble.selected-text');
         
@@ -1181,28 +1354,30 @@ class ComicCreator {
             textBox.classList.remove('selected-text');
         });
 
-        // Add export class to hide all editor UI elements
-        document.getElementById('comic-canvas').classList.add('exporting');
-
-        // Use html2canvas to capture each page
-        const promises = this.pages.map((page, index) => {
-            return new Promise(async (resolve) => {
+        try {
+            // Create a new array to store page images
+            const pageImages = [];
+            
+            // Process each page one by one
+            for (let index = 0; index < this.pages.length; index++) {
                 // Update loading message
                 loadingIndicator.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Capturing page ${index + 1} of ${this.pages.length}...`;
                 
-                // Save current page index
-                const currentIndex = this.currentPageIndex;
+                // Navigate to the page - this will load the page with its own state
+                this.navigateToPage(index, true);
                 
-                // Load the page to display
-                this.navigateToPage(index, false);
+                console.log(`Capturing page ${index + 1}`);
+                
+                // Allow time for the page to render completely
+                await new Promise(resolve => setTimeout(resolve, 100));
                 
                 // Get the comic canvas
                 const canvas = document.getElementById('comic-canvas');
                 
-                // Add export class to this page too
+                // Add export class to hide UI elements during capture
                 canvas.classList.add('exporting');
                 
-                // Hide any selected elements on this page too
+                // Hide any selected elements on this page
                 canvas.querySelectorAll('.comic-panel.selected').forEach(panel => {
                     panel.classList.remove('selected');
                 });
@@ -1211,8 +1386,8 @@ class ComicCreator {
                     textBox.classList.remove('selected-text');
                 });
                 
+                // Use html2canvas to convert to canvas
                 try {
-                    // Use html2canvas to convert to canvas
                     const h2c = await html2canvas(canvas, {
                         allowTaint: true,
                         useCORS: true,
@@ -1221,36 +1396,30 @@ class ComicCreator {
                         logging: false
                     });
                     
-                    resolve({
+                    // Store the page image with its index
+                    pageImages.push({
                         canvas: h2c,
                         index: index
                     });
+                    
+                    // Remove the export class
+                    canvas.classList.remove('exporting');
                 } catch (error) {
-                    console.error('Error converting page to image:', error);
-                    resolve(null);
-                } finally {
-                    // Restore the original page
-                    this.navigateToPage(currentIndex, false);
+                    console.error(`Error capturing page ${index + 1}:`, error);
                 }
-            });
-        });
-        
-        // Handle all pages and create PDF
-        Promise.all(promises).then(results => {
+            }
+            
             // Update loading message
             loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating PDF...';
             
-            // Filter out failed pages
-            const validResults = results.filter(result => result !== null);
-            
-            if (validResults.length === 0) {
+            if (pageImages.length === 0) {
                 console.error('Failed to generate any page images');
-                loadingIndicator.remove();
+                alert('Failed to generate the PDF. Please try again.');
                 return;
             }
             
-            // Sort by page index
-            validResults.sort((a, b) => a.index - b.index);
+            // Sort by page index (in case async processing completed out of order)
+            pageImages.sort((a, b) => a.index - b.index);
             
             // Create PDF
             const pdf = new jspdf.jsPDF({
@@ -1260,7 +1429,7 @@ class ComicCreator {
             });
             
             // Add pages
-            validResults.forEach((result, i) => {
+            pageImages.forEach((result, i) => {
                 // Add a new page for each page after the first
                 if (i > 0) {
                     pdf.addPage();
@@ -1280,27 +1449,22 @@ class ComicCreator {
             // Save the PDF
             pdf.save('my-comic.pdf');
             
+            console.log('PDF generated successfully with', pageImages.length, 'pages');
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('An error occurred while generating the PDF: ' + error.message);
+        } finally {
             // Remove loading indicator
             loadingIndicator.remove();
             
-            // Remove export class
-            document.getElementById('comic-canvas').classList.remove('exporting');
-            
-            // Restore UI state after export is complete
-            if (selectedPanel) {
-                selectedPanel.classList.add('selected');
-            }
-            
-            selectedTextBoxes.forEach(textBox => {
-                textBox.classList.add('selected-text');
+            // Remove export class from any remaining
+            document.querySelectorAll('.exporting').forEach(el => {
+                el.classList.remove('exporting');
             });
-        }).catch(error => {
-            console.error('Error generating PDF:', error);
-            // Remove loading indicator in case of error
-            loadingIndicator.remove();
             
-            // Remove export class
-            document.getElementById('comic-canvas').classList.remove('exporting');
+            // Navigate back to the original page
+            console.log(`Returning to original page: ${currentPageIndex}`);
+            this.navigateToPage(currentPageIndex, true);
             
             // Restore UI state
             if (selectedPanel) {
@@ -1310,7 +1474,7 @@ class ComicCreator {
             selectedTextBoxes.forEach(textBox => {
                 textBox.classList.add('selected-text');
             });
-        });
+        }
     }
 
     applyBackgroundStyle(style) {
@@ -1355,74 +1519,20 @@ class ComicCreator {
         if (currentIndex >= this.pages.length) {
             // If we deleted the last page, go to the new last page
             newPageIndex = this.pages.length - 1;
-            console.log('Deleted last page, navigating to new last page');
+            console.log('Deleted last page, navigating to new last page:', newPageIndex);
         } else {
             // If we deleted any page (including first), stay at the same index
             // This will automatically show the next page
             newPageIndex = currentIndex;
-            console.log('Deleted current page, navigating to next page');
+            console.log('Deleted current page, navigating to next page:', newPageIndex);
         }
 
-        // Update the current page index before navigation
-        this.currentPageIndex = newPageIndex;
+        // Instead of directly loading the page state here, use the navigateToPage method
+        // This ensures consistent state management
+        this.currentPageIndex = newPageIndex; // Set index first to avoid confusion
+        this.loadPageState(newPageIndex);
         
-        // Get the target page
-        const page = this.pages[newPageIndex];
-        if (!page || !page.layout) return;
-        
-        // Set the current layout
-        this.selectedLayout = Object.entries(this.layouts).find(
-            ([_, layout]) => layout === page.layout
-        )?.[0];
-        
-        // Create panels with the saved layout
-        this.createComic(page.layout);
-        
-        // Restore panel states
-        if (page.panelStates && page.panelStates.length > 0) {
-            const panels = document.querySelectorAll('.comic-panel');
-            page.panelStates.forEach((state, i) => {
-                if (panels[i]) {
-                    // Apply background style to panel
-                    panels[i].dataset.backgroundStyle = state.backgroundStyle || 'classic-white';
-                    
-                    if (state.imageId) {
-                        // Find the image by ID, ensuring string comparison
-                        const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
-                        if (image) {
-                            // Create and add the image
-                            const img = document.createElement('img');
-                            img.src = image.src;
-                            img.alt = image.name;
-                            img.style.position = 'absolute';
-                            img.style.left = state.left || '50%';
-                            img.style.top = state.top || '50%';
-                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
-                            
-                            // Clear panel and add new image
-                            panels[i].innerHTML = '';
-                            panels[i].appendChild(img);
-                            
-                            // Set data attributes
-                            panels[i].dataset.imageId = state.imageId;
-                            img.dataset.imageId = state.imageId;
-                            panels[i].dataset.initialScale = state.initialScale || '1';
-                            panels[i].dataset.currentScale = state.currentScale || '1';
-                            
-                            // Setup image dragging
-                            this.setupImageDragging(img);
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Restore canvas background style
-        if (page.canvasBackgroundStyle) {
-            this.applyBackgroundStyle(page.canvasBackgroundStyle);
-        }
-        
-        // Update page indicator and navigation buttons
+        // Update navigation UI
         this.updatePageIndicator();
         this.updateNavigationButtons();
     }
@@ -1847,10 +1957,10 @@ class ComicCreator {
         textProperties.querySelector('.font-size-value').textContent = `${fontSizeValue}px`;
         
         const fontColor = textProperties.querySelector('.font-color');
-        fontColor.value = rgbToHex(computedStyle.color) || '#000000';
+        fontColor.value = this.rgbToHex(computedStyle.color) || '#000000';
         
         const bubbleColor = textProperties.querySelector('.bubble-color');
-        bubbleColor.value = rgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff';
+        bubbleColor.value = this.rgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff';
         
         const rotation = textProperties.querySelector('.rotation');
         const transform = textBox.style.transform;
@@ -1866,23 +1976,38 @@ class ComicCreator {
             // Add the selected class
             textBox.classList.add(bubbleType.value);
             textBox.dataset.bubbleType = bubbleType.value;
+            
+            // Save state after changing bubble type
+            this.saveCurrentPageState();
         });
         
         fontFamily.addEventListener('change', () => {
             textElement.style.fontFamily = fontFamily.value;
+            
+            // Save state after changing font family
+            this.saveCurrentPageState();
         });
         
         fontSize.addEventListener('input', () => {
             textElement.style.fontSize = `${fontSize.value}px`;
             textProperties.querySelector('.font-size-value').textContent = `${fontSize.value}px`;
+            
+            // Save state after changing font size
+            this.saveCurrentPageState();
         });
         
         fontColor.addEventListener('input', () => {
             textElement.style.color = fontColor.value;
+            
+            // Save state after changing font color
+            this.saveCurrentPageState();
         });
         
         bubbleColor.addEventListener('input', () => {
             textBox.style.backgroundColor = bubbleColor.value;
+            
+            // Save state after changing bubble color
+            this.saveCurrentPageState();
         });
         
         const boldBtn = textProperties.querySelector('.bold-btn');
@@ -1890,6 +2015,9 @@ class ComicCreator {
             const isBold = textElement.style.fontWeight === 'bold';
             textElement.style.fontWeight = isBold ? 'normal' : 'bold';
             boldBtn.classList.toggle('active');
+            
+            // Save state after toggling bold
+            this.saveCurrentPageState();
         });
         
         const italicBtn = textProperties.querySelector('.italic-btn');
@@ -1897,6 +2025,9 @@ class ComicCreator {
             const isItalic = textElement.style.fontStyle === 'italic';
             textElement.style.fontStyle = isItalic ? 'normal' : 'italic';
             italicBtn.classList.toggle('active');
+            
+            // Save state after toggling italic
+            this.saveCurrentPageState();
         });
         
         const underlineBtn = textProperties.querySelector('.underline-btn');
@@ -1904,6 +2035,9 @@ class ComicCreator {
             const isUnderline = textElement.style.textDecoration === 'underline';
             textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
             underlineBtn.classList.toggle('active');
+            
+            // Save state after toggling underline
+            this.saveCurrentPageState();
         });
         
         rotation.addEventListener('input', () => {
@@ -1916,6 +2050,9 @@ class ComicCreator {
             const translate = translateMatch ? `translate(${translateMatch[1]})` : 'translate(-50%, -50%)';
             
             textBox.style.transform = `${translate} rotate(${value}deg)`;
+            
+            // Save state after changing rotation
+            this.saveCurrentPageState();
         });
         
         // Set the active state for the text style buttons
@@ -1926,19 +2063,7 @@ class ComicCreator {
     
     // Helper function for the text properties
     rgbToHex(rgb) {
-        // Convert rgb(r, g, b) to #rrggbb
-        if (!rgb) return '#000000';
-        
-        if (rgb.startsWith('#')) return rgb;
-        
-        const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-        if (!match) return '#000000';
-        
-        const r = parseInt(match[1]).toString(16).padStart(2, '0');
-        const g = parseInt(match[2]).toString(16).padStart(2, '0');
-        const b = parseInt(match[3]).toString(16).padStart(2, '0');
-        
-        return `#${r}${g}${b}`;
+        return globalRgbToHex(rgb);
     }
 
     showTextFormatPopup(textBox, event) {
@@ -2206,12 +2331,18 @@ class ComicCreator {
         // Close button
         popup.querySelector('.close-popup').addEventListener('click', () => {
             popup.remove();
+            
+            // Save the state when closing the popup
+            this.saveCurrentPageState();
         });
         
         // Close when clicking outside
         document.addEventListener('mousedown', (e) => {
             if (!popup.contains(e.target) && !textBox.contains(e.target)) {
                 popup.remove();
+                
+                // Save the state when closing the popup
+                this.saveCurrentPageState();
             }
         });
         
@@ -2236,6 +2367,9 @@ class ComicCreator {
                 // Disable bubble tail dropdown
                 popup.querySelector('#bubble-tail-position').disabled = true;
             }
+            
+            // Save the state after changing bubble toggle
+            this.saveCurrentPageState();
         });
         
         // Bubble style options
@@ -2272,6 +2406,9 @@ class ComicCreator {
                     textElement.style.fontStyle = 'italic';
                     popup.querySelector('.italic-btn').classList.add('active');
                 }
+                
+                // Save the state after changing bubble style
+                this.saveCurrentPageState();
             });
         });
         
