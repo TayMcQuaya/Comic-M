@@ -1667,13 +1667,68 @@ class ComicCreator {
                 </div>
                 <div class="control-group">
                     <label>Font</label>
-                    <select class="font-family">
-                        <option value="Arial">Arial</option>
-                        <option value="Comic Sans MS">Comic Sans MS</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Impact">Impact</option>
-                        <option value="Bangers">Bangers</option>
-                    </select>
+                    <div class="custom-select">
+                        <select class="font-family">
+                            <option disabled class="font-category">Common Fonts</option>
+                            <option value="Arial" class="font-option">
+                                <span class="font-preview font-arial">Arial - Comic Text</span>
+                            </option>
+                            <option value="Comic Sans MS" class="font-option">
+                                <span class="font-preview font-comic-sans">Comic Sans MS - Comic Text</span>
+                            </option>
+                            <option value="Times New Roman" class="font-option">
+                                <span class="font-preview font-times">Times New Roman - Comic Text</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Sound Effects</option>
+                            <option value="Impact" class="font-option">
+                                <span class="font-preview font-impact">Impact - BOOM!</span>
+                            </option>
+                            <option value="Bangers" class="font-option">
+                                <span class="font-preview font-bangers">Bangers - POW!</span>
+                            </option>
+                            <option value="Anton" class="font-option">
+                                <span class="font-preview font-anton">Anton - CRASH!</span>
+                            </option>
+                            <option value="Russo One" class="font-option">
+                                <span class="font-preview font-russo-one">Russo One - WHAM!</span>
+                            </option>
+                            <option value="Fredoka One" class="font-option">
+                                <span class="font-preview font-fredoka-one">Fredoka One - SPLASH!</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Handwriting Styles</option>
+                            <option value="Comic Neue" class="font-option">
+                                <span class="font-preview font-comic-neue">Comic Neue - Casual</span>
+                            </option>
+                            <option value="Permanent Marker" class="font-option">
+                                <span class="font-preview font-permanent-marker">Permanent Marker</span>
+                            </option>
+                            <option value="Gloria Hallelujah" class="font-option">
+                                <span class="font-preview font-gloria-hallelujah">Gloria Hallelujah</span>
+                            </option>
+                            <option value="Architects Daughter" class="font-option">
+                                <span class="font-preview font-architects-daughter">Architects Daughter</span>
+                            </option>
+                            <option value="Shadows Into Light" class="font-option">
+                                <span class="font-preview font-shadows-into-light">Shadows Into Light</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Title/Header Fonts</option>
+                            <option value="Luckiest Guy" class="font-option">
+                                <span class="font-preview font-luckiest-guy">Luckiest Guy</span>
+                            </option>
+                            <option value="Boogaloo" class="font-option">
+                                <span class="font-preview font-boogaloo">Boogaloo</span>
+                            </option>
+                            <option value="Acme" class="font-option">
+                                <span class="font-preview font-acme">Acme</span>
+                            </option>
+                            <option value="Press Start 2P" class="font-option">
+                                <span class="font-preview font-press-start-2p">Press Start 2P</span>
+                            </option>
+                        </select>
+                    </div>
                 </div>
                 <div class="control-group">
                     <label>Size</label>
@@ -1712,7 +1767,7 @@ class ComicCreator {
         const computedStyle = window.getComputedStyle(textElement);
         
         const fontFamily = textProperties.querySelector('.font-family');
-        fontFamily.value = computedStyle.fontFamily.split(',')[0].replace(/"/g, '') || 'Arial';
+        fontFamily.value = computedStyle.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Arial';
         
         const fontSize = textProperties.querySelector('.font-size');
         const fontSizeValue = parseInt(computedStyle.fontSize) || 16;
@@ -1848,6 +1903,8 @@ class ComicCreator {
         popup.style.top = `${top}px`;
         popup.style.left = `${left}px`;
         
+        const textElement = textBox.querySelector('.text-content');
+        
         // Create the content for the popup
         popup.innerHTML = `
             <div class="popup-header">
@@ -1898,11 +1955,64 @@ class ComicCreator {
                     <div class="text-font-section">
                         <label for="font-family">Font</label>
                         <select id="font-family" class="font-family">
-                            <option value="Arial" ${textBox.querySelector('.text-content').style.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
-                            <option value="Comic Sans MS" ${textBox.querySelector('.text-content').style.fontFamily === 'Comic Sans MS' ? 'selected' : ''}>Comic Sans MS</option>
-                            <option value="Times New Roman" ${textBox.querySelector('.text-content').style.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
-                            <option value="Impact" ${textBox.querySelector('.text-content').style.fontFamily === 'Impact' ? 'selected' : ''}>Impact</option>
-                            <option value="Bangers" ${textBox.querySelector('.text-content').style.fontFamily === 'Bangers' ? 'selected' : ''}>Bangers</option>
+                            <option disabled class="font-category">Common Fonts</option>
+                            <option value="Arial" class="font-option" ${textElement.style.fontFamily === 'Arial' ? 'selected' : ''}>
+                                <span class="font-preview font-arial">Arial - Comic Text</span>
+                            </option>
+                            <option value="Comic Sans MS" class="font-option" ${textElement.style.fontFamily === 'Comic Sans MS' ? 'selected' : ''}>
+                                <span class="font-preview font-comic-sans">Comic Sans MS - Comic Text</span>
+                            </option>
+                            <option value="Times New Roman" class="font-option" ${textElement.style.fontFamily === 'Times New Roman' ? 'selected' : ''}>
+                                <span class="font-preview font-times">Times New Roman - Comic Text</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Sound Effects</option>
+                            <option value="Impact" class="font-option" ${textElement.style.fontFamily === 'Impact' ? 'selected' : ''}>
+                                <span class="font-preview font-impact">Impact - BOOM!</span>
+                            </option>
+                            <option value="Bangers" class="font-option" ${textElement.style.fontFamily === 'Bangers' ? 'selected' : ''}>
+                                <span class="font-preview font-bangers">Bangers - POW!</span>
+                            </option>
+                            <option value="Anton" class="font-option" ${textElement.style.fontFamily === 'Anton' ? 'selected' : ''}>
+                                <span class="font-preview font-anton">Anton - CRASH!</span>
+                            </option>
+                            <option value="Russo One" class="font-option" ${textElement.style.fontFamily === 'Russo One' ? 'selected' : ''}>
+                                <span class="font-preview font-russo-one">Russo One - WHAM!</span>
+                            </option>
+                            <option value="Fredoka One" class="font-option" ${textElement.style.fontFamily === 'Fredoka One' ? 'selected' : ''}>
+                                <span class="font-preview font-fredoka-one">Fredoka One - SPLASH!</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Handwriting Styles</option>
+                            <option value="Comic Neue" class="font-option" ${textElement.style.fontFamily === 'Comic Neue' ? 'selected' : ''}>
+                                <span class="font-preview font-comic-neue">Comic Neue - Casual</span>
+                            </option>
+                            <option value="Permanent Marker" class="font-option" ${textElement.style.fontFamily === 'Permanent Marker' ? 'selected' : ''}>
+                                <span class="font-preview font-permanent-marker">Permanent Marker</span>
+                            </option>
+                            <option value="Gloria Hallelujah" class="font-option" ${textElement.style.fontFamily === 'Gloria Hallelujah' ? 'selected' : ''}>
+                                <span class="font-preview font-gloria-hallelujah">Gloria Hallelujah</span>
+                            </option>
+                            <option value="Architects Daughter" class="font-option" ${textElement.style.fontFamily === 'Architects Daughter' ? 'selected' : ''}>
+                                <span class="font-preview font-architects-daughter">Architects Daughter</span>
+                            </option>
+                            <option value="Shadows Into Light" class="font-option" ${textElement.style.fontFamily === 'Shadows Into Light' ? 'selected' : ''}>
+                                <span class="font-preview font-shadows-into-light">Shadows Into Light</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Title/Header Fonts</option>
+                            <option value="Luckiest Guy" class="font-option" ${textElement.style.fontFamily === 'Luckiest Guy' ? 'selected' : ''}>
+                                <span class="font-preview font-luckiest-guy">Luckiest Guy</span>
+                            </option>
+                            <option value="Boogaloo" class="font-option" ${textElement.style.fontFamily === 'Boogaloo' ? 'selected' : ''}>
+                                <span class="font-preview font-boogaloo">Boogaloo</span>
+                            </option>
+                            <option value="Acme" class="font-option" ${textElement.style.fontFamily === 'Acme' ? 'selected' : ''}>
+                                <span class="font-preview font-acme">Acme</span>
+                            </option>
+                            <option value="Press Start 2P" class="font-option" ${textElement.style.fontFamily === 'Press Start 2P' ? 'selected' : ''}>
+                                <span class="font-preview font-press-start-2p">Press Start 2P</span>
+                            </option>
                         </select>
                     </div>
                     
@@ -1910,21 +2020,21 @@ class ComicCreator {
                         <div class="style-control">
                             <label for="font-size">Size</label>
                             <div class="size-control">
-                                <input type="range" id="font-size" class="font-size" min="8" max="72" value="${parseInt(textBox.querySelector('.text-content').style.fontSize) || 16}">
-                                <span class="font-size-value">${parseInt(textBox.querySelector('.text-content').style.fontSize) || 16}px</span>
+                                <input type="range" id="font-size" class="font-size" min="8" max="72" value="${parseInt(textElement.style.fontSize) || 16}">
+                                <span class="font-size-value">${parseInt(textElement.style.fontSize) || 16}px</span>
                             </div>
                         </div>
                         
                         <div class="style-control">
                             <label>Style</label>
                             <div class="text-style-buttons">
-                                <button class="style-btn bold-btn ${textBox.querySelector('.text-content').style.fontWeight === 'bold' ? 'active' : ''}" title="Bold">
+                                <button class="style-btn bold-btn ${textElement.style.fontWeight === 'bold' ? 'active' : ''}" title="Bold">
                                     <i class="fas fa-bold"></i>
                                 </button>
-                                <button class="style-btn italic-btn ${textBox.querySelector('.text-content').style.fontStyle === 'italic' ? 'active' : ''}" title="Italic">
+                                <button class="style-btn italic-btn ${textElement.style.fontStyle === 'italic' ? 'active' : ''}" title="Italic">
                                     <i class="fas fa-italic"></i>
                                 </button>
-                                <button class="style-btn underline-btn ${textBox.querySelector('.text-content').style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
+                                <button class="style-btn underline-btn ${textElement.style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
                                     <i class="fas fa-underline"></i>
                                 </button>
                             </div>
@@ -1933,13 +2043,13 @@ class ComicCreator {
                         <div class="style-control">
                             <label>Alignment</label>
                             <div class="text-align-buttons">
-                                <button class="align-btn align-left ${textBox.querySelector('.text-content').style.textAlign === 'left' ? 'active' : ''}" title="Align Left">
+                                <button class="align-btn align-left ${textElement.style.textAlign === 'left' ? 'active' : ''}" title="Align Left">
                                     <i class="fas fa-align-left"></i>
                                 </button>
-                                <button class="align-btn align-center ${!textBox.querySelector('.text-content').style.textAlign || textBox.querySelector('.text-content').style.textAlign === 'center' ? 'active' : ''}" title="Align Center">
+                                <button class="align-btn align-center ${!textElement.style.textAlign || textElement.style.textAlign === 'center' ? 'active' : ''}" title="Align Center">
                                     <i class="fas fa-align-center"></i>
                                 </button>
-                                <button class="align-btn align-right ${textBox.querySelector('.text-content').style.textAlign === 'right' ? 'active' : ''}" title="Align Right">
+                                <button class="align-btn align-right ${textElement.style.textAlign === 'right' ? 'active' : ''}" title="Align Right">
                                     <i class="fas fa-align-right"></i>
                                 </button>
                             </div>
@@ -1949,7 +2059,7 @@ class ComicCreator {
                     <div class="color-section">
                         <div class="color-control">
                             <label for="text-color">Text Color</label>
-                            <input type="color" id="text-color" class="text-color" value="${this.rgbToHex(window.getComputedStyle(textBox.querySelector('.text-content')).color)}">
+                            <input type="color" id="text-color" class="text-color" value="${this.rgbToHex(window.getComputedStyle(textElement).color)}">
                         </div>
                         <div class="color-control">
                             <label for="bubble-color">Bubble Color</label>
@@ -1964,16 +2074,16 @@ class ComicCreator {
                         <div class="effect-control">
                             <label for="text-outline">Outline</label>
                             <div class="outline-control">
-                                <input type="checkbox" id="text-outline" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('0 0') ? 'checked' : ''}>
-                                <input type="color" id="outline-color" value="#000000" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('0 0') ? '' : 'disabled'}>
+                                <input type="checkbox" id="text-outline" ${textElement.style.textShadow && textElement.style.textShadow.includes('0 0') ? 'checked' : ''}>
+                                <input type="color" id="outline-color" value="#000000" ${textElement.style.textShadow && textElement.style.textShadow.includes('0 0') ? '' : 'disabled'}>
                             </div>
                         </div>
                         
                         <div class="effect-control">
                             <label for="text-shadow">Shadow</label>
                             <div class="shadow-control">
-                                <input type="checkbox" id="text-shadow" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('2px 2px') ? 'checked' : ''}>
-                                <input type="color" id="shadow-color" value="#666666" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('2px 2px') ? '' : 'disabled'}>
+                                <input type="checkbox" id="text-shadow" ${textElement.style.textShadow && textElement.style.textShadow.includes('2px 2px') ? 'checked' : ''}>
+                                <input type="color" id="shadow-color" value="#666666" ${textElement.style.textShadow && textElement.style.textShadow.includes('2px 2px') ? '' : 'disabled'}>
                             </div>
                         </div>
                         
