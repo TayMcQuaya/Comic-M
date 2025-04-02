@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comic Creator</title>
+    <link rel="stylesheet" href="/src/styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Step 1: Image Upload -->
+        <div id="upload-page" class="page active">
+            <h1>Comic Creator</h1>
+            <div class="upload-section">
+                <h2>Upload Your Images</h2>
+                <div id="upload-area" class="upload-area">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag & drop images here or click to select files</p>
+                </div>
+                <div id="image-library" class="image-library">
+                    <h3>Your Images</h3>
+                    <div id="image-thumbnails" class="thumbnails-grid"></div>
+                </div>
+                <button id="next-step-btn" class="primary-btn" disabled>
+                    Choose Layout <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Layout Selection -->
+        <div id="layout-page" class="page">
+            <div class="page-header">
+                <button class="back-btn" id="back-to-upload">
+                    <i class="fas fa-arrow-left"></i> Back to Images
+                </button>
+                <h2>Choose Your Panel Layout</h2>
+            </div>
+            <div class="layout-grid" id="layout-grid"></div>
+        </div>
+
+        <!-- Step 3: Comic Editor -->
+        <div id="editor-page" class="page">
+            <div class="editor-header">
+                <button class="back-btn" id="back-to-layout">
+                    <i class="fas fa-arrow-left"></i> Back to Layouts
+                </button>
+                <div class="editor-tools">
+                    <button id="add-text-btn" class="tool-btn">
+                        <i class="fas fa-font"></i> Add Text
+                    </button>
+                    <button id="download-btn" class="tool-btn">
+                        <i class="fas fa-download"></i> Download Comic
+                    </button>
+                </div>
+            </div>
+            
+            <div class="editor-container">
+                <!-- Left Sidebar: Image Library -->
+                <div class="editor-sidebar">
+                    <h3>Your Images</h3>
+                    <div id="editor-thumbnails" class="thumbnails-grid"></div>
+                </div>
+
+                <!-- Main Canvas Area -->
+                <div class="comic-canvas-container">
+                    <div id="comic-canvas"></div>
+                </div>
+
+                <!-- Right Sidebar: Properties -->
+                <div class="properties-panel">
+                    <div id="panel-properties" class="properties-section">
+                        <h4>Panel Settings</h4>
+                        <div class="panel-controls">
+                            <div class="control-group">
+                                <label>Zoom</label>
+                                <input type="range" class="zoom-control" min="50" max="200" value="100">
+                                <span class="zoom-value">100%</span>
+                            </div>
+                            <div class="control-group">
+                                <label>Position</label>
+                                <div class="position-controls">
+                                    <button class="position-btn up"><i class="fas fa-arrow-up"></i></button>
+                                    <button class="position-btn left"><i class="fas fa-arrow-left"></i></button>
+                                    <button class="position-btn right"><i class="fas fa-arrow-right"></i></button>
+                                    <button class="position-btn down"><i class="fas fa-arrow-down"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="text-properties" class="properties-section" style="display: none;">
+                        <h4>Text Settings</h4>
+                        <div class="text-controls">
+                            <select class="font-family">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Comic Sans MS">Comic Sans MS</option>
+                            </select>
+                            <div class="control-group">
+                                <label>Size</label>
+                                <input type="number" class="font-size" value="16" min="8" max="72">
+                            </div>
+                            <div class="control-group">
+                                <label>Color</label>
+                                <input type="color" class="font-color" value="#000000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden file input -->
+    <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
+
+    <script type="module" src="/src/js/main.js"></script>
+</body>
+</html> 
