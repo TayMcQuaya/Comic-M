@@ -1668,7 +1668,7 @@ class ComicCreator {
                 <div class="control-group">
                     <label>Font</label>
                     <div class="custom-select">
-                        <select class="font-family">
+                    <select class="font-family">
                             <option disabled class="font-category">Common Fonts</option>
                             <option value="Arial" class="font-option">
                                 <span class="font-preview font-arial">Arial - Comic Text</span>
@@ -1727,7 +1727,7 @@ class ComicCreator {
                             <option value="Press Start 2P" class="font-option">
                                 <span class="font-preview font-press-start-2p">Press Start 2P</span>
                             </option>
-                        </select>
+                    </select>
                     </div>
                 </div>
                 <div class="control-group">
