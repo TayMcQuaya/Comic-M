@@ -311,21 +311,11 @@ class ComicCreator {
         let startLeft, startTop;
 
         const onMouseDown = (e) => {
-            if (!img.parentElement.classList.contains('selected')) return;
-            
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startLeft = parseInt(img.style.left) || 50;
-            startTop = parseInt(img.style.top) || 50;
-            
-            // Change cursor and ensure opacity stays at 1
-            img.style.cursor = 'grabbing';
-            img.style.opacity = '1';
-            
-            // Prevent image drag default behavior
-            e.preventDefault();
-            e.stopPropagation();
+            container.classList.add('dragging');
+            // Set both data types for compatibility
+            e.dataTransfer.setData('image/id', image.id.toString());
+            e.dataTransfer.setData('reorder/id', image.id.toString());
+            e.dataTransfer.effectAllowed = 'copyMove';
         };
 
         const onMouseMove = (e) => {
@@ -398,9 +388,7 @@ class ComicCreator {
         } else {
             // Clear panel controls when no panel is selected
             const controls = document.querySelector('.panel-controls');
-            if (controls) {
-                controls.innerHTML = '';
-            }
+            if (controls) controls.innerHTML = '';
         }
     }
 
@@ -642,32 +630,72 @@ class ComicCreator {
     }
 
     saveCurrentPageState() {
+        console.log('Saving current page state');
         const currentPage = this.pages[this.currentPageIndex];
         if (!currentPage) return;
-        
-        // Save layout
-        currentPage.layout = this.layouts[this.selectedLayout];
         
         // Save panel states
         currentPage.panelStates = Array.from(document.querySelectorAll('.comic-panel')).map(panel => {
             const img = panel.querySelector('img');
-            if (!img) return { 
-                imageId: null,
-                backgroundStyle: panel.dataset.backgroundStyle || 'classic-white'
+            const panelState = {
+                backgroundStyle: panel.dataset.backgroundStyle || 'classic-white',
+                textElements: []
             };
             
-            // Ensure we're saving the actual image ID from the panel
+            // Save image data if present
+            if (img) {
             const imageId = panel.dataset.imageId || img.dataset.imageId;
             
-            return {
-                imageId: imageId,
-                transform: img.style.transform || 'translate(-50%, -50%) scale(1)',
-                left: img.style.left || '50%',
-                top: img.style.top || '50%',
-                initialScale: panel.dataset.initialScale || '1',
-                currentScale: panel.dataset.currentScale || '1',
-                backgroundStyle: panel.dataset.backgroundStyle || 'classic-white'
-            };
+                panelState.imageId = imageId;
+                panelState.transform = img.style.transform || 'translate(-50%, -50%) scale(1)';
+                panelState.left = img.style.left || '50%';
+                panelState.top = img.style.top || '50%';
+                panelState.initialScale = panel.dataset.initialScale || '1';
+                panelState.currentScale = panel.dataset.currentScale || '1';
+            }
+            
+            // Save text elements
+            Array.from(panel.querySelectorAll('.text-bubble')).forEach(textBubble => {
+                const textElement = textBubble.querySelector('.text-content');
+                
+                // Extract the class names for bubble type
+                const bubbleClasses = Array.from(textBubble.classList)
+                    .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
+                                    'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
+                                    'no-bubble'].includes(cls));
+                
+                // Extract tail position class
+                const tailPositionClass = Array.from(textBubble.classList)
+                    .find(cls => cls.startsWith('tail-'));
+                
+                panelState.textElements.push({
+                    id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
+                    previousBubbleType: textBubble.dataset.previousBubbleType || '',
+                    tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace('tail-', '') : ''),
+                    content: textElement.innerHTML,
+                    style: {
+                        left: textBubble.style.left,
+                        top: textBubble.style.top,
+                        width: textBubble.style.width,
+                        height: textBubble.style.height,
+                        transform: textBubble.style.transform,
+                        backgroundColor: textBubble.style.backgroundColor,
+                        fontFamily: textElement.style.fontFamily,
+                        fontSize: textElement.style.fontSize,
+                        fontWeight: textElement.style.fontWeight,
+                        fontStyle: textElement.style.fontStyle,
+                        textDecoration: textElement.style.textDecoration,
+                        textAlign: textElement.style.textAlign,
+                        textTransform: textElement.style.textTransform,
+                        color: textElement.style.color,
+                        opacity: textElement.style.opacity,
+                        textShadow: textElement.style.textShadow
+                    }
+                });
+            });
+            
+            return panelState;
         });
 
         // Save canvas background style
@@ -695,6 +723,15 @@ class ComicCreator {
         document.querySelector('#back-to-layout').addEventListener('click', () => {
             document.querySelector('#editor-page').classList.remove('active');
             document.querySelector('#layout-page').classList.add('active');
+        });
+
+        // Add Text Button
+        document.querySelector('#add-text-btn')?.addEventListener('click', () => {
+            if (this.currentPanel) {
+                this.addTextToPanel(this.currentPanel);
+            } else {
+                alert('Please select a panel first');
+            }
         });
 
         // Panel Controls
@@ -966,74 +1003,132 @@ class ComicCreator {
         document.getElementById('editor-page').classList.add('active');
     }
 
-    navigateToPage(index) {
-        if (index < 0 || index >= this.pages.length) return;
+    navigateToPage(pageIndex, saveCurrentState = true) {
+        // Validate page index
+        if (pageIndex < 0 || pageIndex >= this.pages.length) {
+            console.error('Invalid page index:', pageIndex);
+            return;
+        }
         
-        // Save current page state before navigating
+        // Save current page state if requested
+        if (saveCurrentState) {
         this.saveCurrentPageState();
+        }
         
         // Update current page index
-        this.currentPageIndex = index;
+        this.currentPageIndex = pageIndex;
         
-        // Get the target page
-        const page = this.pages[index];
-        if (!page || !page.layout) return;
-        
-        // Set the current layout
-        this.selectedLayout = Object.entries(this.layouts).find(
-            ([_, layout]) => layout === page.layout
-        )?.[0];
-        
-        // Create panels with the saved layout
-        this.createComic(page.layout);
-        
-        // Restore panel states
-        if (page.panelStates && page.panelStates.length > 0) {
-            const panels = document.querySelectorAll('.comic-panel');
-            page.panelStates.forEach((state, i) => {
-                if (panels[i]) {
-                    // Apply background style to panel
-                    panels[i].dataset.backgroundStyle = state.backgroundStyle || 'classic-white';
-                    
-                    if (state.imageId) {
-                        // Find the image by ID, ensuring string comparison
-                        const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
-                        if (image) {
-                            // Create and add the image
-                            const img = document.createElement('img');
-                            img.src = image.src;
-                            img.alt = image.name;
-                            img.style.position = 'absolute';
-                            img.style.left = state.left || '50%';
-                            img.style.top = state.top || '50%';
-                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
-                            
-                            // Clear panel and add new image
-                            panels[i].innerHTML = '';
-                            panels[i].appendChild(img);
-                            
-                            // Set data attributes
-                            panels[i].dataset.imageId = state.imageId;
-                            img.dataset.imageId = state.imageId;
-                            panels[i].dataset.initialScale = state.initialScale || '1';
-                            panels[i].dataset.currentScale = state.currentScale || '1';
-                            
-                            // Setup image dragging
-                            this.setupImageDragging(img);
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Restore canvas background style
-        if (page.canvasBackgroundStyle) {
-            this.applyBackgroundStyle(page.canvasBackgroundStyle);
-        }
+        // Load the page state
+        this.loadPageState(pageIndex);
         
         // Update page indicator and navigation buttons
         this.updatePageIndicator();
         this.updateNavigationButtons();
+    }
+    
+    loadPageState(pageIndex) {
+        const page = this.pages[pageIndex];
+        if (!page || !page.layout) return false;
+        
+        // Set the current layout and create the comic structure
+        this.selectedLayout = page.layout;
+        this.createComic(this.layouts[page.layout]);
+        
+        // Set canvas background style
+        const canvas = document.querySelector('#comic-canvas');
+        if (canvas && page.canvasBackgroundStyle) {
+            canvas.className = ''; // Clear existing classes
+            canvas.classList.add(page.canvasBackgroundStyle);
+        }
+        
+        // Restore panel states
+            const panels = document.querySelectorAll('.comic-panel');
+        
+        if (page.panelStates && panels.length === page.panelStates.length) {
+            page.panelStates.forEach((state, index) => {
+                const panel = panels[index];
+                
+                // Set panel background style
+                if (state.backgroundStyle) {
+                    panel.dataset.backgroundStyle = state.backgroundStyle;
+                    // Apply background styling here if needed
+                }
+                
+                // Restore image if it exists
+                    if (state.imageId) {
+                        const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                        if (image) {
+                        this.addImageToPanel(panel, image);
+                        
+                        // Apply saved image transformations
+                        const img = panel.querySelector('img');
+                        if (img) {
+                            img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
+                            img.style.left = state.left || '50%';
+                            img.style.top = state.top || '50%';
+                            panel.dataset.initialScale = state.initialScale || '1';
+                            panel.dataset.currentScale = state.currentScale || '1';
+                        }
+                    }
+                }
+                
+                // Restore text elements
+                if (state.textElements && state.textElements.length > 0) {
+                    state.textElements.forEach(textData => {
+                        // Create the text bubble
+                        const textContainer = this.addTextToPanel(panel);
+                        
+                        // Set the ID
+                        textContainer.id = textData.id;
+                        
+                        // Store previous bubble type if it exists
+                        if (textData.previousBubbleType) {
+                            textContainer.dataset.previousBubbleType = textData.previousBubbleType;
+                        }
+                        
+                        // Apply the bubble type
+                        textContainer.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble', 'no-bubble');
+                        textContainer.classList.add(textData.bubbleType);
+                        textContainer.dataset.bubbleType = textData.bubbleType;
+                        
+                        // Apply tail position if it exists
+                        if (textData.tailPosition) {
+                            textContainer.classList.add(`tail-${textData.tailPosition}`);
+                            textContainer.dataset.tailPosition = textData.tailPosition;
+                        }
+                        
+                        // Set content
+                        const textElement = textContainer.querySelector('.text-content');
+                        textElement.innerHTML = textData.content;
+                        
+                        // Apply styles
+                        const style = textData.style;
+                        
+                        // Apply bubble styles
+                        textContainer.style.left = style.left;
+                        textContainer.style.top = style.top;
+                        textContainer.style.width = style.width;
+                        textContainer.style.height = style.height;
+                        textContainer.style.transform = style.transform;
+                        textContainer.style.backgroundColor = style.backgroundColor;
+                        
+                        // Apply text styles
+                        textElement.style.fontFamily = style.fontFamily;
+                        textElement.style.fontSize = style.fontSize;
+                        textElement.style.fontWeight = style.fontWeight;
+                        textElement.style.fontStyle = style.fontStyle;
+                        textElement.style.textDecoration = style.textDecoration;
+                        textElement.style.textAlign = style.textAlign;
+                        textElement.style.textTransform = style.textTransform;
+                        textElement.style.color = style.color;
+                        textElement.style.opacity = style.opacity;
+                        textElement.style.textShadow = style.textShadow;
+                    });
+                }
+            });
+        }
+        
+        return true;
     }
 
     updateNavigationButtons() {
@@ -1065,102 +1160,85 @@ class ComicCreator {
     }
 
     async downloadComic() {
-        const zip = new JSZip();
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.className = 'loading-indicator';
-        loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating comic...';
-        document.body.appendChild(loadingIndicator);
-
-        try {
-            // Create a folder for individual page images
-            const pagesFolder = zip.folder("pages");
-            const canvasPromises = [];
-            const pageCanvases = [];
-
-            // Create PDF document
-            const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "px",
+        this.saveCurrentPageState();
+        
+        // Use html2canvas to capture each page
+        const promises = this.pages.map((page, index) => {
+            return new Promise(async (resolve) => {
+                // Save current page index
+                const currentIndex = this.currentPageIndex;
+                
+                // Load the page to display
+                this.navigateToPage(index, false);
+                
+                // Get the comic canvas
+                const canvas = document.getElementById('comic-canvas');
+                
+                try {
+                    // Use html2canvas to convert to canvas
+                    const h2c = await html2canvas(canvas, {
+                        allowTaint: true,
+                        useCORS: true,
+                        scale: 2, // Higher quality
+                        backgroundColor: null,
+                        logging: false
+                    });
+                    
+                    resolve({
+                        canvas: h2c,
+                        index: index
+                    });
+                } catch (error) {
+                    console.error('Error converting page to image:', error);
+                    resolve(null);
+                } finally {
+                    // Restore the original page
+                    this.navigateToPage(currentIndex, false);
+                }
+            });
+        });
+        
+        // Handle all pages and create PDF
+        Promise.all(promises).then(results => {
+            // Filter out failed pages
+            const validResults = results.filter(result => result !== null);
+            
+            if (validResults.length === 0) {
+                console.error('Failed to generate any page images');
+                return;
+            }
+            
+            // Sort by page index
+            validResults.sort((a, b) => a.index - b.index);
+            
+            // Create PDF
+            const pdf = new jspdf.jsPDF({
+                orientation: 'portrait',
+                unit: 'px',
                 format: [700, 700]
             });
-            let isFirstPage = true;
-
-            // Store current page index to restore later
-            const currentPageIndex = this.currentPageIndex;
-
-            // Process each page
-            for (let i = 0; i < this.pages.length; i++) {
-                const canvas = document.createElement('canvas');
-                canvas.width = 700;
-                canvas.height = 700;
-                const ctx = canvas.getContext('2d');
-                
-                // Set white background
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                // Switch to this page to render it
-                await this.navigateToPage(i);
-                
-                // Wait a moment for the page to render
-                await new Promise(resolve => setTimeout(resolve, 100));
-                
-                // Capture the comic canvas
-                const comicCanvas = document.querySelector('#comic-canvas');
-                const promise = html2canvas(comicCanvas, {
-                    scale: 2,
-                    backgroundColor: null
-                }).then(renderedCanvas => {
-                    // Draw the rendered canvas onto our prepared canvas
-                    ctx.drawImage(renderedCanvas, 0, 0, canvas.width, canvas.height);
-                    
-                    // Store canvas for PDF generation
-                    pageCanvases.push(canvas);
-                    
-                    // Add to zip as PNG
-                    return new Promise(resolve => {
-                        canvas.toBlob(blob => {
-                            pagesFolder.file(`page_${i + 1}.png`, blob);
-                            resolve();
-                        }, 'image/png');
-                    });
-                });
-                
-                canvasPromises.push(promise);
-            }
-
-            // Wait for all pages to be processed
-            await Promise.all(canvasPromises);
-
-            // Add pages to PDF
-            pageCanvases.forEach((canvas, index) => {
-                if (!isFirstPage) {
-                    pdf.addPage([700, 700], 'portrait');
+            
+            // Add pages
+            validResults.forEach((result, i) => {
+                // Add a new page for each page after the first
+                if (i > 0) {
+                    pdf.addPage();
                 }
-                pdf.addImage(canvas, 'PNG', 0, 0, 700, 700);
-                isFirstPage = false;
+                
+                // Add the image to the PDF
+                pdf.addImage(
+                    result.canvas.toDataURL('image/jpeg', 0.85),
+                    'JPEG',
+                    0,
+                    0,
+                    700,
+                    700
+                );
             });
-
-            // Add PDF to zip
-            zip.file("comic.pdf", pdf.output('blob'));
-
-            // Generate and download zip
-            const content = await zip.generateAsync({type: "blob"});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(content);
-            link.download = 'comic_export.zip';
-            link.click();
-            URL.revokeObjectURL(link.href);
-
-            // Return to the original page
-            await this.navigateToPage(currentPageIndex);
-        } catch (error) {
-            console.error('Error generating comic:', error);
-            alert('There was an error generating your comic. Please try again.');
-        } finally {
-            loadingIndicator.remove();
-        }
+            
+            // Save the PDF
+            pdf.save('my-comic.pdf');
+        });
     }
 
     applyBackgroundStyle(style) {
@@ -1344,6 +1422,942 @@ class ComicCreator {
             // Update the display
             this.updateImageLibrary();
         }
+    }
+
+    addTextToPanel(panel) {
+        // Create text container with default speech bubble
+        const textId = `text_${Date.now()}`;
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-bubble speech-bubble';
+        textContainer.id = textId;
+        textContainer.dataset.bubbleType = 'speech-bubble';
+        textContainer.style.position = 'absolute';
+        textContainer.style.left = '50%';
+        textContainer.style.top = '50%';
+        textContainer.style.transform = 'translate(-50%, -50%)';
+        textContainer.style.minWidth = '100px';
+        textContainer.style.minHeight = '50px';
+        textContainer.style.padding = '10px';
+        textContainer.style.zIndex = '10';
+        
+        // Create editable text element
+        const textElement = document.createElement('div');
+        textElement.className = 'text-content';
+        textElement.contentEditable = true;
+        textElement.innerHTML = 'Click to edit text';
+        textElement.style.outline = 'none';
+        textElement.style.wordWrap = 'break-word';
+        textElement.style.color = '#000000'; // Set default text color to black
+        
+        // Add drag handle for better usability
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
+        dragHandle.title = 'Drag to move';
+        
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
+        resizeHandle.title = 'Drag to resize';
+        
+        // Add edit formatting button
+        const formatButton = document.createElement('div');
+        formatButton.className = 'format-text-btn';
+        formatButton.innerHTML = '<i class="fas fa-palette"></i>';
+        formatButton.title = 'Format text';
+        
+        // Add delete button
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'delete-text-btn';
+        deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+        deleteButton.title = 'Delete text';
+        
+        // Append elements
+        textContainer.appendChild(textElement);
+        textContainer.appendChild(dragHandle);
+        textContainer.appendChild(resizeHandle);
+        textContainer.appendChild(formatButton);
+        textContainer.appendChild(deleteButton);
+        panel.appendChild(textContainer);
+        
+        // Make draggable
+        this.makeTextDraggable(textContainer, dragHandle);
+        
+        // Make resizable
+        this.makeTextResizable(textContainer, resizeHandle);
+        
+        // Setup delete functionality
+        deleteButton.addEventListener('click', () => {
+            textContainer.remove();
+            
+            // Hide the formatting popup if open
+            const popup = document.getElementById('text-format-popup');
+            if (popup) popup.style.display = 'none';
+            
+            // Hide properties panel
+            document.getElementById('text-properties').style.display = 'none';
+        });
+        
+        // Setup formatting button
+        formatButton.addEventListener('click', (e) => {
+            this.showTextFormatPopup(textContainer, e);
+        });
+        
+        // Setup text selection
+        textContainer.addEventListener('click', (e) => {
+            if (e.target !== textElement && !e.target.closest('.format-text-btn')) {
+                this.selectTextBox(textContainer);
+            }
+        });
+        
+        // Automatically select the new text box
+        this.selectTextBox(textContainer);
+        
+        return textContainer;
+    }
+    
+    makeTextDraggable(element, handle) {
+        let isDragging = false;
+        let startX, startY;
+        let startLeft, startTop;
+        let panelRect;
+        
+        const onMouseDown = (e) => {
+            // Only drag when using the handle or the bubble border (not controls or content)
+            const isHandle = e.target === handle || e.target.closest('.drag-handle');
+            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
+            
+            if (!isHandle && !isBubbleBorder) {
+                return;
+            }
+            
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            
+            // Get the panel rectangle to calculate boundaries
+            const panel = element.parentElement;
+            panelRect = panel.getBoundingClientRect();
+            
+            // Calculate position relative to panel
+            const rect = element.getBoundingClientRect();
+            startLeft = ((rect.left - panelRect.left) / panelRect.width) * 100;
+            startTop = ((rect.top - panelRect.top) / panelRect.height) * 100;
+            
+            // Add dragging class for visual feedback
+            element.classList.add('dragging-text');
+            handle.style.cursor = 'grabbing';
+            
+            e.preventDefault();
+        };
+        
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            const panel = element.parentElement;
+            const percentX = (deltaX / panel.offsetWidth) * 100;
+            const percentY = (deltaY / panel.offsetHeight) * 100;
+            
+            // Calculate new position
+            let newLeft = startLeft + percentX;
+            let newTop = startTop + percentY;
+            
+            // Get element dimensions
+            const elementRect = element.getBoundingClientRect();
+            const elementWidth = elementRect.width;
+            const elementHeight = elementRect.height;
+            
+            // Calculate boundaries (keeping at least 10% of the element inside the panel)
+            const minLeft = -elementWidth * 0.9 / panelRect.width * 100;
+            const maxLeft = 100 - elementWidth * 0.1 / panelRect.width * 100;
+            const minTop = -elementHeight * 0.9 / panelRect.height * 100;
+            const maxTop = 100 - elementHeight * 0.1 / panelRect.height * 100;
+            
+            // Apply boundaries
+            newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+            newTop = Math.max(minTop, Math.min(newTop, maxTop));
+            
+            // Set position
+            element.style.left = `${newLeft}%`;
+            element.style.top = `${newTop}%`;
+        };
+        
+        const onMouseUp = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            element.classList.remove('dragging-text');
+            handle.style.cursor = 'grab';
+        };
+        
+        handle.style.cursor = 'grab';
+        handle.addEventListener('mousedown', onMouseDown);
+        element.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+    }
+    
+    makeTextResizable(element, handle) {
+        let isResizing = false;
+        let startX, startY;
+        let startWidth, startHeight;
+        
+        handle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            startWidth = element.offsetWidth;
+            startHeight = element.offsetHeight;
+            
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            
+            const deltaX = e.clientX - startX;
+            const deltaY = e.clientY - startY;
+            
+            element.style.width = `${startWidth + deltaX}px`;
+            element.style.height = `${startHeight + deltaY}px`;
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isResizing = false;
+        });
+    }
+    
+    selectTextBox(textBox) {
+        // Deselect any previously selected text box
+        document.querySelectorAll('.text-bubble').forEach(box => {
+            box.classList.remove('selected-text');
+        });
+        
+        // Select the current text box
+        textBox.classList.add('selected-text');
+        this.currentTextBox = textBox;
+        
+        // Show text properties panel
+        const textProperties = document.getElementById('text-properties');
+        textProperties.style.display = 'block';
+        
+        // Update properties panel with the current text box's styles
+        this.updateTextProperties(textBox);
+    }
+    
+    updateTextProperties(textBox) {
+        const textProperties = document.getElementById('text-properties');
+        textProperties.innerHTML = `
+            <h4>Text Settings</h4>
+            <div class="text-controls">
+                <div class="control-group">
+                    <label>Bubble Style</label>
+                    <select class="bubble-type">
+                        <option value="speech-bubble">Speech Bubble</option>
+                        <option value="thought-bubble">Thought Bubble</option>
+                        <option value="caption-box">Caption/Narration</option>
+                        <option value="shout-bubble">Shout Bubble</option>
+                        <option value="whisper-bubble">Whisper Bubble</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Font</label>
+                    <select class="font-family">
+                        <option value="Arial">Arial</option>
+                        <option value="Comic Sans MS">Comic Sans MS</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Impact">Impact</option>
+                        <option value="Bangers">Bangers</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Size</label>
+                    <input type="range" class="font-size" min="8" max="36" value="16">
+                    <span class="font-size-value">16px</span>
+                </div>
+                <div class="control-group">
+                    <label>Text Color</label>
+                    <input type="color" class="font-color" value="#000000">
+                </div>
+                <div class="control-group">
+                    <label>Bubble Color</label>
+                    <input type="color" class="bubble-color" value="#ffffff">
+                </div>
+                <div class="control-group">
+                    <label>Text Style</label>
+                    <div class="text-style-buttons">
+                        <button class="style-btn bold-btn" title="Bold"><i class="fas fa-bold"></i></button>
+                        <button class="style-btn italic-btn" title="Italic"><i class="fas fa-italic"></i></button>
+                        <button class="style-btn underline-btn" title="Underline"><i class="fas fa-underline"></i></button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Rotation</label>
+                    <input type="range" class="rotation" min="-180" max="180" value="0">
+                    <span class="rotation-value">0°</span>
+                </div>
+            </div>
+        `;
+        
+        // Set initial values based on the current text box
+        const bubbleType = textProperties.querySelector('.bubble-type');
+        bubbleType.value = textBox.dataset.bubbleType || 'speech-bubble';
+        
+        const textElement = textBox.querySelector('.text-content');
+        const computedStyle = window.getComputedStyle(textElement);
+        
+        const fontFamily = textProperties.querySelector('.font-family');
+        fontFamily.value = computedStyle.fontFamily.split(',')[0].replace(/"/g, '') || 'Arial';
+        
+        const fontSize = textProperties.querySelector('.font-size');
+        const fontSizeValue = parseInt(computedStyle.fontSize) || 16;
+        fontSize.value = fontSizeValue;
+        textProperties.querySelector('.font-size-value').textContent = `${fontSizeValue}px`;
+        
+        const fontColor = textProperties.querySelector('.font-color');
+        fontColor.value = rgbToHex(computedStyle.color) || '#000000';
+        
+        const bubbleColor = textProperties.querySelector('.bubble-color');
+        bubbleColor.value = rgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff';
+        
+        const rotation = textProperties.querySelector('.rotation');
+        const transform = textBox.style.transform;
+        const rotateMatch = transform.match(/rotate\(([-\d.]+)deg\)/);
+        const rotationValue = rotateMatch ? parseFloat(rotateMatch[1]) : 0;
+        rotation.value = rotationValue;
+        textProperties.querySelector('.rotation-value').textContent = `${rotationValue}°`;
+        
+        // Add event listeners for property changes
+        bubbleType.addEventListener('change', () => {
+            // Remove all bubble type classes
+            textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble');
+            // Add the selected class
+            textBox.classList.add(bubbleType.value);
+            textBox.dataset.bubbleType = bubbleType.value;
+        });
+        
+        fontFamily.addEventListener('change', () => {
+            textElement.style.fontFamily = fontFamily.value;
+        });
+        
+        fontSize.addEventListener('input', () => {
+            textElement.style.fontSize = `${fontSize.value}px`;
+            textProperties.querySelector('.font-size-value').textContent = `${fontSize.value}px`;
+        });
+        
+        fontColor.addEventListener('input', () => {
+            textElement.style.color = fontColor.value;
+        });
+        
+        bubbleColor.addEventListener('input', () => {
+            textBox.style.backgroundColor = bubbleColor.value;
+        });
+        
+        const boldBtn = textProperties.querySelector('.bold-btn');
+        boldBtn.addEventListener('click', () => {
+            const isBold = textElement.style.fontWeight === 'bold';
+            textElement.style.fontWeight = isBold ? 'normal' : 'bold';
+            boldBtn.classList.toggle('active');
+        });
+        
+        const italicBtn = textProperties.querySelector('.italic-btn');
+        italicBtn.addEventListener('click', () => {
+            const isItalic = textElement.style.fontStyle === 'italic';
+            textElement.style.fontStyle = isItalic ? 'normal' : 'italic';
+            italicBtn.classList.toggle('active');
+        });
+        
+        const underlineBtn = textProperties.querySelector('.underline-btn');
+        underlineBtn.addEventListener('click', () => {
+            const isUnderline = textElement.style.textDecoration === 'underline';
+            textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
+            underlineBtn.classList.toggle('active');
+        });
+        
+        rotation.addEventListener('input', () => {
+            const value = rotation.value;
+            textProperties.querySelector('.rotation-value').textContent = `${value}°`;
+            
+            // Preserve the translate part of the transform
+            const transform = textBox.style.transform;
+            const translateMatch = transform.match(/translate\(([^)]+)\)/);
+            const translate = translateMatch ? `translate(${translateMatch[1]})` : 'translate(-50%, -50%)';
+            
+            textBox.style.transform = `${translate} rotate(${value}deg)`;
+        });
+        
+        // Set the active state for the text style buttons
+        if (textElement.style.fontWeight === 'bold') boldBtn.classList.add('active');
+        if (textElement.style.fontStyle === 'italic') italicBtn.classList.add('active');
+        if (textElement.style.textDecoration === 'underline') underlineBtn.classList.add('active');
+    }
+    
+    // Helper function for the text properties
+    rgbToHex(rgb) {
+        // Convert rgb(r, g, b) to #rrggbb
+        if (!rgb) return '#000000';
+        
+        if (rgb.startsWith('#')) return rgb;
+        
+        const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+        if (!match) return '#000000';
+        
+        const r = parseInt(match[1]).toString(16).padStart(2, '0');
+        const g = parseInt(match[2]).toString(16).padStart(2, '0');
+        const b = parseInt(match[3]).toString(16).padStart(2, '0');
+        
+        return `#${r}${g}${b}`;
+    }
+
+    showTextFormatPopup(textBox, event) {
+        // Remove any existing popup
+        let popup = document.getElementById('text-format-popup');
+        if (popup) {
+            popup.remove();
+        }
+        
+        // Create the popup
+        popup = document.createElement('div');
+        popup.id = 'text-format-popup';
+        popup.className = 'text-format-popup';
+        
+        // Position the popup near the text box but ensure it's visible
+        const rect = textBox.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        
+        // Default position below the textbox
+        let top = rect.bottom + 10;
+        let left = rect.left;
+        
+        // Adjust if too close to bottom
+        if (top + 300 > viewportHeight) {
+            top = rect.top - 310; // Place above
+        }
+        
+        // Adjust if too close to right edge
+        if (left + 300 > viewportWidth) {
+            left = viewportWidth - 310;
+        }
+        
+        popup.style.top = `${top}px`;
+        popup.style.left = `${left}px`;
+        
+        // Create the content for the popup
+        popup.innerHTML = `
+            <div class="popup-header">
+                <h3>Text Formatting</h3>
+                <button class="close-popup"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-content">
+                <div class="popup-section">
+                    <h4>Bubble Style</h4>
+                    <div class="bubble-toggle">
+                        <label>
+                            <input type="checkbox" id="show-bubble" ${textBox.dataset.bubbleType !== 'no-bubble' ? 'checked' : ''}>
+                            Show Bubble
+                        </label>
+                    </div>
+                    <div class="bubble-options">
+                        <div class="bubble-grid">
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'speech-bubble' ? 'selected' : ''}" data-type="speech-bubble">
+                                <div class="bubble-preview speech-bubble-preview"></div>
+                                <span>Speech</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'thought-bubble' ? 'selected' : ''}" data-type="thought-bubble">
+                                <div class="bubble-preview thought-bubble-preview"></div>
+                                <span>Thought</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'caption-box' ? 'selected' : ''}" data-type="caption-box">
+                                <div class="bubble-preview caption-box-preview"></div>
+                                <span>Caption</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'shout-bubble' ? 'selected' : ''}" data-type="shout-bubble">
+                                <div class="bubble-preview shout-bubble-preview"></div>
+                                <span>Shout</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'whisper-bubble' ? 'selected' : ''}" data-type="whisper-bubble">
+                                <div class="bubble-preview whisper-bubble-preview"></div>
+                                <span>Whisper</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'jagged-bubble' ? 'selected' : ''}" data-type="jagged-bubble">
+                                <div class="bubble-preview jagged-bubble-preview"></div>
+                                <span>Jagged</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
+                    <h4>Text Style</h4>
+                    <div class="text-font-section">
+                        <label for="font-family">Font</label>
+                        <select id="font-family" class="font-family">
+                            <option value="Arial" ${textBox.querySelector('.text-content').style.fontFamily === 'Arial' ? 'selected' : ''}>Arial</option>
+                            <option value="Comic Sans MS" ${textBox.querySelector('.text-content').style.fontFamily === 'Comic Sans MS' ? 'selected' : ''}>Comic Sans MS</option>
+                            <option value="Times New Roman" ${textBox.querySelector('.text-content').style.fontFamily === 'Times New Roman' ? 'selected' : ''}>Times New Roman</option>
+                            <option value="Impact" ${textBox.querySelector('.text-content').style.fontFamily === 'Impact' ? 'selected' : ''}>Impact</option>
+                            <option value="Bangers" ${textBox.querySelector('.text-content').style.fontFamily === 'Bangers' ? 'selected' : ''}>Bangers</option>
+                        </select>
+                    </div>
+                    
+                    <div class="text-style-grid">
+                        <div class="style-control">
+                            <label for="font-size">Size</label>
+                            <div class="size-control">
+                                <input type="range" id="font-size" class="font-size" min="8" max="72" value="${parseInt(textBox.querySelector('.text-content').style.fontSize) || 16}">
+                                <span class="font-size-value">${parseInt(textBox.querySelector('.text-content').style.fontSize) || 16}px</span>
+                            </div>
+                        </div>
+                        
+                        <div class="style-control">
+                            <label>Style</label>
+                            <div class="text-style-buttons">
+                                <button class="style-btn bold-btn ${textBox.querySelector('.text-content').style.fontWeight === 'bold' ? 'active' : ''}" title="Bold">
+                                    <i class="fas fa-bold"></i>
+                                </button>
+                                <button class="style-btn italic-btn ${textBox.querySelector('.text-content').style.fontStyle === 'italic' ? 'active' : ''}" title="Italic">
+                                    <i class="fas fa-italic"></i>
+                                </button>
+                                <button class="style-btn underline-btn ${textBox.querySelector('.text-content').style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
+                                    <i class="fas fa-underline"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="style-control">
+                            <label>Alignment</label>
+                            <div class="text-align-buttons">
+                                <button class="align-btn align-left ${textBox.querySelector('.text-content').style.textAlign === 'left' ? 'active' : ''}" title="Align Left">
+                                    <i class="fas fa-align-left"></i>
+                                </button>
+                                <button class="align-btn align-center ${!textBox.querySelector('.text-content').style.textAlign || textBox.querySelector('.text-content').style.textAlign === 'center' ? 'active' : ''}" title="Align Center">
+                                    <i class="fas fa-align-center"></i>
+                                </button>
+                                <button class="align-btn align-right ${textBox.querySelector('.text-content').style.textAlign === 'right' ? 'active' : ''}" title="Align Right">
+                                    <i class="fas fa-align-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="color-section">
+                        <div class="color-control">
+                            <label for="text-color">Text Color</label>
+                            <input type="color" id="text-color" class="text-color" value="${this.rgbToHex(window.getComputedStyle(textBox.querySelector('.text-content')).color)}">
+                        </div>
+                        <div class="color-control">
+                            <label for="bubble-color">Bubble Color</label>
+                            <input type="color" id="bubble-color" class="bubble-color" value="${this.rgbToHex(window.getComputedStyle(textBox).backgroundColor)}">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
+                    <h4>Effects</h4>
+                    <div class="effects-grid">
+                        <div class="effect-control">
+                            <label for="text-outline">Outline</label>
+                            <div class="outline-control">
+                                <input type="checkbox" id="text-outline" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('0 0') ? 'checked' : ''}>
+                                <input type="color" id="outline-color" value="#000000" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('0 0') ? '' : 'disabled'}>
+                            </div>
+                        </div>
+                        
+                        <div class="effect-control">
+                            <label for="text-shadow">Shadow</label>
+                            <div class="shadow-control">
+                                <input type="checkbox" id="text-shadow" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('2px 2px') ? 'checked' : ''}>
+                                <input type="color" id="shadow-color" value="#666666" ${textBox.querySelector('.text-content').style.textShadow && textBox.querySelector('.text-content').style.textShadow.includes('2px 2px') ? '' : 'disabled'}>
+                            </div>
+                        </div>
+                        
+                        <div class="effect-control">
+                            <label for="bubble-tail-position">Bubble Tail</label>
+                            <select id="bubble-tail-position" ${textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box' ? 'disabled' : ''}>
+                                <option value="bottom-left" ${textBox.dataset.tailPosition === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
+                                <option value="bottom-center" ${textBox.dataset.tailPosition === 'bottom-center' ? 'selected' : ''}>Bottom Center</option>
+                                <option value="bottom-right" ${textBox.dataset.tailPosition === 'bottom-right' ? 'selected' : ''}>Bottom Right</option>
+                                <option value="left-center" ${textBox.dataset.tailPosition === 'left-center' ? 'selected' : ''}>Left Center</option>
+                                <option value="right-center" ${textBox.dataset.tailPosition === 'right-center' ? 'selected' : ''}>Right Center</option>
+                                <option value="top-left" ${textBox.dataset.tailPosition === 'top-left' ? 'selected' : ''}>Top Left</option>
+                                <option value="top-center" ${textBox.dataset.tailPosition === 'top-center' ? 'selected' : ''}>Top Center</option>
+                                <option value="top-right" ${textBox.dataset.tailPosition === 'top-right' ? 'selected' : ''}>Top Right</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
+                    <h4>Position</h4>
+                    <div class="position-controls">
+                        <div class="position-grid">
+                            <button class="position-grid-btn" data-position="top-left">↖</button>
+                            <button class="position-grid-btn" data-position="top-center">↑</button>
+                            <button class="position-grid-btn" data-position="top-right">↗</button>
+                            <button class="position-grid-btn" data-position="middle-left">←</button>
+                            <button class="position-grid-btn" data-position="middle-center">•</button>
+                            <button class="position-grid-btn" data-position="middle-right">→</button>
+                            <button class="position-grid-btn" data-position="bottom-left">↙</button>
+                            <button class="position-grid-btn" data-position="bottom-center">↓</button>
+                            <button class="position-grid-btn" data-position="bottom-right">↘</button>
+                        </div>
+                        
+                        <div class="rotation-control">
+                            <label for="rotation">Rotation</label>
+                            <div class="rotation-slider">
+                                <input type="range" id="rotation" class="rotation" min="-180" max="180" value="${this.getRotationValue(textBox)}">
+                                <span class="rotation-value">${this.getRotationValue(textBox)}°</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Set up event listeners for the popup
+        this.setupPopupEventListeners(popup, textBox);
+        
+        // Select the current text box
+        this.selectTextBox(textBox);
+    }
+    
+    setupPopupEventListeners(popup, textBox) {
+        const textElement = textBox.querySelector('.text-content');
+        
+        // Close button
+        popup.querySelector('.close-popup').addEventListener('click', () => {
+            popup.remove();
+        });
+        
+        // Close when clicking outside
+        document.addEventListener('mousedown', (e) => {
+            if (!popup.contains(e.target) && !textBox.contains(e.target)) {
+                popup.remove();
+            }
+        });
+        
+        // Bubble toggle
+        const bubbleToggle = popup.querySelector('#show-bubble');
+        bubbleToggle.addEventListener('change', () => {
+            if (bubbleToggle.checked) {
+                // Restore previous bubble type or default to speech bubble
+                const previousType = textBox.dataset.previousBubbleType || 'speech-bubble';
+                textBox.classList.remove('no-bubble');
+                textBox.classList.add(previousType);
+                textBox.dataset.bubbleType = previousType;
+                // Enable bubble tail dropdown
+                popup.querySelector('#bubble-tail-position').disabled = (previousType === 'caption-box');
+            } else {
+                // Store current bubble type before removing
+                textBox.dataset.previousBubbleType = textBox.dataset.bubbleType;
+                // Remove all bubble classes and add no-bubble
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble');
+                textBox.classList.add('no-bubble');
+                textBox.dataset.bubbleType = 'no-bubble';
+                // Disable bubble tail dropdown
+                popup.querySelector('#bubble-tail-position').disabled = true;
+            }
+        });
+        
+        // Bubble style options
+        popup.querySelectorAll('.bubble-option').forEach(option => {
+            option.addEventListener('click', () => {
+                // Update selected state in UI
+                popup.querySelectorAll('.bubble-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                
+                // Get bubble type
+                const bubbleType = option.dataset.type;
+                
+                // Remove all bubble classes and add the selected one
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble', 'no-bubble');
+                textBox.classList.add(bubbleType);
+                textBox.dataset.bubbleType = bubbleType;
+                
+                // Update bubble toggle checkbox
+                bubbleToggle.checked = true;
+                
+                // Enable/disable bubble tail dropdown based on bubble type
+                popup.querySelector('#bubble-tail-position').disabled = (bubbleType === 'caption-box');
+                
+                // Apply default styling for the bubble type if needed
+                if (bubbleType === 'shout-bubble') {
+                    textElement.style.fontWeight = 'bold';
+                    textElement.style.textTransform = 'uppercase';
+                    popup.querySelector('.bold-btn').classList.add('active');
+                } else if (bubbleType === 'whisper-bubble') {
+                    textElement.style.fontStyle = 'italic';
+                    textElement.style.opacity = '0.8';
+                    popup.querySelector('.italic-btn').classList.add('active');
+                } else if (bubbleType === 'caption-box') {
+                    textElement.style.fontStyle = 'italic';
+                    popup.querySelector('.italic-btn').classList.add('active');
+                }
+            });
+        });
+        
+        // Font family
+        popup.querySelector('#font-family').addEventListener('change', (e) => {
+            textElement.style.fontFamily = e.target.value;
+        });
+        
+        // Font size
+        const fontSizeSlider = popup.querySelector('#font-size');
+        const fontSizeValue = popup.querySelector('.font-size-value');
+        fontSizeSlider.addEventListener('input', () => {
+            textElement.style.fontSize = `${fontSizeSlider.value}px`;
+            fontSizeValue.textContent = `${fontSizeSlider.value}px`;
+        });
+        
+        // Text style buttons
+        popup.querySelector('.bold-btn').addEventListener('click', () => {
+            const isBold = textElement.style.fontWeight === 'bold';
+            textElement.style.fontWeight = isBold ? 'normal' : 'bold';
+            popup.querySelector('.bold-btn').classList.toggle('active');
+        });
+        
+        popup.querySelector('.italic-btn').addEventListener('click', () => {
+            const isItalic = textElement.style.fontStyle === 'italic';
+            textElement.style.fontStyle = isItalic ? 'normal' : 'italic';
+            popup.querySelector('.italic-btn').classList.toggle('active');
+        });
+        
+        popup.querySelector('.underline-btn').addEventListener('click', () => {
+            const isUnderline = textElement.style.textDecoration === 'underline';
+            textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
+            popup.querySelector('.underline-btn').classList.toggle('active');
+        });
+        
+        // Text alignment
+        popup.querySelector('.align-left').addEventListener('click', () => {
+            textElement.style.textAlign = 'left';
+            popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            popup.querySelector('.align-left').classList.add('active');
+        });
+        
+        popup.querySelector('.align-center').addEventListener('click', () => {
+            textElement.style.textAlign = 'center';
+            popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            popup.querySelector('.align-center').classList.add('active');
+        });
+        
+        popup.querySelector('.align-right').addEventListener('click', () => {
+            textElement.style.textAlign = 'right';
+            popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            popup.querySelector('.align-right').classList.add('active');
+        });
+        
+        // Colors
+        popup.querySelector('#text-color').addEventListener('input', (e) => {
+            textElement.style.color = e.target.value;
+        });
+        
+        popup.querySelector('#bubble-color').addEventListener('input', (e) => {
+            textBox.style.backgroundColor = e.target.value;
+        });
+        
+        // Text outline
+        const textOutlineCheckbox = popup.querySelector('#text-outline');
+        const outlineColorPicker = popup.querySelector('#outline-color');
+        
+        textOutlineCheckbox.addEventListener('change', () => {
+            if (textOutlineCheckbox.checked) {
+                outlineColorPicker.disabled = false;
+                this.applyTextOutline(textElement, outlineColorPicker.value);
+            } else {
+                outlineColorPicker.disabled = true;
+                this.removeTextOutline(textElement);
+            }
+        });
+        
+        outlineColorPicker.addEventListener('input', () => {
+            if (textOutlineCheckbox.checked) {
+                this.applyTextOutline(textElement, outlineColorPicker.value);
+            }
+        });
+        
+        // Text shadow
+        const textShadowCheckbox = popup.querySelector('#text-shadow');
+        const shadowColorPicker = popup.querySelector('#shadow-color');
+        
+        textShadowCheckbox.addEventListener('change', () => {
+            if (textShadowCheckbox.checked) {
+                shadowColorPicker.disabled = false;
+                this.applyTextShadow(textElement, shadowColorPicker.value);
+            } else {
+                shadowColorPicker.disabled = true;
+                this.removeTextShadow(textElement);
+            }
+        });
+        
+        shadowColorPicker.addEventListener('input', () => {
+            if (textShadowCheckbox.checked) {
+                this.applyTextShadow(textElement, shadowColorPicker.value);
+            }
+        });
+        
+        // Bubble tail position
+        popup.querySelector('#bubble-tail-position').addEventListener('change', (e) => {
+            this.updateBubbleTail(textBox, e.target.value);
+        });
+        
+        // Position grid buttons
+        popup.querySelectorAll('.position-grid-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const position = btn.dataset.position;
+                this.positionTextBox(textBox, position);
+            });
+        });
+        
+        // Rotation slider
+        const rotationSlider = popup.querySelector('#rotation');
+        const rotationValue = popup.querySelector('.rotation-value');
+        
+        rotationSlider.addEventListener('input', () => {
+            const value = rotationSlider.value;
+            rotationValue.textContent = `${value}°`;
+            
+            // Preserve the translate part of the transform
+            const transform = textBox.style.transform;
+            const translateMatch = transform.match(/translate\(([^)]+)\)/);
+            const translate = translateMatch ? `translate(${translateMatch[1]})` : 'translate(-50%, -50%)';
+            
+            textBox.style.transform = `${translate} rotate(${value}deg)`;
+        });
+    }
+    
+    // Helper methods for text formatting
+    getRotationValue(textBox) {
+        const transform = textBox.style.transform;
+        const rotateMatch = transform.match(/rotate\(([-\d.]+)deg\)/);
+        return rotateMatch ? parseInt(rotateMatch[1]) : 0;
+    }
+    
+    applyTextOutline(textElement, color) {
+        const currentShadow = textElement.style.textShadow;
+        // Remove existing outline if present
+        let shadow = this.removeEffectFromShadow(currentShadow, '0 0');
+        // Add new outline
+        shadow = shadow ? shadow + ', ' : '';
+        shadow += `0 0 1px ${color}, 0 0 1px ${color}, 0 0 1px ${color}, 0 0 1px ${color}`;
+        textElement.style.textShadow = shadow;
+    }
+    
+    removeTextOutline(textElement) {
+        const currentShadow = textElement.style.textShadow;
+        textElement.style.textShadow = this.removeEffectFromShadow(currentShadow, '0 0');
+    }
+    
+    applyTextShadow(textElement, color) {
+        const currentShadow = textElement.style.textShadow;
+        // Remove existing shadow if present
+        let shadow = this.removeEffectFromShadow(currentShadow, '2px 2px');
+        // Add new shadow
+        shadow = shadow ? shadow + ', ' : '';
+        shadow += `2px 2px 3px ${color}`;
+        textElement.style.textShadow = shadow;
+    }
+    
+    removeTextShadow(textElement) {
+        const currentShadow = textElement.style.textShadow;
+        textElement.style.textShadow = this.removeEffectFromShadow(currentShadow, '2px 2px');
+    }
+    
+    removeEffectFromShadow(shadow, prefix) {
+        if (!shadow) return '';
+        
+        // Split shadow into individual shadows
+        const shadows = shadow.split(',');
+        
+        // Filter out shadows that start with the prefix
+        return shadows
+            .filter(s => !s.trim().startsWith(prefix))
+            .join(',');
+    }
+    
+    updateBubbleTail(textBox, position) {
+        // Remove any existing position classes
+        textBox.className = textBox.className.replace(/tail-\S+/g, '').trim();
+        
+        // Add the new position class
+        textBox.classList.add(`tail-${position}`);
+        
+        // Store the position in dataset
+        textBox.dataset.tailPosition = position;
+    }
+    
+    positionTextBox(textBox, position) {
+        const panel = textBox.parentElement;
+        const panelRect = panel.getBoundingClientRect();
+        
+        // Calculate positions as percentages
+        let left, top;
+        
+        switch (position) {
+            case 'top-left':
+                left = 10;
+                top = 10;
+                break;
+            case 'top-center':
+                left = 50;
+                top = 10;
+                break;
+            case 'top-right':
+                left = 90;
+                top = 10;
+                break;
+            case 'middle-left':
+                left = 10;
+                top = 50;
+                break;
+            case 'middle-center':
+                left = 50;
+                top = 50;
+                break;
+            case 'middle-right':
+                left = 90;
+                top = 50;
+                break;
+            case 'bottom-left':
+                left = 10;
+                top = 90;
+                break;
+            case 'bottom-center':
+                left = 50;
+                top = 90;
+                break;
+            case 'bottom-right':
+                left = 90;
+                top = 90;
+                break;
+            default:
+                left = 50;
+                top = 50;
+        }
+        
+        // Set position
+        textBox.style.left = `${left}%`;
+        textBox.style.top = `${top}%`;
+        
+        // Adjust transform to account for the anchor point
+        const translateX = position.includes('left') ? '0%' : 
+                         position.includes('right') ? '-100%' : '-50%';
+        const translateY = position.includes('top') ? '0%' : 
+                         position.includes('bottom') ? '-100%' : '-50%';
+        
+        // Preserve rotation if present
+        const rotation = this.getRotationValue(textBox);
+        const rotateStyle = rotation !== 0 ? ` rotate(${rotation}deg)` : '';
+        
+        textBox.style.transform = `translate(${translateX}, ${translateY})${rotateStyle}`;
     }
 }
 
