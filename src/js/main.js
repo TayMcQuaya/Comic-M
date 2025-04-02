@@ -831,6 +831,11 @@ class ComicCreator {
             canvas.appendChild(div);
         });
 
+        // Apply default background style if no layout is provided
+        if (!layout) {
+            this.applyBackgroundStyle('classic-white');
+        }
+
         // Only save state if this is a new page creation
         if (!layout) {
             this.saveCurrentPageState();
@@ -1132,6 +1137,9 @@ class ComicCreator {
 
         // Add the new style class
         canvas.classList.add(style);
+
+        // Save the current page state
+        this.saveCurrentPageState();
     }
 }
 
