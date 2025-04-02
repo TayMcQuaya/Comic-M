@@ -79,7 +79,7 @@ class ComicCreator {
         // Get all currently used image IDs from panels
         const usedImageIds = Array.from(document.querySelectorAll('.comic-panel'))
             .map(panel => panel.dataset.imageId)
-            .filter(id => id); // Filter out undefined/null values
+            .filter(id => id);
         
         // Update each grid with the images
         grids.forEach(grid => {
@@ -90,7 +90,7 @@ class ComicCreator {
             this.uploadedImages.forEach(image => {
                 const container = document.createElement('div');
                 container.className = 'thumbnail-container';
-                if (usedImageIds.includes(image.id.toString())) {
+                if (usedImageIds.includes(String(image.id))) {
                     container.classList.add('in-use');
                 }
                 container.draggable = true;
@@ -102,7 +102,7 @@ class ComicCreator {
                     ${grid.closest('.editor-sidebar') ? '' : `<button class="delete-btn" data-image-id="${image.id}">×</button>`}
                 `;
 
-                // Setup drag functionality
+                // Setup drag functionality for both image dragging and reordering
                 this.setupDragAndDrop(container, image);
                 
                 // Setup delete button if it exists
@@ -112,15 +112,23 @@ class ComicCreator {
                 }
                 
                 grid.appendChild(container);
+
+                // Add reordering drag events for both upload page and editor sidebar
+                this.setupReorderDrag(container);
             });
+
+            // Add drop zone functionality to the grid itself
+            this.setupGridDropZone(grid);
         });
     }
 
     setupDragAndDrop(container, image) {
         container.addEventListener('dragstart', (e) => {
             container.classList.add('dragging');
+            // Set both data types for compatibility
             e.dataTransfer.setData('image/id', image.id.toString());
-            e.dataTransfer.effectAllowed = 'copy';
+            e.dataTransfer.setData('reorder/id', image.id.toString());
+            e.dataTransfer.effectAllowed = 'copyMove';
         });
 
         container.addEventListener('dragend', () => {
@@ -194,6 +202,14 @@ class ComicCreator {
 
     setupComicEditor() {
         const canvas = document.querySelector('#comic-canvas');
+        
+        // Add keyboard event listener for delete key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Delete' && this.currentPanel && this.currentPanel.querySelector('img')) {
+                this.clearPanelImage(this.currentPanel);
+            }
+        });
+
         canvas.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
@@ -303,15 +319,20 @@ class ComicCreator {
             startLeft = parseInt(img.style.left) || 50;
             startTop = parseInt(img.style.top) || 50;
             
-            // Change cursor
+            // Change cursor and ensure opacity stays at 1
             img.style.cursor = 'grabbing';
+            img.style.opacity = '1';
             
             // Prevent image drag default behavior
             e.preventDefault();
+            e.stopPropagation();
         };
 
         const onMouseMove = (e) => {
             if (!isDragging) return;
+
+            // Ensure opacity stays at 1 during drag
+            img.style.opacity = '1';
 
             // Calculate the distance moved
             const deltaX = e.clientX - startX;
@@ -330,14 +351,24 @@ class ComicCreator {
         const onMouseUp = () => {
             isDragging = false;
             img.style.cursor = 'grab';
+            img.style.opacity = '1';
         };
 
         // Add mouse event listeners
         img.style.cursor = 'grab';
         img.style.pointerEvents = 'auto'; // Enable pointer events for dragging
+        img.style.opacity = '1'; // Ensure initial opacity is 1
+        img.draggable = false; // Disable native dragging
+        
         img.addEventListener('mousedown', onMouseDown);
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
+        
+        // Prevent default drag behavior
+        img.addEventListener('dragstart', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
     }
 
     selectPanel(panel) {
@@ -1051,17 +1082,27 @@ class ComicCreator {
                 this.currentPanel = null;
             }
 
-            // Add a temporary style to hide selection styles during download
+            // Add a temporary style to hide selection styles and shadows during download
             const tempStyle = document.createElement('style');
             tempStyle.innerHTML = `
-                .comic-panel { border-color: #2c3e50 !important; }
-                .comic-panel:hover { border-color: #2c3e50 !important; }
+                .comic-panel { 
+                    border-color: #2c3e50 !important; 
+                    box-shadow: none !important;
+                    transform: none !important;
+                }
+                .comic-panel:hover { 
+                    border-color: #2c3e50 !important;
+                    box-shadow: none !important;
+                }
                 .comic-panel.selected { 
                     border-color: #2c3e50 !important;
                     box-shadow: none !important;
                 }
                 .comic-panel img {
                     cursor: default !important;
+                }
+                #comic-canvas {
+                    box-shadow: none !important;
                 }
             `;
             document.head.appendChild(tempStyle);
@@ -1259,6 +1300,75 @@ class ComicCreator {
         // Update page indicator and navigation buttons
         this.updatePageIndicator();
         this.updateNavigationButtons();
+    }
+
+    setupReorderDrag(container) {
+        // Remove the dragstart listener since it's handled in setupDragAndDrop
+        container.addEventListener('dragend', () => {
+            container.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+        });
+
+        container.addEventListener('dragenter', (e) => {
+            e.preventDefault();
+            if (!container.classList.contains('dragging')) {
+                container.classList.add('drag-over');
+            }
+        });
+
+        container.addEventListener('dragleave', () => {
+            container.classList.remove('drag-over');
+        });
+
+        container.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = e.target.closest('.comic-panel') ? 'copy' : 'move';
+        });
+
+        container.addEventListener('drop', (e) => {
+            e.preventDefault();
+            container.classList.remove('drag-over');
+            const draggedId = e.dataTransfer.getData('reorder/id');
+            if (draggedId && draggedId !== container.dataset.imageId) {
+                this.reorderImages(draggedId, container.dataset.imageId);
+            }
+        });
+    }
+
+    setupGridDropZone(grid) {
+        grid.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            const draggingElement = document.querySelector('.dragging');
+            if (draggingElement) {
+                const siblings = [...grid.querySelectorAll('.thumbnail-container:not(.dragging)')];
+                const nextSibling = siblings.find(sibling => {
+                    const rect = sibling.getBoundingClientRect();
+                    return e.clientY < rect.top + rect.height / 2;
+                });
+                if (nextSibling) {
+                    grid.insertBefore(draggingElement, nextSibling);
+                } else {
+                    grid.appendChild(draggingElement);
+                }
+            }
+        });
+    }
+
+    reorderImages(fromId, toId) {
+        const fromIndex = this.uploadedImages.findIndex(img => String(img.id) === fromId);
+        const toIndex = this.uploadedImages.findIndex(img => String(img.id) === toId);
+        
+        if (fromIndex !== -1 && toIndex !== -1) {
+            // Reorder the array
+            const [movedImage] = this.uploadedImages.splice(fromIndex, 1);
+            this.uploadedImages.splice(toIndex, 0, movedImage);
+            
+            // Update the display
+            this.updateImageLibrary();
+        }
     }
 }
 

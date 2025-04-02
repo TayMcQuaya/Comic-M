@@ -1,25 +1,48 @@
 :root {
-    --primary-color: #4a90e2;
-    --secondary-color: #2c3e50;
-    --background-color: #f5f6fa;
-    --text-color: #2c3e50;
-    --border-color: #dcdde1;
-    --shadow-color: rgba(0, 0, 0, 0.1);
-    --panel-border-color: #2c3e50;
-    --panel-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+    /* Main theme colors - Manga/Comic inspired */
+    --primary-color: #FF3B3B;      /* Vibrant red for emphasis */
+    --secondary-color: #FF8A00;    /* Warm orange for accents */
+    --accent-color: #FFD700;       /* Gold for highlights */
+    --background-color: #1A1A1A;   /* Deep black for background */
+    --card-bg: #2D2D2D;           /* Darker gray for cards */
+    --sidebar-bg: #252525;        /* Dark gray for sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #B8B8B8;       /* Light gray for secondary text */
+    --text-bright: #FFD700;      /* Gold for emphasis */
+    
+    /* UI element colors */
+    --border-color: #404040;      /* Medium gray for borders */
+    --input-bg: #333333;         /* Slightly lighter gray for inputs */
+    --hover-color: #3D3D3D;      /* Hover state color */
+    --active-color: #FF3B3B;     /* Active state uses primary color */
+    
+    /* Feedback colors */
+    --success-color: #00FF66;     /* Bright green */
+    --warning-color: #FFD700;     /* Gold */
+    --danger-color: #FF3B3B;      /* Matches primary */
+    
+    /* Effects */
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --panel-border-color: #FF3B3B;
 }
 
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) var(--card-bg);
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    line-height: 1.6;
-    color: var(--text-color);
+    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
+    -webkit-font-smoothing: antialiased;
     background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
     min-height: 100vh;
 }
 
@@ -30,17 +53,24 @@ body {
 .page {
     display: none;
     padding: 1rem;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
+    overflow-y: auto; /* Enable scrolling by default for all pages */
 }
 
 .page.active {
     display: block;
 }
 
+/* Disable scrolling specifically for the editor page */
+#editor-page.page {
+    overflow: hidden; /* Disable scrolling for editor page */
+    height: 100vh; /* Fixed height for editor page */
+}
+
 /* Upload Page */
 #upload-page {
     text-align: center;
+    padding-bottom: 2rem;
 }
 
 #upload-page h1 {
@@ -53,13 +83,24 @@ body {
     max-width: 1000px;
     margin: 0 auto;
     padding: 2rem;
-    background-color: white;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
     border-radius: 10px;
     box-shadow: 0 2px 4px var(--shadow-color);
+    color: var(--text-color);
+}
+
+.upload-section h2 {
+    color: var(--text-bright);
+    font-size: 2rem;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--shadow-color);
 }
 
 .upload-area {
     border: 3px dashed var(--border-color);
+    background: var(--card-bg);
     border-radius: 10px;
     padding: 1.5rem;
     margin: 1rem 0;
@@ -69,8 +110,8 @@ body {
 }
 
 .upload-area:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(74, 144, 226, 0.05);
+    border-color: var(--accent-color);
+    transform: scale(1.02);
 }
 
 .upload-area i {
@@ -88,9 +129,18 @@ body {
 .image-library {
     margin-top: 2rem;
     padding: 1rem;
-    background-color: white;
+    background-color: var(--card-bg);
     border-radius: 5px;
     box-shadow: 0 2px 4px var(--shadow-color);
+    border: 1px solid var(--border-color);
+}
+
+.image-library h3 {
+    color: var(--text-bright);
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--shadow-color);
 }
 
 .thumbnails-grid {
@@ -98,23 +148,44 @@ body {
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 1rem;
     padding: 1rem;
-    max-height: 400px;
+    max-height: 60vh;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
 }
 
 .thumbnail-container {
     position: relative;
     width: 100%;
-    background: white;
+    background: var(--card-bg);
     border-radius: 4px;
     box-shadow: 0 2px 4px var(--shadow-color);
     cursor: move;
     transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid var(--border-color);
+    transform-origin: center;
+    user-select: none;
+}
+
+.thumbnail-container.dragging {
+    opacity: 1;
+    cursor: grabbing;
+    position: relative;
+    z-index: 1000;
+    transform: scale(1.05) rotate(2deg);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.thumbnail-container.drag-over {
+    transform: scale(0.95);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-color);
 }
 
 .thumbnail-container:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px var(--shadow-color);
+    transform: scale(1.02) rotate(-1deg);
+    border-color: var(--accent-color);
+    box-shadow: 4px 4px 0 var(--shadow-color);
 }
 
 .thumbnail-container img {
@@ -138,7 +209,7 @@ body {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 68, 68, 0.9);
     border: none;
     border-radius: 50%;
     width: 30px;
@@ -148,16 +219,19 @@ body {
     justify-content: center;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.2s, background-color 0.2s;
+    transition: opacity 0.2s;
+    color: #FFFF00;
 }
 
 .thumbnail-container:hover .delete-btn {
     opacity: 1;
+    background: rgba(255, 68, 68, 0.9);
+    color: #FFFF00;
 }
 
-.delete-btn:hover {
+.thumbnail-container .delete-btn:hover {
     background: #ff4444;
-    color: white;
+    color: #FFFF00;
 }
 
 /* Layout Selection Page */
@@ -165,11 +239,29 @@ body {
     display: flex;
     align-items: center;
     gap: 2rem;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: white;
+    margin-bottom: 3rem;
+    padding: 1.5rem;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
     border-radius: 10px;
     box-shadow: 0 2px 4px var(--shadow-color);
+    color: var(--text-color);
+    text-align: center;
+    justify-content: center;
+    width: 90%;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    transform: scale(0.95);
+}
+
+.page-header h2 {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--shadow-color);
+    margin: 0;
 }
 
 .layout-grid {
@@ -177,34 +269,170 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
     padding: 1rem;
+    max-width: 1400px;
+    width: 90%;
+    margin: 0 auto;
+    padding-bottom: 2rem;
 }
 
 .layout-option {
-    background: white;
+    background: var(--card-bg);
+    border: 3px solid var(--border-color);
+    border-radius: 12px;
     padding: 1.5rem;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px var(--shadow-color);
     cursor: pointer;
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 4px 4px 0 var(--shadow-color);
+    transform: translate(-4px, -4px);
 }
 
 .layout-option:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px var(--shadow-color);
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 var(--shadow-color);
+    border-color: var(--accent-color);
+}
+
+.layout-option.selected {
+    border-color: var(--accent-color);
+    background: var(--hover-color);
 }
 
 .layout-preview {
-    margin: 1rem 0;
-    border: 2px solid var(--border-color);
-    border-radius: 4px;
-    padding: 10px;
-    background: #f8f9fa;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    width: 100%;
+    aspect-ratio: 1;
+    display: grid;
+    gap: 4px;
 }
 
 .layout-preview .preview-panel {
-    border: 2px solid #2c3e50 !important;
-    background: white !important;
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.layout-option h3 {
+    color: var(--text-bright);
+    font-size: 1.2rem;
+    margin: 1rem 0 0.5rem;
+    font-weight: 500;
+}
+
+.layout-option p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.start-button {
+    background: var(--primary-color);
+    color: var(--text-bright);
+    border: none;
+    border-radius: 8px;
+    padding: 1rem 2.5rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-top: 6rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 0.5px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.start-button:hover {
+    background: var(--secondary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.start-button:disabled {
+    background: var(--border-color);
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Layout preview grid variations */
+.layout-preview.grid-2x2 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+}
+
+.layout-preview.grid-3x3 {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+}
+
+.layout-preview.grid-1x2 {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 1fr;
+}
+
+.layout-preview.grid-2x1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, 1fr);
+}
+
+.layout-preview.grid-1x3 {
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+}
+
+.layout-preview.grid-3x1 {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(3, 1fr);
+}
+
+/* Back button on first page */
+.back-to-layouts {
+    position: absolute;
+    top: 2rem;
+    left: 2rem;
+    background: var(--card-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.8rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.back-to-layouts:hover {
+    background: var(--hover-color);
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.back-to-layouts i {
+    font-size: 1.2rem;
+}
+
+/* Loading state */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--background-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    color: var(--accent-color);
+    font-size: 2rem;
 }
 
 /* Comic Editor Page */
@@ -213,10 +441,12 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1.5rem;
-    background: white;
+    background: var(--card-bg);
     border-radius: 10px;
     box-shadow: 0 2px 4px var(--shadow-color);
     margin-bottom: 0.5rem;
+    border-bottom: 3px solid var(--border-color);
+    box-shadow: 0 4px 0 var(--shadow-color);
 }
 
 .editor-tools {
@@ -238,7 +468,7 @@ body {
 }
 
 .editor-sidebar {
-    background: white;
+    background: var(--sidebar-bg);
     padding: 0.75rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -253,11 +483,13 @@ body {
 
 .editor-sidebar h3 {
     margin-bottom: 1rem;
-    color: var(--text-color);
+    color: var(--text-bright);
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--shadow-color);
 }
 
 .comic-canvas-container {
-    background: #f0f0f0;
+    background: var(--background-color);
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -271,13 +503,13 @@ body {
 
 #comic-canvas {
     position: relative;
-    background: white;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    background: var(--card-bg);
+    box-shadow: 8px 8px 0 var(--shadow-color);
     margin: 20px auto 0;
     width: 700px;
     height: 700px;
     padding: 40px;
-    border: 1px solid #ddd;
+    border: 3px solid var(--border-color);
     transform: translateY(-80px);
 }
 
@@ -301,13 +533,43 @@ body {
 
 .comic-panel {
     position: absolute;
-    background: white;
-    border: 3px solid var(--panel-border-color, #2c3e50);
+    background: #E0E0E0; /* Changed to bright grey for empty panels */
+    border: 3px solid #000000; /* Black border for unselected panels */
     overflow: hidden;
     transition: all 0.3s ease;
     user-select: none;
-    box-shadow: var(--panel-shadow, 2px 2px 6px rgba(0, 0, 0, 0.1));
+    box-shadow: 5px 5px 0 var(--shadow-color);
     transform: scale(1.02);
+}
+
+.comic-panel.has-image {
+    background: var(--card-bg); /* Dark background only when panel has an image */
+}
+
+/* Remove hover color change */
+.comic-panel:hover {
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Make selected panel red */
+.comic-panel.selected {
+    border-color: #FF0000; /* Bright red for selected panels */
+    box-shadow: 8px 8px 0 var(--shadow-color);
+}
+
+/* Update keyboard interaction styles to match new color scheme */
+.comic-panel:focus,
+.comic-panel:focus-visible {
+    outline: none;
+    border-color: #FF0000;
+    box-shadow: 0 0 0 2px #FF0000;
+}
+
+.comic-panel.selected:focus,
+.comic-panel.selected:focus-visible {
+    outline: none;
+    border-color: #FF0000;
+    box-shadow: 8px 8px 0 var(--shadow-color), 0 0 0 2px #FF0000;
 }
 
 .comic-panel::before {
@@ -320,17 +582,6 @@ body {
     border: 1px solid rgba(0, 0, 0, 0.1);
     pointer-events: none;
     z-index: 2;
-}
-
-.comic-panel:hover {
-    border-color: var(--primary-color);
-    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.15);
-}
-
-.comic-panel.selected {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px var(--primary-color),
-                4px 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .comic-panel img {
@@ -349,22 +600,48 @@ body {
     pointer-events: none;
     user-select: none;
     -webkit-user-drag: none;
+    /* Prevent any transparency during drag */
+    opacity: 1 !important;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .comic-panel.selected img {
     pointer-events: auto;
     cursor: grab;
+    /* Ensure no transparency when selected */
+    opacity: 1 !important;
 }
 
 .comic-panel.selected img:active {
     cursor: grabbing;
+    /* Ensure no transparency when dragging */
+    opacity: 1 !important;
+}
+
+/* Override any browser default drag behavior */
+img:not([draggable="true"]),
+img[draggable="false"] {
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+    user-drag: none;
+}
+
+/* Ensure no transparency during drag operations */
+*:-webkit-drag,
+*:-moz-drag,
+*:drag {
+    opacity: 1 !important;
 }
 
 .panel-controls {
-    background: white;
+    background: var(--card-bg);
     padding: 0.4rem;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 4px 4px 0 var(--shadow-color);
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
@@ -374,61 +651,64 @@ body {
     top: 0;
     transform: scale(0.95);
     transform-origin: top right;
+    border: 2px solid var(--border-color);
+    padding-right: 12px;
+    margin-right: -6px;
+    font-weight: bold;
 }
 
 .control-group {
-    background: #f8f9fa;
+    background: var(--input-bg);
     padding: 0.3rem;
     border-radius: 6px;
     margin-bottom: 0.2rem;
+    border: 2px solid var(--border-color);
 }
 
 .control-group h4 {
     margin-bottom: 0.2rem;
-    color: var(--secondary-color);
+    color: var(--text-color);
     font-size: 0.85rem;
 }
 
+/* Position Controls */
 .position-controls {
     display: grid;
     grid-template-areas:
         ". up ."
         "left . right"
         ". down .";
-    gap: 0.15rem;
+    gap: 5px;
+    background: var(--input-bg);
+    padding: 8px;
+    border-radius: 8px;
     width: 90px;
     margin: 0.2rem auto;
-    background: white;
-    padding: 0.3rem;
-    border-radius: 4px;
 }
 
 .position-btn {
-    padding: 0.3rem;
-    border: 1px solid var(--border-color);
-    background: white;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    background: var(--card-bg);
+    border: 2px solid var(--accent-color);
+    color: var(--accent-color);
+    padding: 0;
     width: 24px;
     height: 24px;
+    font-size: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.8rem;
+    margin: 0;
+    border-radius: 4px;
 }
 
-.position-btn:hover {
-    background: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-    transform: translateY(-1px);
+.position-btn i {
+    font-size: 14px;
 }
 
-.position-btn.up { grid-area: up; }
-.position-btn.down { grid-area: down; }
-.position-btn.left { grid-area: left; }
-.position-btn.right { grid-area: right; }
+.position-btn.up { grid-area: up; justify-self: center; }
+.position-btn.down { grid-area: down; justify-self: center; }
+.position-btn.left { grid-area: left; justify-self: start; }
+.position-btn.right { grid-area: right; justify-self: end; }
 
 /* Update thumbnails grid for editor sidebar */
 .editor-sidebar .thumbnails-grid {
@@ -440,12 +720,14 @@ body {
     border-radius: 8px;
     overflow-y: auto;
     max-height: calc(100vh - 180px);
+    padding-right: 12px;
+    margin-right: -6px;
 }
 
 .editor-sidebar .thumbnail-container {
     position: relative;
     width: 100%;
-    background: white;
+    background: var(--card-bg);
     border-radius: 6px;
     padding: 0.25rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -468,7 +750,7 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 59, 59, 0.7);
     pointer-events: none;
     border-radius: 6px;
 }
@@ -479,16 +761,16 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    color: var(--primary-color);
-    font-size: 1.5rem;
+    color: var(--text-bright);
+    font-size: 3rem;
     z-index: 1;
     pointer-events: none;
+    text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
 }
 
 .editor-sidebar .thumbnail-container.dragging {
-    opacity: 0.7;
     transform: scale(0.95);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .editor-sidebar .thumbnail-container img {
@@ -519,10 +801,12 @@ body {
 
 /* Properties Panel */
 .properties-panel {
-    background: white;
+    background: var(--card-bg);
     padding: 1rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px var(--shadow-color);
+    padding-right: 12px;
+    margin-right: -6px;
 }
 
 .properties-section {
@@ -546,16 +830,24 @@ body {
 .text-controls input {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid var(--border-color);
+    border: 2px solid var(--border-color);
     border-radius: 4px;
+    background: var(--input-bg);
+    color: var(--text-color);
+    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: var(--accent-color);
+    box-shadow: 3px 3px 0 var(--shadow-color);
 }
 
 /* Buttons */
 .primary-btn,
 .tool-btn {
     background: var(--primary-color);
-    color: white;
-    border: none;
+    color: var(--text-bright);
+    border: 2px solid var(--text-bright);
     padding: 0.6rem 1.2rem;
     border-radius: 5px;
     cursor: pointer;
@@ -563,13 +855,23 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    transition: all 0.3s;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    font-weight: bold;
+    box-shadow: 3px 3px 0 var(--text-bright);
+    transform: translate(-3px, -3px);
 }
 
 .primary-btn:hover,
 .tool-btn:hover {
-    background: #357abd;
-    transform: translateY(-1px);
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 var(--text-bright);
+    background: var(--secondary-color);
+}
+
+/* Specific style for the upload page button */
+#upload-page .primary-btn {
+    margin-top: 3rem;
 }
 
 .primary-btn:disabled {
@@ -583,11 +885,13 @@ body {
     border: none;
     color: var(--secondary-color);
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 1.2rem;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.8rem;
     transition: color 0.3s;
+    font-weight: bold;
+    padding: 0.5rem 1rem;
 }
 
 .back-btn:hover {
@@ -596,13 +900,25 @@ body {
 
 /* Drag and Drop Styles */
 .dragging {
-    opacity: 0.5;
     transform: scale(0.95);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .drop-target {
     border: 2px dashed var(--primary-color) !important;
     background: rgba(74, 144, 226, 0.1) !important;
+}
+
+/* Update editor sidebar thumbnail container dragging state */
+.editor-sidebar .thumbnail-container.dragging {
+    transform: scale(0.95);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure images remain fully opaque during drag */
+.dragging img,
+.thumbnail-container.dragging img {
+    opacity: 1 !important;
 }
 
 /* Responsive Design */
@@ -645,10 +961,11 @@ body {
 
 .page-indicator {
     font-size: 1rem;
-    font-weight: 500;
-    color: var(--secondary-color);
+    font-weight: bold;
+    color: var(--text-bright);
     min-width: 100px;
     text-align: center;
+    text-shadow: 2px 2px 0 var(--shadow-color);
 }
 
 /* Style for disabled navigation buttons */
@@ -660,6 +977,7 @@ body {
 
 /* Update upload area to be always accessible */
 .editor-sidebar .upload-area {
+    background: var(--input-bg);
     border: 2px dashed var(--border-color);
     border-radius: 8px;
     padding: 0.75rem;
@@ -667,12 +985,11 @@ body {
     cursor: pointer;
     transition: all 0.3s ease;
     text-align: center;
-    background: var(--background-color);
 }
 
 .editor-sidebar .upload-area:hover {
-    border-color: var(--primary-color);
-    background-color: rgba(74, 144, 226, 0.05);
+    border-color: var(--accent-color);
+    background: var(--hover-color);
     transform: translateY(-1px);
 }
 
@@ -698,7 +1015,7 @@ body {
 
 .delete-panel-image-btn {
     background: #ff4444;
-    color: white;
+    color: #FFFF00;
     border: none;
     padding: 0.8rem;
     border-radius: 5px;
@@ -718,6 +1035,7 @@ body {
 
 .delete-panel-image-btn i {
     font-size: 1rem;
+    color: #FFFF00;
 }
 
 /* Update zoom group styling */
@@ -748,38 +1066,43 @@ body {
 .background-styles {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 4px;
-    margin-bottom: 0.4rem;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 0 4px;
+    width: 100%;
 }
 
 .style-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 4px;
+    padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    background: white;
+    background: var(--card-bg);
     cursor: pointer;
     transition: all 0.3s ease;
+    color: var(--text-color);
+    width: 100%;
+}
+
+.style-btn .preview {
+    width: 60px;
+    height: 45px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    margin-bottom: 4px;
+    background: var(--input-bg);
 }
 
 .style-btn:hover {
-    border-color: var(--primary-color);
+    border-color: var(--accent-color);
     transform: translateY(-2px);
 }
 
 .style-btn.active {
-    border-color: var(--primary-color);
-    background: var(--primary-color-light);
-}
-
-.style-btn .preview {
-    width: 40px;
-    height: 30px;
-    border: 1px solid #ddd;
-    border-radius: 3px;
-    margin-bottom: 2px;
+    border-color: var(--accent-color);
+    background: var(--hover-color);
 }
 
 /* Background Styles */
@@ -824,7 +1147,13 @@ body {
 }
 
 #comic-canvas.gradient-fade {
-    background: linear-gradient(135deg, white 0%, #f0f0f0 100%);
+    background: linear-gradient(135deg, 
+        #ffffff 0%,
+        #e0e0e0 25%,
+        #c0c0c0 50%,
+        #a0a0a0 75%,
+        #808080 100%
+    );
 }
 
 /* Preview styles */
@@ -863,42 +1192,51 @@ body {
 }
 
 .preview.gradient-fade {
-    background: linear-gradient(135deg, white 0%, #f0f0f0 100%);
+    background: linear-gradient(135deg, 
+        #ffffff 0%,
+        #e0e0e0 25%,
+        #c0c0c0 50%,
+        #a0a0a0 75%,
+        #808080 100%
+    );
 }
 
-/* Ensure the step size control stays with position controls */
+/* Step size control */
 .step-size-control {
-    background: white;
-    padding: 0.3rem;
+    background: var(--card-bg);
+    padding: 0.5rem;
     border-radius: 4px;
     margin-bottom: 0.2rem;
     text-align: center;
     font-size: 0.85rem;
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
 }
 
 /* Update scrollbar styles to be more visible */
 .panel-controls::-webkit-scrollbar {
-    width: 4px;
+    width: 10px;
+    height: 10px;
 }
 
 .panel-controls::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 2px;
+    background: var(--background-color);
 }
 
 .panel-controls::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 2px;
+    background: var(--border-color);
+    border: 2px solid var(--background-color);
+    border-radius: 10px;
 }
 
 .panel-controls::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: var(--accent-color);
 }
 
 .danger-btn {
-    background-color: #dc3545;
-    color: white;
-    border: none;
+    background: var(--danger-color);
+    color: var(--text-color);
+    border: 2px solid var(--text-bright);
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
@@ -906,13 +1244,378 @@ body {
     align-items: center;
     gap: 8px;
     transition: background-color 0.2s;
+    box-shadow: 3px 3px 0 var(--shadow-color);
+    transform: translate(-3px, -3px);
 }
 
 .danger-btn:hover {
-    background-color: #c82333;
+    transform: translate(0, 0);
+    box-shadow: 0 0 0 var(--shadow-color);
 }
 
 .danger-btn:disabled {
     background-color: #6c757d;
     cursor: not-allowed;
+}
+
+/* Panel Property Sections */
+.panel-properties {
+    background: var(--card-bg);
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px var(--shadow-color);
+}
+
+.panel-properties h3 {
+    color: var(--text-bright);
+    margin: 0 0 1.2rem 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid var(--border-color);
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--shadow-color);
+}
+
+.panel-properties .control-group {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.panel-properties .control-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.panel-properties .control-group h4 {
+    color: var(--primary-color);
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.panel-properties .control-group h4 i {
+    color: var(--secondary-color);
+    font-size: 1.1rem;
+}
+
+/* Reset Zoom Button */
+.reset-zoom-btn {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.reset-zoom-btn:hover {
+    background: var(--hover-color);
+    border-color: var(--secondary-color);
+    color: var(--secondary-color);
+    transform: translateY(-1px);
+}
+
+.reset-zoom-btn i {
+    font-size: 1rem;
+}
+
+/* Zoom Controls */
+.zoom-group {
+    background: var(--background-color);
+    padding: 1.2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.zoom-control {
+    width: 100%;
+    margin: 10px 0;
+    accent-color: var(--secondary-color);
+    height: 6px;
+    -webkit-appearance: none;
+    background: var(--border-color);
+    border-radius: 3px;
+    outline: none;
+}
+
+.zoom-control::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-color);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid var(--text-bright);
+    box-shadow: 2px 2px 0 var(--shadow-color);
+}
+
+.zoom-control::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    background: var(--secondary-color);
+}
+
+.zoom-value {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    font-weight: 500;
+    text-align: center;
+    margin-top: 5px;
+}
+
+/* Step Size Input */
+.step-size-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+}
+
+.step-size-input:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.1);
+}
+
+.step-size-input::placeholder {
+    color: #999;
+}
+
+/* Make navbar fonts bold */
+.editor-header,
+.editor-tools,
+.tool-btn,
+.page-navigation,
+.page-controls,
+.page-actions,
+.page-indicator,
+.primary-btn,
+.back-btn {
+    font-weight: 700;
+}
+
+.editor-sidebar h3,
+.panel-controls h4,
+.panel-properties h3,
+.panel-properties h4 {
+    font-weight: 700;
+}
+
+/* First page and layout selection styles */
+.welcome-container {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.welcome-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.welcome-header h1 {
+    color: var(--text-bright);
+    font-size: 3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    letter-spacing: 0.5px;
+    text-shadow: 4px 4px 0 var(--shadow-color);
+    text-transform: uppercase;
+}
+
+.welcome-header p {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Comic-style headers */
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Comic Sans MS', 'Comic Neue', cursive;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Style text labels */
+label {
+    color: var(--text-bright);
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+}
+
+/* Container for layout selection page */
+#layout-selection-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 4rem 2rem;
+}
+
+/* Custom Scrollbar Styles - Global */
+*::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--card-bg);
+    border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--secondary-color);
+    border: 3px solid var(--card-bg);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color);
+}
+
+*::-webkit-scrollbar-corner {
+    background: var(--card-bg);
+}
+
+/* Specific scrollbar styles for different components */
+.thumbnails-grid,
+.editor-sidebar,
+.panel-controls,
+.properties-panel,
+.comic-canvas-container {
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+}
+
+/* Update the editor sidebar thumbnails grid scrollbar */
+.editor-sidebar .thumbnails-grid {
+    padding-right: 12px; /* Add space for scrollbar */
+    margin-right: -6px; /* Offset the padding */
+}
+
+/* Panel controls scrollbar adjustment */
+.panel-controls {
+    padding-right: 12px;
+    margin-right: -6px;
+}
+
+/* Properties panel scrollbar adjustment */
+.properties-panel {
+    padding-right: 12px;
+    margin-right: -6px;
+}
+
+/* Panel Settings Text Styles */
+.panel-controls {
+    font-weight: bold;
+}
+
+.panel-controls .properties-panel h3,
+.panel-controls .panel-settings h3,
+.panel-controls .image-controls h3,
+.panel-controls .position-controls h3,
+.panel-controls .background-style h3,
+.panel-properties h3,
+.panel-settings h3,
+.image-controls h3,
+.position-controls h3,
+.background-style h3,
+.control-group h3 {
+    color: var(--text-bright) !important;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 var(--shadow-color);
+    font-weight: bold;
+    text-align: center;
+    padding: 0.5rem 0;
+}
+
+.control-group h4,
+.panel-properties .control-group h4,
+.properties-panel h4 {
+    color: var(--text-bright) !important;
+    margin: 0.5rem 0;
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 var(--shadow-color);
+}
+
+/* Style for control groups to ensure proper spacing and alignment */
+.control-group {
+    background: var(--input-bg);
+    padding: 0.8rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    border: 2px solid var(--border-color);
+    text-align: center;
+    font-weight: bold;
+}
+
+/* Make all text in panel controls bold */
+.panel-controls label,
+.panel-controls p,
+.panel-controls span,
+.panel-controls div,
+.step-size-control,
+.zoom-value {
+    font-weight: bold;
+}
+
+/* Update other buttons */
+.primary-btn, 
+.danger-btn,
+.tool-btn,
+.style-btn,
+.position-btn,
+.reset-zoom-btn {
+    color: #FFFF00 !important;
+}
+
+.primary-btn i, 
+.danger-btn i,
+.tool-btn i,
+.style-btn i,
+.position-btn i,
+.reset-zoom-btn i {
+    color: #FFFF00 !important;
+}
+
+.delete-btn:hover {
+    background: #ff4444;
+    color: #FFFF00;
+}
+
+/* Ensure thumbnail delete buttons also have yellow text */
+.thumbnail-container .delete-btn {
+    color: #FFFF00;
 }
