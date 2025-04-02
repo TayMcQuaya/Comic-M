@@ -788,7 +788,6 @@ class ComicCreator {
         canvas.style.width = '700px';
         canvas.style.height = '700px';
         canvas.style.position = 'relative';
-        canvas.style.backgroundColor = 'white';
         canvas.style.margin = '0 auto';
         canvas.style.display = 'block';
 
