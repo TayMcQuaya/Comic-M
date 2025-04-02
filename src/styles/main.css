@@ -230,6 +230,9 @@ body {
     gap: 0.75rem;
     padding: 0.5rem;
     height: calc(100vh - 70px);
+    align-items: start;
+    overflow-y: auto;
+    min-height: 900px;
 }
 
 .editor-sidebar {
@@ -241,6 +244,8 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    position: sticky;
+    top: 0;
     max-height: calc(100vh - 80px);
 }
 
@@ -250,8 +255,8 @@ body {
 }
 
 .comic-canvas-container {
-    background: #f8f9fa;
-    padding: 1rem;
+    background: #f0f0f0;
+    padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     overflow: auto;
@@ -259,15 +264,37 @@ body {
     justify-content: center;
     align-items: flex-start;
     height: 100%;
+    padding-top: 0;
 }
 
 #comic-canvas {
     position: relative;
     background: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    margin: 0 auto;
-    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    margin: 20px auto 0;
+    width: 700px;
+    height: 700px;
+    padding: 40px;
     border: 1px solid #ddd;
+    transform: translateY(-80px);
+}
+
+/* Add a subtle paper texture effect to the comic canvas */
+#comic-canvas::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, 
+        rgba(255,255,255,0.2) 25%, 
+        transparent 25%, 
+        transparent 75%, 
+        rgba(255,255,255,0.2) 75%, 
+        rgba(255,255,255,0.2));
+    background-size: 100px 100px;
+    pointer-events: none;
 }
 
 .comic-panel {
@@ -278,6 +305,7 @@ body {
     transition: all 0.3s ease;
     user-select: none;
     box-shadow: var(--panel-shadow, 2px 2px 6px rgba(0, 0, 0, 0.1));
+    transform: scale(1.02);
 }
 
 .comic-panel::before {
@@ -335,6 +363,9 @@ body {
     padding: 0.75rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .control-group {
@@ -342,10 +373,11 @@ body {
     padding: 0.75rem;
     border-radius: 5px;
     margin-bottom: 1rem;
+    position: relative;
 }
 
 .control-group:last-child {
-    margin-bottom: 0;
+    margin-bottom: 1rem;
 }
 
 .control-group h4 {
@@ -370,6 +402,9 @@ body {
     gap: 0.2rem;
     width: 120px;
     margin: 0.5rem auto;
+    background: white;
+    padding: 0.5rem;
+    border-radius: 5px;
 }
 
 .position-btn {
@@ -715,4 +750,134 @@ body {
 
 .loading-indicator i {
     font-size: 1.5rem;
+}
+
+.background-styles {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 1rem;
+}
+
+.style-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.style-btn:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.style-btn.active {
+    border-color: var(--primary-color);
+    background: var(--primary-color-light);
+}
+
+.style-btn .preview {
+    width: 60px;
+    height: 40px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 4px;
+}
+
+/* Background Styles */
+#comic-canvas.classic-white {
+    background: white;
+}
+
+#comic-canvas.vintage-paper {
+    background-color: #f4e4bc;
+    background-image: 
+        linear-gradient(rgba(255,255,255,.2) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(255,255,255,.2) 2px, transparent 2px),
+        linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+    background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
+    background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
+}
+
+#comic-canvas.dotted-pattern {
+    background-color: white;
+    background-image: radial-gradient(#2c3e50 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+#comic-canvas.halftone {
+    background-color: white;
+    background-image: 
+        radial-gradient(circle at 100% 150%, #f0f0f0 24%, white 25%, white 28%, #f0f0f0 29%, #f0f0f0 36%, white 36%, white 40%, transparent 40%, transparent),
+        radial-gradient(circle at 0 150%, #f0f0f0 24%, white 25%, white 28%, #f0f0f0 29%, #f0f0f0 36%, white 36%, white 40%, transparent 40%, transparent),
+        radial-gradient(circle at 50% 100%, white 10%, #f0f0f0 11%, #f0f0f0 23%, white 24%, white 30%, #f0f0f0 31%, #f0f0f0 43%, white 44%, white 50%, #f0f0f0 51%, #f0f0f0 63%, white 64%, white 71%, transparent 71%, transparent),
+        radial-gradient(circle at 100% 50%, white 5%, #f0f0f0 6%, #f0f0f0 15%, white 16%, white 20%, #f0f0f0 21%, #f0f0f0 30%, white 31%, white 35%, #f0f0f0 36%, #f0f0f0 45%, white 46%, white 49%, transparent 50%, transparent),
+        radial-gradient(circle at 0 50%, white 5%, #f0f0f0 6%, #f0f0f0 15%, white 16%, white 20%, #f0f0f0 21%, #f0f0f0 30%, white 31%, white 35%, #f0f0f0 36%, #f0f0f0 45%, white 46%, white 49%, transparent 50%, transparent);
+    background-size: 100px 50px;
+}
+
+#comic-canvas.graph-paper {
+    background-color: white;
+    background-image:
+        linear-gradient(rgba(44, 62, 80, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44, 62, 80, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+#comic-canvas.gradient-fade {
+    background: linear-gradient(135deg, white 0%, #f0f0f0 100%);
+}
+
+/* Preview styles */
+.preview.classic-white {
+    background: white;
+}
+
+.preview.vintage-paper {
+    background-color: #f4e4bc;
+    background-image: 
+        linear-gradient(rgba(255,255,255,.2) 2px, transparent 2px),
+        linear-gradient(90deg, rgba(255,255,255,.2) 2px, transparent 2px);
+    background-size: 10px 10px;
+}
+
+.preview.dotted-pattern {
+    background-color: white;
+    background-image: radial-gradient(#2c3e50 0.5px, transparent 0.5px);
+    background-size: 5px 5px;
+}
+
+.preview.halftone {
+    background-color: white;
+    background-image: 
+        radial-gradient(circle at 100% 150%, #f0f0f0 24%, white 25%, white 28%, #f0f0f0 29%, #f0f0f0 36%, white 36%, white 40%, transparent 40%, transparent),
+        radial-gradient(circle at 0 150%, #f0f0f0 24%, white 25%, white 28%, #f0f0f0 29%, #f0f0f0 36%, white 36%, white 40%, transparent 40%, transparent);
+    background-size: 20px 10px;
+}
+
+.preview.graph-paper {
+    background-color: white;
+    background-image:
+        linear-gradient(rgba(44, 62, 80, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(44, 62, 80, 0.1) 1px, transparent 1px);
+    background-size: 5px 5px;
+}
+
+.preview.gradient-fade {
+    background: linear-gradient(135deg, white 0%, #f0f0f0 100%);
+}
+
+/* Ensure the step size control stays with position controls */
+.step-size-control {
+    background: white;
+    padding: 0.5rem;
+    border-radius: 5px;
+    margin-bottom: 0.5rem;
+    text-align: center;
 }

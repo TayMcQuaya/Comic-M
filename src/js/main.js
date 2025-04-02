@@ -380,6 +380,35 @@ class ComicCreator {
         // Clear existing controls
         controls.innerHTML = `
             <div class="control-group">
+                <h4 style="text-align: center;">Background Style</h4>
+                <div class="background-styles">
+                    <button class="style-btn" data-style="classic-white">
+                        <span class="preview classic-white"></span>
+                        Classic White
+                    </button>
+                    <button class="style-btn" data-style="vintage-paper">
+                        <span class="preview vintage-paper"></span>
+                        Vintage Paper
+                    </button>
+                    <button class="style-btn" data-style="dotted-pattern">
+                        <span class="preview dotted-pattern"></span>
+                        Dotted Pattern
+                    </button>
+                    <button class="style-btn" data-style="halftone">
+                        <span class="preview halftone"></span>
+                        Halftone
+                    </button>
+                    <button class="style-btn" data-style="graph-paper">
+                        <span class="preview graph-paper"></span>
+                        Graph Paper
+                    </button>
+                    <button class="style-btn" data-style="gradient-fade">
+                        <span class="preview gradient-fade"></span>
+                        Gradient Fade
+                    </button>
+                </div>
+            </div>
+            <div class="control-group">
                 <h4 style="text-align: center;">Image Controls</h4>
                 ${panel.querySelector('img') ? `
                     <button class="delete-panel-image-btn" style="width: 100%; margin-bottom: 1rem;">
@@ -475,6 +504,19 @@ class ComicCreator {
         // Add position control listeners
         controls.querySelectorAll('.position-btn').forEach(btn => {
             btn.addEventListener('click', () => this.handlePositionChange(btn, panel));
+        });
+
+        // Add background style event listeners
+        const styleButtons = controls.querySelectorAll('.style-btn');
+        styleButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const style = btn.dataset.style;
+                this.applyBackgroundStyle(style);
+                
+                // Update active state of buttons
+                styleButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
         });
     }
 
@@ -680,6 +722,7 @@ class ComicCreator {
         const layout = this.getLayoutConfig(this.selectedLayout);
         if (!layout) return;
 
+        // Navigate to editor page
         document.querySelector('#layout-page').classList.remove('active');
         document.querySelector('#editor-page').classList.add('active');
 
@@ -720,37 +763,63 @@ class ComicCreator {
             // Update image library
             this.updateImageLibrary();
         }
-
+        
         const canvas = document.querySelector('#comic-canvas');
         canvas.innerHTML = '';
         
         // Set canvas dimensions and center it
-        canvas.style.width = '600px';
-        canvas.style.height = '600px';
+        canvas.style.width = '700px';
+        canvas.style.height = '700px';
         canvas.style.position = 'relative';
         canvas.style.backgroundColor = 'white';
-        canvas.style.margin = '40px auto'; // Add margin to center vertically
-        canvas.style.display = 'block'; // Ensure block display for margin auto to work
+        canvas.style.margin = '0 auto';
+        canvas.style.display = 'block';
 
         // Create a container for the canvas with padding
         const canvasContainer = canvas.parentElement;
         if (canvasContainer && canvasContainer.classList.contains('comic-canvas-container')) {
-            canvasContainer.style.padding = '20px';
+            canvasContainer.style.padding = '2rem';
+            canvasContainer.style.paddingTop = '120px'; // Add more top padding
             canvasContainer.style.display = 'flex';
             canvasContainer.style.justifyContent = 'center';
-            canvasContainer.style.alignItems = 'center';
-            canvasContainer.style.minHeight = 'calc(100vh - 200px)'; // Account for header and other elements
+            canvasContainer.style.alignItems = 'flex-start';
+            canvasContainer.style.minHeight = 'calc(100vh - 100px)';
         }
+
+        // Calculate the available space for panels (accounting for padding)
+        const panelAreaWidth = 620; // 700px - (40px * 2) padding
+        const panelAreaHeight = 620; // 700px - (40px * 2) padding
+
+        // Define panel spacing
+        const panelGap = 12; // Increased from 10px for better spacing at larger size
 
         layout.panels.forEach(panel => {
             const div = document.createElement('div');
             div.className = 'comic-panel';
-            div.style.left = panel.x + '%';
-            div.style.top = panel.y + '%';
-            div.style.width = panel.width + '%';
-            div.style.height = panel.height + '%';
+            
+            // Calculate base positions (as percentages of the available area)
+            const baseX = panel.x * panelAreaWidth / 100;
+            const baseY = panel.y * panelAreaHeight / 100;
+            const baseWidth = panel.width * panelAreaWidth / 100;
+            const baseHeight = panel.height * panelAreaHeight / 100;
+
+            // Add spacing between panels by reducing their size slightly
+            // and adjusting their positions to maintain relative layout
+            const adjustedX = baseX + 40 + (panel.x > 0 ? panelGap / 2 : 0);
+            const adjustedY = baseY + 40 + (panel.y > 0 ? panelGap / 2 : 0);
+            const adjustedWidth = baseWidth - panelGap;
+            const adjustedHeight = baseHeight - panelGap;
+            
+            div.style.left = adjustedX + 'px';
+            div.style.top = adjustedY + 'px';
+            div.style.width = adjustedWidth + 'px';
+            div.style.height = adjustedHeight + 'px';
+            
             canvas.appendChild(div);
         });
+
+        // Save the current page state
+        this.saveCurrentPageState();
     }
 
     getLayoutConfig(layoutName) {
@@ -1009,6 +1078,21 @@ class ComicCreator {
                 this.selectPanel(currentSelectedPanel);
             }
         }
+    }
+
+    applyBackgroundStyle(style) {
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) return;
+
+        // Remove any existing background classes
+        const backgroundClasses = [
+            'classic-white', 'vintage-paper', 'dotted-pattern',
+            'halftone', 'graph-paper', 'gradient-fade'
+        ];
+        canvas.classList.remove(...backgroundClasses);
+
+        // Add the new style class
+        canvas.classList.add(style);
     }
 }
 
