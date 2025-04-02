@@ -387,7 +387,12 @@ class ComicCreator {
                     </button>
                 ` : ''}
                 <div class="zoom-group">
-                    <label>Zoom</label>
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+                        <label>Zoom</label>
+                        <button class="reset-zoom-btn" style="padding: 4px 8px; font-size: 14px;">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
                     <input type="range" class="zoom-control" min="50" max="200" value="100">
                     <span class="zoom-value">100%</span>
                 </div>
@@ -396,7 +401,13 @@ class ComicCreator {
                 <h4 style="text-align: center;">Position</h4>
                 <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
                     <label style="font-size: 16px;">Step Size: </label>
-                    <input type="number" class="step-size-input" value="3" min="1" max="20" style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
+                    <input type="number" 
+                           class="step-size-input" 
+                           value="1" 
+                           min="0.1" 
+                           max="20" 
+                           step="0.1" 
+                           style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
                 </div>
                 <div class="position-controls">
                     <button class="position-btn up"><i class="fas fa-chevron-up"></i></button>
@@ -433,6 +444,32 @@ class ComicCreator {
 
             // Add zoom event listener
             zoomControl.addEventListener('input', (e) => this.handleZoom(e, panel));
+        }
+
+        // Add reset zoom button listener
+        const resetZoomBtn = controls.querySelector('.reset-zoom-btn');
+        if (resetZoomBtn) {
+            resetZoomBtn.addEventListener('click', () => {
+                const img = panel.querySelector('img');
+                if (!img) return;
+
+                // Reset zoom to 100%
+                const initialScale = parseFloat(panel.dataset.initialScale) || 1;
+                img.style.transform = img.style.transform.replace(/scale\(.*?\)/, `scale(${initialScale})`);
+                panel.dataset.currentScale = initialScale;
+
+                // Update zoom control and value display
+                if (zoomControl) {
+                    zoomControl.value = 100;
+                    const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
+                    if (zoomValue) {
+                        zoomValue.textContent = '100%';
+                    }
+                }
+
+                // Save the current page state
+                this.saveCurrentPageState();
+            });
         }
 
         // Add position control listeners
@@ -487,9 +524,20 @@ class ComicCreator {
         const img = panel.querySelector('img');
         if (!img) return;
 
-        // Get step size from input
+        // Get and validate step size from input
         const stepSizeInput = document.querySelector('.step-size-input');
-        const step = stepSizeInput ? parseInt(stepSizeInput.value) || 3 : 3;
+        let step = 1; // Default value
+        
+        if (stepSizeInput) {
+            const inputValue = parseFloat(stepSizeInput.value);
+            // Ensure the value is a positive number and within bounds
+            if (!isNaN(inputValue) && inputValue >= 0.1 && inputValue <= 20) {
+                step = inputValue;
+            } else {
+                // Reset to default if invalid
+                stepSizeInput.value = "1";
+            }
+        }
 
         const direction = btn.classList.contains('up') ? 'up' :
                         btn.classList.contains('down') ? 'down' :
@@ -498,21 +546,21 @@ class ComicCreator {
         
         if (!direction) return;
 
-        const currentLeft = parseInt(img.style.left) || 50;
-        const currentTop = parseInt(img.style.top) || 50;
+        const currentLeft = parseFloat(img.style.left) || 50;
+        const currentTop = parseFloat(img.style.top) || 50;
 
         switch (direction) {
             case 'up':
-                img.style.top = `${currentTop - step}%`;
+                img.style.top = `${(currentTop - step).toFixed(1)}%`;
                 break;
             case 'down':
-                img.style.top = `${currentTop + step}%`;
+                img.style.top = `${(currentTop + step).toFixed(1)}%`;
                 break;
             case 'left':
-                img.style.left = `${currentLeft - step}%`;
+                img.style.left = `${(currentLeft - step).toFixed(1)}%`;
                 break;
             case 'right':
-                img.style.left = `${currentLeft + step}%`;
+                img.style.left = `${(currentLeft + step).toFixed(1)}%`;
                 break;
         }
 
@@ -676,11 +724,23 @@ class ComicCreator {
         const canvas = document.querySelector('#comic-canvas');
         canvas.innerHTML = '';
         
-        // Set canvas dimensions to maintain a square aspect ratio
+        // Set canvas dimensions and center it
         canvas.style.width = '600px';
         canvas.style.height = '600px';
         canvas.style.position = 'relative';
         canvas.style.backgroundColor = 'white';
+        canvas.style.margin = '40px auto'; // Add margin to center vertically
+        canvas.style.display = 'block'; // Ensure block display for margin auto to work
+
+        // Create a container for the canvas with padding
+        const canvasContainer = canvas.parentElement;
+        if (canvasContainer && canvasContainer.classList.contains('comic-canvas-container')) {
+            canvasContainer.style.padding = '20px';
+            canvasContainer.style.display = 'flex';
+            canvasContainer.style.justifyContent = 'center';
+            canvasContainer.style.alignItems = 'center';
+            canvasContainer.style.minHeight = 'calc(100vh - 200px)'; // Account for header and other elements
+        }
 
         layout.panels.forEach(panel => {
             const div = document.createElement('div');
