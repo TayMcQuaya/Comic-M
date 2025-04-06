@@ -741,13 +741,13 @@ class ComicCreator {
                 
                 // Extract tail position class
                 const tailPositionClass = Array.from(textBubble.classList)
-                    .find(cls => cls.startsWith('tail-'));
+                    .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
                 
                 panelState.textElements.push({
                     id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
                     previousBubbleType: textBubble.dataset.previousBubbleType || '',
-                    tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace('tail-', '') : ''),
+                    tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
                     content: textElement.innerHTML,
                     style: {
                         left: textBubble.style.left,
@@ -1260,7 +1260,8 @@ class ComicCreator {
                         
                         // Apply tail position if it exists
                         if (textData.tailPosition) {
-                            textContainer.classList.add(`tail-${textData.tailPosition}`);
+                            const tailPrefix = textData.bubbleType === 'speech-bubble' ? 'speech-tail-' : 'thought-tail-';
+                            textContainer.classList.add(`${tailPrefix}${textData.tailPosition}`);
                             textContainer.dataset.tailPosition = textData.tailPosition;
                         }
                         
@@ -2593,10 +2594,15 @@ class ComicCreator {
     
     updateBubbleTail(textBox, position) {
         // Remove any existing position classes
-        textBox.className = textBox.className.replace(/tail-\S+/g, '').trim();
+        textBox.className = textBox.className.replace(/(?:speech|thought)-tail-\S+/g, '').trim();
         
-        // Add the new position class
-        textBox.classList.add(`tail-${position}`);
+        // Add the new position class based on bubble type
+        const bubbleType = textBox.dataset.bubbleType;
+        if (bubbleType === 'speech-bubble') {
+            textBox.classList.add(`speech-tail-${position}`);
+        } else if (bubbleType === 'thought-bubble') {
+            textBox.classList.add(`thought-tail-${position}`);
+        }
         
         // Store the position in dataset
         textBox.dataset.tailPosition = position;
