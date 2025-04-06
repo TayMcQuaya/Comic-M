@@ -2269,6 +2269,12 @@ class ComicCreator {
                                 <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
                                 <input type="color" id="shadow-color" value="${this.getShadowColor(textElement)}" ${!textElement.style.textShadow ? 'disabled' : ''}>
                             </div>
+                            <div class="opacity-control">
+                                <label>
+                                    <input type="checkbox" id="bubble-opacity" ${textBox.style.opacity === '0.5' ? 'checked' : ''}>
+                                    50% Opacity
+                                </label>
+                            </div>
                         </div>
                         
                         <div class="effect-control">
@@ -2569,6 +2575,19 @@ class ComicCreator {
             characterData: true,
             childList: true,
             subtree: true
+        });
+
+        // Add opacity control
+        const opacityCheckbox = popup.querySelector('#bubble-opacity');
+        opacityCheckbox.addEventListener('change', () => {
+            // Set opacity on the background pseudo-element
+            if (opacityCheckbox.checked) {
+                textBox.style.setProperty('--bubble-opacity', '0.5');
+            } else {
+                textBox.style.setProperty('--bubble-opacity', '1');
+            }
+            // Save state after changing opacity
+            this.saveCurrentPageState();
         });
     }
     

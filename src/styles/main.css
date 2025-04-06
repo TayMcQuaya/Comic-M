@@ -1622,14 +1622,28 @@ label {
 
 /* Text Bubbles */
 .text-bubble {
-    background-color: white;
+    position: absolute;
     border: 2px solid #000;
     border-radius: 20px;
-    position: absolute;
     cursor: grab;
     box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
     user-select: none;
     transition: transform 0.1s, border-color 0.2s;
+    overflow: visible;
+    --bubble-opacity: 1;
+}
+
+.text-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: white;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
 }
 
 .text-content {
@@ -1639,16 +1653,17 @@ label {
     width: 100%;
     height: 100%;
     cursor: text;
-    color: #000000; /* Default text color is black */
+    color: #000000;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    padding: 10px;
 }
 
 /* Create a smooth outline effect that stays behind text */
 .text-content[data-has-outline="true"] {
     position: relative;
-    z-index: 1;
+    z-index: 2;
 }
 
 .text-content[data-has-outline="true"]::before {
@@ -1676,7 +1691,6 @@ label {
 }
 
 .dragging-text {
-    opacity: 0.8;
     z-index: 101;
 }
 
@@ -1684,9 +1698,10 @@ label {
 /* Speech Bubble */
 .speech-bubble {
     position: relative;
+    background-color: white;   
 }
 
-.speech-bubble:after {
+.speech-bubble::after {
     content: '';
     position: absolute;
     bottom: -17px;
@@ -1701,216 +1716,39 @@ label {
 /* Thought Bubble */
 .thought-bubble {
     border-radius: 50%;
+    background-color:white
 }
 
-/* Thought Bubble Small Circle */
-.thought-bubble-small {
-    width: 15px;
-    height: 15px;
-    position: absolute;
-    background: inherit;
-    border: 2px solid #000;
-    border-radius: 50%;
-    bottom: -20px;
-    left: 20px;
-}
-
-/* Thought Bubble Tiny Circle */
-.thought-bubble-tiny {
-    width: 8px;
-    height: 8px;
-    position: absolute;
-    background: inherit;
-    border: 2px solid #000;
-    border-radius: 50%;
-    bottom: -30px;
-    left: 30px;
-}
-
-.thought-bubble:before {
+.thought-bubble::before {
     content: '';
     position: absolute;
-    width: 15px;
-    height: 15px;
-    bottom: -20px;
-    left: 20px;
-    background: inherit;
-    border: 2px solid #000;
-    border-radius: 50%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: white;
+    border-radius: inherit;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
 }
 
-.thought-bubble:after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    bottom: -30px;
-    left: 30px;
-    background: inherit;
-    border: 2px solid #000;
-    border-radius: 50%;
-}
-
-/* Thought bubble positions */
-/* Bottom positions */
-.thought-tail-bottom-left:before {
-    left: 20px;
-    bottom: -20px;
-    right: auto;
-    top: auto;
-}
-
-.thought-tail-bottom-left:after {
-    left: 30px;
-    bottom: -30px;
-    right: auto;
-    top: auto;
-}
-
-.thought-tail-bottom-center:before {
-    left: 50%;
-    bottom: -20px;
-    right: auto;
-    top: auto;
-    transform: translateX(-50%);
-}
-
-.thought-tail-bottom-center:after {
-    left: 50%;
-    bottom: -30px;
-    right: auto;
-    top: auto;
-    transform: translateX(-50%);
-}
-
-.thought-tail-bottom-right:before {
-    left: auto;
-    right: 20px;
-    bottom: -20px;
-    top: auto;
-}
-
-.thought-tail-bottom-right:after {
-    left: auto;
-    right: 30px;
-    bottom: -30px;
-    top: auto;
-}
-
-/* Left positions */
-.thought-tail-left-center:before {
-    top: 50%;
-    left: -20px;
-    right: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-}
-
-.thought-tail-left-center:after {
-    top: 50%;
-    left: -30px;
-    right: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-}
-
-/* Right positions */
-.thought-tail-right-center:before {
-    top: 50%;
-    right: -20px;
-    left: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-}
-
-.thought-tail-right-center:after {
-    top: 50%;
-    right: -30px;
-    left: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-}
-
-/* Top positions */
-.thought-tail-top-left:before {
-    left: 20px;
-    top: -20px;
-    right: auto;
-    bottom: auto;
-}
-
-.thought-tail-top-left:after {
-    left: 30px;
-    top: -30px;
-    right: auto;
-    bottom: auto;
-}
-
-.thought-tail-top-center:before {
-    left: 50%;
-    top: -20px;
-    right: auto;
-    bottom: auto;
-    transform: translateX(-50%);
-}
-
-.thought-tail-top-center:after {
-    left: 50%;
-    top: -30px;
-    right: auto;
-    bottom: auto;
-    transform: translateX(-50%);
-}
-
-.thought-tail-top-right:before {
-    right: 20px;
-    top: -20px;
-    left: auto;
-    bottom: auto;
-}
-
-.thought-tail-top-right:after {
-    right: 30px;
-    top: -30px;
-    left: auto;
-    bottom: auto;
-}
-
-/* Caption Box */
-.caption-box {
+/* Update all bubble types to use the background pseudo-element */
+.caption-box::before {
     border-radius: 0;
     background-color: #f8f8f8;
-    border: 2px solid #000;
-    box-shadow: none;
-    font-style: italic;
 }
 
-/* Shout Bubble */
-.shout-bubble {
+.shout-bubble::before {
     background-color: #ffeb3b;
     border-radius: 8px;
-    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.3);
 }
 
-.shout-bubble .text-content {
-    font-weight: bold;
-    text-transform: uppercase;
-}
-
-/* Whisper Bubble */
-.whisper-bubble {
+.whisper-bubble::before {
     background-color: #f5f5f5;
-    border: 1px dashed #999;
     border-radius: 15px;
 }
 
-.whisper-bubble .text-content {
-    font-style: italic;
-    opacity: 0.8;
-}
-
-/* Jagged Bubble */
-.jagged-bubble {
+.jagged-bubble::before {
     background-color: #ff5252;
     border-radius: 0;
     clip-path: polygon(
@@ -1920,12 +1758,6 @@ label {
     );
 }
 
-.jagged-bubble .text-content {
-    font-weight: bold;
-    text-transform: uppercase;
-    color: white;
-}
-
 /* No Bubble */
 .no-bubble {
     background-color: transparent;
@@ -1933,8 +1765,8 @@ label {
     box-shadow: none;
 }
 
-.no-bubble:after,
-.no-bubble:before {
+.no-bubble::before,
+.no-bubble::after {
     display: none;
 }
 
@@ -2769,4 +2601,281 @@ select.font-family option {
     outline: none !important;
     border-color: #000000 !important;
     box-shadow: 5px 5px 0 var(--shadow-color) !important;
+}
+
+.thought-bubble {
+    border-radius: 50%;
+}
+
+.thought-bubble::before {
+    border-radius: 50%;
+}
+
+/* Thought bubble positions */
+/* Bottom positions */
+.thought-tail-bottom-left::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: 20px;
+    bottom: -20px;
+    right: auto;
+    top: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-bottom-left::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: 30px;
+    bottom: -30px;
+    right: auto;
+    top: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-bottom-center::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: 50%;
+    bottom: -20px;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-bottom-center::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: 50%;
+    bottom: -30px;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-bottom-right::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: auto;
+    right: 20px;
+    bottom: -20px;
+    top: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-bottom-right::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: auto;
+    right: 30px;
+    bottom: -30px;
+    top: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+/* Left positions */
+.thought-tail-left-center::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    top: 50%;
+    left: -20px;
+    right: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-left-center::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: 50%;
+    left: -30px;
+    right: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+/* Right positions */
+.thought-tail-right-center::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    top: 50%;
+    right: -20px;
+    left: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-right-center::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: 50%;
+    right: -30px;
+    left: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+/* Top positions */
+.thought-tail-top-left::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: 20px;
+    top: -20px;
+    right: auto;
+    bottom: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-top-left::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: 30px;
+    top: -30px;
+    right: auto;
+    bottom: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-top-center::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    left: 50%;
+    top: -20px;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-top-center::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: 50%;
+    top: -30px;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-top-right::before {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    right: 20px;
+    top: -20px;
+    left: auto;
+    bottom: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+.thought-tail-top-right::after {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    right: 30px;
+    top: -30px;
+    left: auto;
+    bottom: auto;
+    background: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
 }
