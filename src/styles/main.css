@@ -1640,6 +1640,34 @@ label {
     height: 100%;
     cursor: text;
     color: #000000; /* Default text color is black */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Create a smooth outline effect that stays behind text */
+.text-content[data-has-outline="true"] {
+    position: relative;
+    z-index: 1;
+}
+
+.text-content[data-has-outline="true"]::before {
+    content: attr(data-text);
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: -1;
+    color: var(--outline-color, #000000);
+    -webkit-text-stroke: var(--outline-width, 2px) var(--outline-color, #000000);
+    text-stroke: var(--outline-width, 2px) var(--outline-color, #000000);
+}
+
+/* Ensure text appears above the outline */
+.text-content[data-has-outline="true"] {
+    z-index: 2;
+    color: var(--text-color, #000000);
 }
 
 .selected-text {

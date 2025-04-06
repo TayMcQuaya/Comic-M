@@ -2559,6 +2559,17 @@ class ComicCreator {
             
             textBox.style.transform = `${translate} rotate(${value}deg)`;
         });
+
+        // Add text content change observer
+        const observer = new MutationObserver(() => {
+            this.updateOutlineText(textElement);
+        });
+        
+        observer.observe(textElement, {
+            characterData: true,
+            childList: true,
+            subtree: true
+        });
     }
     
     // Helper methods for text formatting
@@ -2569,13 +2580,31 @@ class ComicCreator {
     }
     
     applyTextOutline(textElement, color, thickness = 2) {
-        textElement.style.webkitTextStroke = `${thickness}px ${color}`;
-        textElement.style.textStroke = `${thickness}px ${color}`; // For Firefox
+        // Store the current text content
+        const text = textElement.textContent || textElement.innerText;
+        
+        // Set the data attributes for the outline effect
+        textElement.setAttribute('data-has-outline', 'true');
+        textElement.setAttribute('data-text', text);
+        
+        // Set the CSS custom properties for the outline
+        textElement.style.setProperty('--outline-color', color);
+        textElement.style.setProperty('--outline-width', `${thickness}px`);
+        textElement.style.setProperty('--text-color', textElement.style.color || '#000000');
+        
+        // Add smooth text rendering
+        textElement.style.webkitFontSmoothing = 'antialiased';
+        textElement.style.mozOsxFontSmoothing = 'grayscale';
+        textElement.style.textRendering = 'optimizeLegibility';
     }
     
     removeTextOutline(textElement) {
-        textElement.style.webkitTextStroke = 'none';
-        textElement.style.textStroke = 'none';
+        // Remove the outline-related attributes and styles
+        textElement.removeAttribute('data-has-outline');
+        textElement.removeAttribute('data-text');
+        textElement.style.removeProperty('--outline-color');
+        textElement.style.removeProperty('--outline-width');
+        textElement.style.removeProperty('--text-color');
     }
     
     applyTextShadow(textElement, color) {
@@ -2697,6 +2726,13 @@ class ComicCreator {
         const shadow = textElement.style.textShadow || '';
         const color = shadow.match(/[#][a-fA-F0-9]{6}/) || shadow.match(/rgba?\([^)]+\)/);
         return color ? this.rgbToHex(color[0]) : '#666666';
+    }
+
+    // Add a new method to update the outline text content when text changes
+    updateOutlineText(textElement) {
+        if (textElement.hasAttribute('data-has-outline')) {
+            textElement.setAttribute('data-text', textElement.textContent || textElement.innerText);
+        }
     }
 }
 
