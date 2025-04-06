@@ -2259,18 +2259,15 @@ class ComicCreator {
                     <h4>Effects</h4>
                     <div class="effects-grid">
                         <div class="effect-control">
-                            <label for="text-outline">Outline</label>
+                            <label>Text Effects</label>
                             <div class="outline-control">
-                                <input type="checkbox" id="text-outline" ${textElement.style.textShadow && textElement.style.textShadow.includes('0 0') ? 'checked' : ''}>
-                                <input type="color" id="outline-color" value="#000000" ${textElement.style.textShadow && textElement.style.textShadow.includes('0 0') ? '' : 'disabled'}>
+                                <input type="checkbox" id="text-outline" ${textElement.style.webkitTextStroke ? 'checked' : ''}>
+                                <input type="number" id="outline-thickness" class="outline-thickness" value="${this.getOutlineThickness(textElement)}" min="1" max="5" step="0.5" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                <input type="color" id="outline-color" value="${this.getOutlineColor(textElement)}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
                             </div>
-                        </div>
-                        
-                        <div class="effect-control">
-                            <label for="text-shadow">Shadow</label>
                             <div class="shadow-control">
-                                <input type="checkbox" id="text-shadow" ${textElement.style.textShadow && textElement.style.textShadow.includes('2px 2px') ? 'checked' : ''}>
-                                <input type="color" id="shadow-color" value="#666666" ${textElement.style.textShadow && textElement.style.textShadow.includes('2px 2px') ? '' : 'disabled'}>
+                                <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
+                                <input type="color" id="shadow-color" value="${this.getShadowColor(textElement)}" ${!textElement.style.textShadow ? 'disabled' : ''}>
                             </div>
                         </div>
                         
@@ -2475,28 +2472,44 @@ class ComicCreator {
         
         // Text outline
         const textOutlineCheckbox = popup.querySelector('#text-outline');
+        const outlineThicknessInput = popup.querySelector('#outline-thickness');
         const outlineColorPicker = popup.querySelector('#outline-color');
-        
+
         textOutlineCheckbox.addEventListener('change', () => {
             if (textOutlineCheckbox.checked) {
+                outlineThicknessInput.disabled = false;
                 outlineColorPicker.disabled = false;
-                this.applyTextOutline(textElement, outlineColorPicker.value);
+                this.applyTextOutline(textElement, outlineColorPicker.value, parseFloat(outlineThicknessInput.value));
             } else {
+                outlineThicknessInput.disabled = true;
                 outlineColorPicker.disabled = true;
                 this.removeTextOutline(textElement);
             }
+            
+            // Save state after changing outline
+            this.saveCurrentPageState();
         });
-        
+
+        outlineThicknessInput.addEventListener('input', () => {
+            if (textOutlineCheckbox.checked) {
+                this.applyTextOutline(textElement, outlineColorPicker.value, parseFloat(outlineThicknessInput.value));
+                // Save state after changing outline thickness
+                this.saveCurrentPageState();
+            }
+        });
+
         outlineColorPicker.addEventListener('input', () => {
             if (textOutlineCheckbox.checked) {
-                this.applyTextOutline(textElement, outlineColorPicker.value);
+                this.applyTextOutline(textElement, outlineColorPicker.value, parseFloat(outlineThicknessInput.value));
+                // Save state after changing outline color
+                this.saveCurrentPageState();
             }
         });
         
         // Text shadow
         const textShadowCheckbox = popup.querySelector('#text-shadow');
         const shadowColorPicker = popup.querySelector('#shadow-color');
-        
+
         textShadowCheckbox.addEventListener('change', () => {
             if (textShadowCheckbox.checked) {
                 shadowColorPicker.disabled = false;
@@ -2505,11 +2518,16 @@ class ComicCreator {
                 shadowColorPicker.disabled = true;
                 this.removeTextShadow(textElement);
             }
+            
+            // Save state after changing shadow
+            this.saveCurrentPageState();
         });
-        
+
         shadowColorPicker.addEventListener('input', () => {
             if (textShadowCheckbox.checked) {
                 this.applyTextShadow(textElement, shadowColorPicker.value);
+                // Save state after changing shadow color
+                this.saveCurrentPageState();
             }
         });
         
@@ -2550,34 +2568,22 @@ class ComicCreator {
         return rotateMatch ? parseInt(rotateMatch[1]) : 0;
     }
     
-    applyTextOutline(textElement, color) {
-        const currentShadow = textElement.style.textShadow;
-        // Remove existing outline if present
-        let shadow = this.removeEffectFromShadow(currentShadow, '0 0');
-        // Add new outline
-        shadow = shadow ? shadow + ', ' : '';
-        shadow += `0 0 1px ${color}, 0 0 1px ${color}, 0 0 1px ${color}, 0 0 1px ${color}`;
-        textElement.style.textShadow = shadow;
+    applyTextOutline(textElement, color, thickness = 2) {
+        textElement.style.webkitTextStroke = `${thickness}px ${color}`;
+        textElement.style.textStroke = `${thickness}px ${color}`; // For Firefox
     }
     
     removeTextOutline(textElement) {
-        const currentShadow = textElement.style.textShadow;
-        textElement.style.textShadow = this.removeEffectFromShadow(currentShadow, '0 0');
+        textElement.style.webkitTextStroke = 'none';
+        textElement.style.textStroke = 'none';
     }
     
     applyTextShadow(textElement, color) {
-        const currentShadow = textElement.style.textShadow;
-        // Remove existing shadow if present
-        let shadow = this.removeEffectFromShadow(currentShadow, '2px 2px');
-        // Add new shadow
-        shadow = shadow ? shadow + ', ' : '';
-        shadow += `2px 2px 3px ${color}`;
-        textElement.style.textShadow = shadow;
+        textElement.style.textShadow = `2px 2px 2px ${color}`;
     }
     
     removeTextShadow(textElement) {
-        const currentShadow = textElement.style.textShadow;
-        textElement.style.textShadow = this.removeEffectFromShadow(currentShadow, '2px 2px');
+        textElement.style.textShadow = 'none';
     }
     
     removeEffectFromShadow(shadow, prefix) {
@@ -2672,6 +2678,25 @@ class ComicCreator {
         const rotateStyle = rotation !== 0 ? ` rotate(${rotation}deg)` : '';
         
         textBox.style.transform = `translate(${translateX}, ${translateY})${rotateStyle}`;
+    }
+
+    // Add these new helper methods to the ComicCreator class
+    getOutlineThickness(textElement) {
+        const stroke = textElement.style.webkitTextStroke || '';
+        const match = stroke.match(/^(\d+(\.\d+)?)px/);
+        return match ? match[1] : '2';
+    }
+
+    getOutlineColor(textElement) {
+        const stroke = textElement.style.webkitTextStroke || '';
+        const color = stroke.match(/[#][a-fA-F0-9]{6}/) || stroke.match(/rgba?\([^)]+\)/);
+        return color ? this.rgbToHex(color[0]) : '#000000';
+    }
+
+    getShadowColor(textElement) {
+        const shadow = textElement.style.textShadow || '';
+        const color = shadow.match(/[#][a-fA-F0-9]{6}/) || shadow.match(/rgba?\([^)]+\)/);
+        return color ? this.rgbToHex(color[0]) : '#666666';
     }
 }
 
