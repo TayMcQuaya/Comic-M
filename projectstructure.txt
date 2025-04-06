@@ -1,0 +1,96 @@
+# Comic Book Maker - Project Structure
+
+Comic-Book-Maker/
+│
+├── index.html                  # Main HTML entry point for the application
+│                               # - Contains the core page structure
+│                               # - Includes UI components for all workflow steps
+│                               # - Links to external resources (fonts, libraries)
+│
+├── package.json                # Node.js project configuration
+│                               # - Dependency management
+│                               # - NPM scripts for development and build
+│
+├── package-lock.json           # Dependency lock file with exact versions
+│
+├── .gitignore                  # Git ignore configuration
+│                               # - Excludes node_modules, dist, and other files
+│
+├── README.md                   # Project documentation and user guide
+│
+├── projectstructure.txt        # This file - documents project organization
+│
+├── node_modules/               # Installed Node.js dependencies (not tracked in git)
+│
+├── dist/                       # Production build output (generated via build command)
+│                               # - Optimized, bundled files ready for deployment
+│
+├── src/                        # Source code directory
+│   │
+│   ├── js/                     # JavaScript code files
+│   │   │
+│   │   ├── main.js             # Main application logic
+│   │   │                       # - ComicCreator class implementation
+│   │   │                       # - Initializes the application
+│   │   │                       # - Manages all user interactions
+│   │   │                       # - Handles image uploads, layout selection
+│   │   │                       # - Implements panel editing, text tools
+│   │   │                       # - Manages multi-page comics
+│   │   │                       # - Provides PDF export functionality
+│   │   │
+│   │   ├── layouts.js          # Panel layout definitions
+│   │   │                       # - Contains 20+ different comic panel layouts
+│   │   │                       # - Each layout defines panel positions as percentages
+│   │   │                       # - Includes functions for custom grid generation
+│   │   │
+│   │   ├── ComicCreator.js     # Core functionality module
+│   │   │                       # - Alternative implementation with modular structure
+│   │   │                       # - Handles canvas operations and image transformation
+│   │   │                       # - Contains PDF export logic
+│   │   │
+│   │   └── main.js.fixed       # Backup version of main.js
+│   │
+│   └── styles/                 # CSS stylesheets
+│       └── main.css            # Main application styles
+│                               # - Uses CSS variables for theming
+│                               # - Responsive design for various screen sizes
+│                               # - Handles all UI components styling
+│                               # - Contains animation and transitions
+│                               # - Implements different background styles for panels
+│
+└── .git/                       # Git repository data
+
+## External Dependencies
+
+### Runtime Dependencies
+- jsPDF (^2.5.1)                # PDF generation library
+- @fortawesome/fontawesome-free (^6.5.1) # Icons for the UI
+
+### CDN-loaded Dependencies
+- Font Awesome                  # Icon library
+- Google Fonts                  # Comic-specific fonts
+- JSZip                         # For file operations
+- html2canvas                   # For converting HTML to canvas for export
+- jsPDF (UMD version)           # PDF generation
+
+### Development Dependencies
+- Vite (^5.0.0)                 # Modern build tool and development server
+
+## Application Structure
+
+### Main Workflow Steps
+1. Image Upload Page            # First step - import images
+2. Layout Selection Page        # Second step - choose panel layout
+3. Comic Editor Page            # Main editing environment
+   - Editor Sidebar             # Image library
+   - Comic Canvas               # Panel editing area
+   - Properties Panel           # Editing controls
+
+### Key Features
+- Panel Layout System           # 20+ different panel arrangements
+- Image Management              # Upload, organize, and place images
+- Text Tools                    # Add and style text elements
+- Multi-page Support            # Create comics with multiple pages
+- PDF Export                    # Generate downloadable PDF files
+- Background Styling            # Apply different styles to panels
+- Responsive Design             # Works on various devices and screen sizes 
