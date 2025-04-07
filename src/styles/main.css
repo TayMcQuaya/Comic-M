@@ -2886,3 +2886,68 @@ select.font-family option {
     z-index: 1;
     opacity: var(--bubble-opacity);
 }
+
+/* Whisper Bubble - Update to have dotted lines */
+.whisper-bubble {
+    border-style: dotted;
+    border-width: 2px;
+    border-color: #000;
+    background-color: white;
+}
+
+.whisper-bubble::before {
+    background-color: white;
+    border-radius: 15px;
+    opacity: var(--bubble-opacity);
+}
+
+/* Jagged Bubble - Remove black outline */
+.jagged-bubble {
+    border: none;
+    background-color: #ff5252;
+    clip-path: polygon(
+        0% 15%, 15% 0%, 85% 0%, 100% 15%, 
+        100% 85%, 85% 100%, 15% 100%, 0% 85%,
+        0% 60%, 5% 50%, 0% 40%
+    );
+    position: relative;
+}
+
+.jagged-bubble::before {
+    background-color: #ff5252;
+    border-radius: 0;
+    clip-path: polygon(
+        0% 15%, 15% 0%, 85% 0%, 100% 15%, 
+        100% 85%, 85% 100%, 15% 100%, 0% 85%,
+        0% 60%, 5% 50%, 0% 40%
+    );
+}
+
+/* Special handling for jagged bubble controls */
+.jagged-bubble .resize-handle,
+.jagged-bubble .format-text-btn,
+.jagged-bubble .delete-text-btn {
+    transform: none;
+}
+
+.jagged-bubble .resize-handle {
+    bottom: 5px;
+    right: 5px;
+}
+
+.jagged-bubble .format-text-btn {
+    bottom: 5px;
+    left: 5px;
+}
+
+.jagged-bubble .delete-text-btn {
+    top: 5px;
+    right: 5px;
+}
+
+/* Ensure controls are visible */
+.jagged-bubble .resize-handle,
+.jagged-bubble .format-text-btn,
+.jagged-bubble .delete-text-btn {
+    z-index: 5;
+}
