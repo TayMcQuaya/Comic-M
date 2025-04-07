@@ -242,6 +242,177 @@ export const layouts = {
             { x: 34, y: 68, width: 32, height: 32 },
             { x: 68, y: 68, width: 32, height: 32 }
         ]
+    },
+    // Add new layouts
+    'spiral-focus': {
+        name: "Spiral Focus",
+        description: "Panels arranged in a spiral pattern",
+        panels: [
+            { x: 25, y: 25, width: 50, height: 50 },
+            { x: 0, y: 0, width: 48, height: 48 },
+            { x: 52, y: 0, width: 48, height: 48 },
+            { x: 52, y: 52, width: 48, height: 48 },
+            { x: 0, y: 52, width: 48, height: 48 }
+        ]
+    },
+    'cross-layout': {
+        name: "Cross Layout",
+        description: "Panels arranged in a cross pattern",
+        panels: [
+            { x: 33, y: 0, width: 34, height: 32 },
+            { x: 0, y: 34, width: 32, height: 32 },
+            { x: 34, y: 34, width: 32, height: 32 },
+            { x: 68, y: 34, width: 32, height: 32 },
+            { x: 33, y: 68, width: 34, height: 32 }
+        ]
+    },
+    'pyramid': {
+        name: "Pyramid Layout",
+        description: "Panels stacked in a pyramid formation",
+        panels: [
+            { x: 25, y: 0, width: 50, height: 32 },
+            { x: 12, y: 34, width: 38, height: 32 },
+            { x: 50, y: 34, width: 38, height: 32 },
+            { x: 0, y: 68, width: 32, height: 32 },
+            { x: 34, y: 68, width: 32, height: 32 },
+            { x: 68, y: 68, width: 32, height: 32 }
+        ]
+    },
+    'windmill': {
+        name: "Windmill Layout",
+        description: "Dynamic rotating panel arrangement",
+        panels: [
+            { x: 25, y: 25, width: 50, height: 50 },
+            { x: 0, y: 0, width: 45, height: 45 },
+            { x: 55, y: 0, width: 45, height: 45 },
+            { x: 0, y: 55, width: 45, height: 45 },
+            { x: 55, y: 55, width: 45, height: 45 }
+        ]
+    },
+    'zigzag': {
+        name: "Zigzag Flow",
+        description: "Panels arranged in a zigzag reading pattern",
+        panels: [
+            { x: 0, y: 0, width: 48, height: 32 },
+            { x: 52, y: 0, width: 48, height: 32 },
+            { x: 26, y: 34, width: 48, height: 32 },
+            { x: 0, y: 68, width: 48, height: 32 },
+            { x: 52, y: 68, width: 48, height: 32 }
+        ]
+    },
+    'panoramic-focus': {
+        name: "Panoramic Focus",
+        description: "Wide panoramic panel with supporting panels",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 40 },
+            { x: 0, y: 42, width: 48, height: 28 },
+            { x: 52, y: 42, width: 48, height: 28 },
+            { x: 0, y: 72, width: 32, height: 28 },
+            { x: 34, y: 72, width: 32, height: 28 },
+            { x: 68, y: 72, width: 32, height: 28 }
+        ]
+    },
+    'storyboard': {
+        name: "Storyboard Layout",
+        description: "Film-style storyboard arrangement",
+        panels: [
+            { x: 0, y: 0, width: 74, height: 48 },
+            { x: 76, y: 0, width: 24, height: 48 },
+            { x: 0, y: 52, width: 24, height: 48 },
+            { x: 26, y: 52, width: 74, height: 48 }
+        ]
+    },
+    'circular-narrative': {
+        name: "Circular Narrative",
+        description: "Panels arranged in a circular reading pattern",
+        panels: [
+            { x: 0, y: 0, width: 48, height: 48 },
+            { x: 52, y: 0, width: 48, height: 48 },
+            { x: 52, y: 52, width: 48, height: 48 },
+            { x: 0, y: 52, width: 48, height: 48 },
+            { x: 26, y: 26, width: 48, height: 48 }
+        ]
+    },
+    'split-screen': {
+        name: "Split Screen",
+        description: "Parallel narrative layout with split panels",
+        panels: [
+            { x: 0, y: 0, width: 48, height: 100 },
+            { x: 52, y: 0, width: 48, height: 32 },
+            { x: 52, y: 34, width: 48, height: 32 },
+            { x: 52, y: 68, width: 48, height: 32 }
+        ]
+    },
+    'cascade': {
+        name: "Cascade Layout",
+        description: "Panels cascading in size from top to bottom",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 32 },
+            { x: 10, y: 34, width: 80, height: 32 },
+            { x: 20, y: 68, width: 60, height: 32 }
+        ]
+    },
+    'mosaic': {
+        name: "Mosaic Grid",
+        description: "Complex mosaic of varying panel sizes",
+        panels: [
+            { x: 0, y: 0, width: 38, height: 38 },
+            { x: 40, y: 0, width: 28, height: 58 },
+            { x: 70, y: 0, width: 30, height: 38 },
+            { x: 0, y: 40, width: 38, height: 60 },
+            { x: 70, y: 40, width: 30, height: 60 },
+            { x: 40, y: 60, width: 28, height: 40 }
+        ]
+    },
+    'double-spread': {
+        name: "Double Spread",
+        description: "Magazine-style double spread layout",
+        panels: [
+            { x: 0, y: 0, width: 60, height: 70 },
+            { x: 62, y: 0, width: 38, height: 34 },
+            { x: 62, y: 36, width: 38, height: 34 },
+            { x: 0, y: 72, width: 100, height: 28 }
+        ]
+    },
+    'cinematic-widescreen': {
+        name: "Cinematic Widescreen",
+        description: "Movie-style widescreen panel arrangement",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 24 },
+            { x: 0, y: 26, width: 48, height: 48 },
+            { x: 52, y: 26, width: 48, height: 48 },
+            { x: 0, y: 76, width: 100, height: 24 }
+        ]
+    },
+    'dynamic-diagonal': {
+        name: "Dynamic Diagonal",
+        description: "Panels arranged along diagonal lines",
+        panels: [
+            { x: 0, y: 0, width: 48, height: 48 },
+            { x: 26, y: 26, width: 48, height: 48 },
+            { x: 52, y: 52, width: 48, height: 48 }
+        ]
+    },
+    'golden-ratio': {
+        name: "Golden Ratio",
+        description: "Panels following the golden ratio proportions",
+        panels: [
+            { x: 0, y: 0, width: 62, height: 62 },
+            { x: 64, y: 0, width: 36, height: 36 },
+            { x: 64, y: 38, width: 36, height: 24 },
+            { x: 0, y: 64, width: 100, height: 36 }
+        ]
+    },
+    'radial-burst': {
+        name: "Radial Burst",
+        description: "Panels radiating from center point",
+        panels: [
+            { x: 25, y: 25, width: 50, height: 50 },
+            { x: 0, y: 0, width: 32, height: 32 },
+            { x: 68, y: 0, width: 32, height: 32 },
+            { x: 0, y: 68, width: 32, height: 32 },
+            { x: 68, y: 68, width: 32, height: 32 }
+        ]
     }
 };
 
