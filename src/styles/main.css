@@ -550,7 +550,7 @@ body {
     overflow: hidden;
     transition: all 0.3s ease;
     user-select: none;
-    box-shadow: 5px 5px 0 var(--shadow-color);
+    /* box-shadow: 5px 5px 0 var(--shadow-color); Removed shadow */
     transform: scale(1.02);
 }
 
@@ -566,7 +566,7 @@ body {
 /* Make selected panel red */
 .comic-panel.selected {
     border-color: #FF0000; /* Bright red for selected panels */
-    box-shadow: 8px 8px 0 var(--shadow-color);
+    /* box-shadow: 8px 8px 0 var(--shadow-color); Removed shadow */
 }
 
 /* Update keyboard interaction styles to match new color scheme */
@@ -574,14 +574,16 @@ body {
 .comic-panel:focus-visible {
     outline: none;
     border-color: #FF0000;
-    box-shadow: 0 0 0 2px #FF0000;
+    /* box-shadow: 8px 8px 0 var(--shadow-color), 0 0 0 2px #FF0000; Removed shadow part */
+    box-shadow: 0 0 0 2px #FF0000; /* Keep focus outline */
 }
 
 .comic-panel.selected:focus,
 .comic-panel.selected:focus-visible {
     outline: none;
     border-color: #FF0000;
-    box-shadow: 8px 8px 0 var(--shadow-color), 0 0 0 2px #FF0000;
+    /* box-shadow: 8px 8px 0 var(--shadow-color), 0 0 0 2px #FF0000; Removed shadow part */
+    box-shadow: 0 0 0 2px #FF0000; /* Keep focus outline */
 }
 
 .comic-panel::before {
@@ -3188,6 +3190,74 @@ select.font-family option {
     background: var(--primary-color);
     border-radius: 50%;
     cursor: pointer;
+    border: 2px solid var(--text-color);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+/* Style adjustments for Text Formatting Popup */
+#text-format-popup {
+    padding: 15px 15px 50px 15px; /* Slightly reduce horizontal padding, keep bottom padding for buttons */
+}
+
+.text-style-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 12px; /* Adjust gap for vertical stacking */
+}
+
+.style-control {
+    /* Minor adjustments if needed, but single column grid handles stacking */
+}
+
+/* Ensure slider controls take full width */
+.style-control .font-size-control,
+.style-control .line-height-control {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Slightly reduce gap */
+}
+.style-control input[type="range"] {
+    flex-grow: 1;
+}
+
+.color-section {
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 12px;
+}
+
+.effects-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Already single column, ensure consistency */
+    gap: 15px;
+}
+
+.effect-control {
+    display: flex;
+    flex-direction: column; /* Stack label and controls vertically */
+    gap: 5px;
+}
+
+.effect-control > div { /* Target the inner div holding checkboxes/inputs */
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping if needed */
+    align-items: center;
+    gap: 8px;
+}
+
+/* Style for red sliders (Size and Line Spacing) */
+.red-slider {
+    accent-color: var(--primary-color);
+}
+
+.red-slider::-webkit-slider-thumb {
+    background: var(--primary-color);
+    border: 2px solid var(--text-color);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+.red-slider::-moz-range-thumb {
+    background: var(--primary-color);
     border: 2px solid var(--text-color);
     box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
 }

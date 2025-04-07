@@ -766,7 +766,12 @@ class ComicCreator {
                         textTransform: textElement.style.textTransform,
                         color: textElement.style.color,
                         opacity: textElement.style.opacity,
-                        textShadow: textElement.style.textShadow
+                        bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
+                        textShadow: textElement.style.textShadow,
+                        lineHeight: textElement.style.lineHeight || 'normal',
+                        hasOutline: textElement.dataset.hasOutline === 'true',
+                        outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
+                        outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000'
                     }
                 });
             });
@@ -804,7 +809,9 @@ class ComicCreator {
         });
 
         // Load Project Button in Upload Page
-        document.querySelector('#load-project-btn').addEventListener('click', () => {
+        document.querySelector('#load-project-btn').addEventListener('click', (event) => { // Add event arg
+            const buttonElement = event.target; // Get the button element
+            
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = '.json';
@@ -818,9 +825,15 @@ class ComicCreator {
                     // After loading, go directly to the editor page
                     document.querySelector('#upload-page').classList.remove('active');
                     document.querySelector('#editor-page').classList.add('active');
+                } else {
+                    console.log("Load Project cancelled by user.");
                 }
+                // Clean up the input element regardless of selection
                 document.body.removeChild(input);
             });
+
+            // Remove focus from the button BEFORE opening the dialog
+            buttonElement.blur(); 
 
             input.click();
         });
@@ -1319,6 +1332,26 @@ class ComicCreator {
                         textElement.style.color = style.color;
                         textElement.style.opacity = style.opacity;
                         textElement.style.textShadow = style.textShadow;
+
+                        // Apply bubble opacity
+                        textContainer.style.setProperty('--bubble-opacity', style.bubbleOpacity || '1');
+
+                        // Apply line height
+                        textElement.style.lineHeight = style.lineHeight || 'normal';
+
+                        // Apply outline styles if present
+                        if (style.hasOutline) {
+                            textElement.dataset.hasOutline = 'true';
+                            textElement.style.setProperty('--outline-width', style.outlineWidth || '2px');
+                            textElement.style.setProperty('--outline-color', style.outlineColor || '#000000');
+                            // Ensure outline text content is updated
+                            this.updateOutlineText(textElement);
+                        } else {
+                            textElement.dataset.hasOutline = 'false';
+                            // Optionally remove outline variables if needed, but the CSS should handle it
+                            // textElement.style.removeProperty('--outline-width');
+                            // textElement.style.removeProperty('--outline-color');
+                        }
                     });
                 }
             }
@@ -2249,8 +2282,16 @@ class ComicCreator {
                         <div class="style-control">
                             <label for="font-size">Size</label>
                             <div class="size-control">
-                                <input type="range" id="font-size" class="font-size" min="8" max="72" value="${parseInt(textElement.style.fontSize) || 16}">
+                                <input type="range" id="font-size" class="font-size red-slider" min="8" max="72" value="${parseInt(textElement.style.fontSize) || 16}">
                                 <span class="font-size-value">${parseInt(textElement.style.fontSize) || 16}px</span>
+                            </div>
+                        </div>
+                        
+                        <div class="style-control">
+                            <label for="line-height">Line Spacing</label>
+                            <div class="line-height-control" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="range" id="line-height" class="line-height red-slider" min="0.8" max="5" step="0.1" value="1.2" style="flex-grow: 1;">
+                                <span class="line-height-value" style="min-width: 30px; text-align: right;">1.2</span>
                             </div>
                         </div>
                         
@@ -2281,14 +2322,6 @@ class ComicCreator {
                                 <button class="align-btn align-right ${textElement.style.textAlign === 'right' ? 'active' : ''}" title="Align Right">
                                     <i class="fas fa-align-right"></i>
                                 </button>
-                            </div>
-                        </div>
-                        
-                        <div class="style-control">
-                            <label for="line-height">Line Spacing</label>
-                            <div class="line-height-control" style="display: flex; align-items: center; gap: 10px;">
-                                <input type="range" id="line-height" class="line-height" min="0.8" max="5" step="0.1" value="1.2" style="flex-grow: 1;"> <!-- Changed max to 5 -->
-                                <span class="line-height-value" style="min-width: 30px; text-align: right;">1.2</span>
                             </div>
                         </div>
                     </div>
@@ -2670,13 +2703,13 @@ class ComicCreator {
     }
     
     applyTextOutline(textElement, color, thickness = 2) {
-        // Store the current text content and computed styles
-        const text = textElement.textContent || textElement.innerText;
+        // Use the helper function to get text with preserved line breaks
+        const text = this.getTextWithLineBreaks(textElement);
         const computedStyle = window.getComputedStyle(textElement);
         
         // Set the data attributes for the outline effect
         textElement.setAttribute('data-has-outline', 'true');
-        textElement.setAttribute('data-text', text);
+        textElement.setAttribute('data-text', text); // Use the correctly processed text
         
         // Set the CSS custom properties for the outline
         textElement.style.setProperty('--outline-color', color);
@@ -2712,12 +2745,17 @@ class ComicCreator {
         
         // Create a MutationObserver to update the outline when text content changes
         if (!textElement._outlineObserver) {
+            // Debounce timer variable
+            let outlineUpdateTimer = null;
+
             textElement._outlineObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    if (mutation.type === 'characterData' || mutation.type === 'childList') {
-                        this.updateOutlineText(textElement);
-                    }
-                });
+                // Clear any existing timer
+                clearTimeout(outlineUpdateTimer);
+
+                // Set a new timer to run updateOutlineText after a short delay (e.g., 100ms)
+                outlineUpdateTimer = setTimeout(() => {
+                    this.updateOutlineText(textElement);
+                }, 100); // 100ms delay - adjust if needed
             });
             
             textElement._outlineObserver.observe(textElement, {
@@ -2864,10 +2902,35 @@ class ComicCreator {
         return color ? this.rgbToHex(color[0]) : '#666666';
     }
 
-    // Add a new method to update the outline text content when text changes
+    // Helper function to get text content while preserving line breaks from <br> and block elements
+    getTextWithLineBreaks(element) {
+        if (!element) return '';
+
+        // Get innerHTML
+        let processedHtml = element.innerHTML;
+
+        // 1. Replace <br> tags with newline characters
+        processedHtml = processedHtml.replace(/<br\s*\/?>/gi, '\n');
+
+        // 2. Replace closing block tags (div, p) with newline characters
+        processedHtml = processedHtml.replace(/<\/(div|p)>/gi, '\n');
+
+        // 3. Create a temporary div to strip *all* remaining HTML tags
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = processedHtml;
+
+        // 4. Extract clean text. textContent or innerText should preserve the newlines.
+        let text = tempDiv.textContent || tempDiv.innerText || '';
+
+        // 5. Trim potential leading/trailing newlines/whitespace
+        return text.trim();
+    }
+
+    // Update the outline text content when text changes
     updateOutlineText(textElement) {
-        if (textElement.hasAttribute('data-has-outline')) {
-            const text = textElement.textContent || textElement.innerText;
+        if (textElement.dataset.hasOutline === 'true') { // Check the dataset property
+            // Use the helper function to get text with preserved line breaks
+            const text = this.getTextWithLineBreaks(textElement);
             textElement.setAttribute('data-text', text);
         }
     }
