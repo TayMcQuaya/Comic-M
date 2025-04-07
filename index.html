@@ -188,5 +188,16 @@
     <input type="file" id="file-input" multiple accept="image/*" style="display: none;">
 
     <script type="module" src="/src/js/main.js"></script>
+
+    <!-- Custom Filename Prompt Modal -->
+    <div id="filename-modal-overlay" class="modal-overlay"></div>
+    <div id="filename-modal" class="modal">
+        <h3>Enter Comic Name</h3>
+        <input type="text" id="comic-filename-input" placeholder="My Comic">
+        <div class="modal-buttons">
+            <button id="cancel-filename-btn" class="secondary-btn">Cancel</button>
+            <button id="confirm-filename-btn" class="primary-btn">Confirm</button>
+        </div>
+    </div>
 </body>
 </html> 

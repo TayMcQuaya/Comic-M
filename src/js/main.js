@@ -1351,6 +1351,15 @@ class ComicCreator {
     }
 
     async downloadComic() {
+        // Show custom modal and wait for user input
+        const filename = await this.promptForFilename("My Comic", ".pdf"); // Pass default and extension
+        if (!filename) {
+            console.log("PDF generation cancelled by user.");
+            return; // Exit if user cancelled or entered nothing
+        }
+
+        // Filename already validated and sanitized in promptForFilename
+
         // Save the current page state before generating the PDF
         this.saveCurrentPageState();
         
@@ -1449,8 +1458,13 @@ class ComicCreator {
             const pdf = new jspdf.jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [700, 700]
+                format: [700, 700] // Maintain aspect ratio close to canvas
             });
+
+            // Add Title to the first page
+            const titleText = filename.endsWith('.pdf') ? filename.slice(0, -4) : filename; // Remove .pdf for display
+            pdf.setFontSize(20); // Use a reasonable font size for the title
+            pdf.text(titleText, 350, 30, { align: 'center' }); // Add title text, centered, near the top
             
             // Add pages
             pageImages.forEach((result, i) => {
@@ -1471,7 +1485,7 @@ class ComicCreator {
             });
             
             // Save the PDF
-            pdf.save('my-comic.pdf');
+            pdf.save(filename); // Use the user-provided filename
             
             console.log('PDF generated successfully with', pageImages.length, 'pages');
         } catch (error) {
@@ -2824,7 +2838,14 @@ class ComicCreator {
         }
     }
 
-    saveProject() {
+    async saveProject() { // Make async
+        // Prompt for filename
+        const filename = await this.promptForFilename("comic-project", ".json"); // Pass default and extension
+        if (!filename) {
+            console.log("Save project cancelled by user.");
+            return; // Exit if user cancelled
+        }
+
         // Save current page state before exporting
         this.saveCurrentPageState();
         
@@ -2854,7 +2875,7 @@ class ComicCreator {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'comic-project.json';
+        a.download = filename; // Use the user-provided filename
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -2939,6 +2960,74 @@ class ComicCreator {
                 input.click();
             });
         }
+    }
+
+    // New method to handle custom filename prompt
+    promptForFilename(defaultName = "My Comic", extension = ".pdf") { // Add parameters with defaults
+        return new Promise((resolve) => {
+            const overlay = document.getElementById('filename-modal-overlay');
+            const modal = document.getElementById('filename-modal');
+            const input = document.getElementById('comic-filename-input');
+            const confirmBtn = document.getElementById('confirm-filename-btn');
+            const cancelBtn = document.getElementById('cancel-filename-btn');
+
+            // Show the modal
+            input.value = defaultName; // Use the provided default name
+            overlay.style.display = 'block';
+            modal.style.display = 'block';
+            // Trigger transitions by adding active class after a short delay
+            setTimeout(() => {
+                modal.classList.add('active');
+                overlay.classList.add('active');
+                input.focus(); // Focus the input field
+                input.select(); // Select the default text
+            }, 10);
+
+            const closeModal = (result) => {
+                modal.classList.remove('active');
+                overlay.classList.remove('active');
+                // Wait for transition before hiding
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    overlay.style.display = 'none';
+                    // Remove event listeners to prevent memory leaks
+                    confirmBtn.removeEventListener('click', handleConfirm);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    input.removeEventListener('keydown', handleKeydown);
+                    resolve(result);
+                }, 300);
+            };
+
+            const handleConfirm = () => {
+                let filename = input.value.trim();
+                if (!filename) {
+                    filename = defaultName; // Use default if empty
+                }
+                if (!filename.toLowerCase().endsWith(extension)) { // Use the provided extension
+                    filename += extension;
+                }
+                // Basic sanitization
+                filename = filename.replace(/[/\\?%*:|"<>]/g, '-');
+                closeModal(filename);
+            };
+
+            const handleCancel = () => {
+                closeModal(null);
+            };
+
+            const handleKeydown = (event) => {
+                if (event.key === 'Enter') {
+                    handleConfirm();
+                } else if (event.key === 'Escape') {
+                    handleCancel();
+                }
+            };
+
+            // Add event listeners
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+            input.addEventListener('keydown', handleKeydown);
+        });
     }
 }
 
