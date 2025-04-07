@@ -1070,6 +1070,9 @@ class ComicCreator {
                 <button class="danger-btn" id="deletePage">
                     <i class="fas fa-trash"></i> Delete Page
                 </button>
+                <button class="tool-btn" id="reorderPagesBtn">
+                    <i class="fas fa-sort"></i> Reorder Pages
+                </button>
             </div>
         `;
         editorHeader.appendChild(pageNavigation);
@@ -1083,11 +1086,13 @@ class ComicCreator {
         const prevPageBtn = document.getElementById('prevPage');
         const nextPageBtn = document.getElementById('nextPage');
         const deletePageBtn = document.getElementById('deletePage');
+        const reorderPagesBtn = document.getElementById('reorderPagesBtn');
 
         addPageBtn.addEventListener('click', () => this.showLayoutSelection());
         prevPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex - 1));
         nextPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex + 1));
         deletePageBtn.addEventListener('click', () => this.deleteCurrentPage());
+        reorderPagesBtn.addEventListener('click', () => this.reorderPages());
     }
 
     showLayoutSelection() {
@@ -3029,6 +3034,149 @@ class ComicCreator {
             input.addEventListener('keydown', handleKeydown);
         });
     }
+
+    // --- New Reorder Pages Functionality ---
+    reorderPages() {
+        const overlay = document.getElementById('reorder-modal-overlay');
+        const modal = document.getElementById('reorder-modal');
+        const list = document.getElementById('reorder-page-list');
+        const confirmBtn = document.getElementById('confirm-reorder-btn');
+        const cancelBtn = document.getElementById('cancel-reorder-btn');
+
+        // --- Populate the list ---
+        list.innerHTML = ''; // Clear previous list items
+        this.pages.forEach((page, index) => {
+            const listItem = document.createElement('li');
+            listItem.draggable = true;
+            listItem.dataset.originalIndex = index; // Store original index
+            listItem.innerHTML = `
+                <i class="fas fa-grip-vertical"></i>
+                <span>Page ${index + 1}</span>
+            `;
+            list.appendChild(listItem);
+        });
+
+        // --- Drag and Drop Logic ---
+        let draggedItem = null;
+
+        list.addEventListener('dragstart', (e) => {
+            draggedItem = e.target;
+            setTimeout(() => e.target.classList.add('dragging'), 0); // Style the dragged item
+        });
+
+        list.addEventListener('dragend', (e) => {
+            setTimeout(() => {
+                if (draggedItem) {
+                    draggedItem.classList.remove('dragging');
+                }
+                draggedItem = null;
+                // Remove any lingering drag-over styles
+                list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            }, 0);
+        });
+
+        list.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const targetItem = e.target.closest('li');
+            if (targetItem && targetItem !== draggedItem) {
+                const listItems = Array.from(list.children);
+                const targetIndex = listItems.indexOf(targetItem);
+                const draggedIndex = listItems.indexOf(draggedItem);
+
+                // Remove previous drag-over styles
+                list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                targetItem.classList.add('drag-over'); // Add style to target
+
+                // Reorder visually in the list
+                if (targetIndex > draggedIndex) {
+                    list.insertBefore(draggedItem, targetItem.nextSibling);
+                } else {
+                    list.insertBefore(draggedItem, targetItem);
+                }
+            }
+        });
+        
+        list.addEventListener('dragleave', (e) => {
+            const targetItem = e.target.closest('li');
+            if (targetItem) {
+                 targetItem.classList.remove('drag-over');
+            }
+        });
+
+        // --- Modal Control Logic ---
+        const closeModal = (confirm = false) => {
+            modal.classList.remove('active');
+            overlay.classList.remove('active');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                overlay.style.display = 'none';
+                // Clean up event listeners (important!)
+                confirmBtn.removeEventListener('click', handleConfirm);
+                cancelBtn.removeEventListener('click', handleCancel);
+                list.removeEventListener('dragstart', list.dragStartHandler);
+                list.removeEventListener('dragend', list.dragEndHandler);
+                list.removeEventListener('dragover', list.dragOverHandler);
+                 list.removeEventListener('dragleave', list.dragLeaveHandler);
+            }, 300); // Wait for transition
+
+            if (confirm) {
+                this.applyPageReorder(list);
+            }
+        };
+
+        const handleConfirm = () => closeModal(true);
+        const handleCancel = () => closeModal(false);
+
+        // Add temporary references to handlers for removal
+        list.dragStartHandler = list.listeners?.['dragstart'];
+        list.dragEndHandler = list.listeners?.['dragend'];
+        list.dragOverHandler = list.listeners?.['dragover'];
+        list.dragLeaveHandler = list.listeners?.['dragleave'];
+
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+
+        // Show the modal
+        overlay.style.display = 'block';
+        modal.style.display = 'block';
+        setTimeout(() => {
+            modal.classList.add('active');
+            overlay.classList.add('active');
+        }, 10);
+    }
+
+    applyPageReorder(listElement) {
+        console.log('Applying page reorder...');
+        const pageContentBeforeReorder = this.pages[this.currentPageIndex]; // Identify the content we are currently viewing
+        const newOrderIndices = Array.from(listElement.children).map(li => parseInt(li.dataset.originalIndex));
+
+        // Create the new pages array based on the new order
+        const reorderedPages = newOrderIndices.map(originalIndex => this.pages[originalIndex]);
+
+        // Update the main pages array
+        this.pages = reorderedPages;
+
+        // Find the new index of the page content we were viewing
+        // We compare the actual page objects
+        const newPageIndex = this.pages.findIndex(page => page === pageContentBeforeReorder);
+
+        if (newPageIndex !== -1) {
+            this.currentPageIndex = newPageIndex;
+            console.log(`Current page index updated to ${newPageIndex} after reorder.`);
+        } else {
+            console.warn('Could not find the current page content after reorder. Staying at index 0.');
+            this.currentPageIndex = 0; // Fallback
+        }
+
+        // Update the UI
+        this.updatePageIndicator();
+        this.updateNavigationButtons();
+
+        // Optionally, reload the current page visually if needed, though updating index should be sufficient
+        // this.loadPageState(this.currentPageIndex);
+        console.log('Page reorder complete.');
+    }
+    // --- End Reorder Pages Functionality ---
 }
 
 // Initialize the comic creator when the DOM is loaded
