@@ -413,6 +413,79 @@ export const layouts = {
             { x: 0, y: 68, width: 32, height: 32 },
             { x: 68, y: 68, width: 32, height: 32 }
         ]
+    },
+    // Minimalist layouts with generous gutters
+    'center-vertical': {
+        name: "Center Vertical",
+        description: "Single vertical panel centered on the page",
+        panels: [
+            { x: 30, y: 10, width: 40, height: 80 }
+        ]
+    },
+    'center-horizontal': {
+        name: "Center Horizontal",
+        description: "Single horizontal panel centered on the page",
+        panels: [
+            { x: 10, y: 30, width: 80, height: 40 }
+        ]
+    },
+    'floating-trio': {
+        name: "Floating Trio",
+        description: "Three small panels with plenty of white space",
+        panels: [
+            { x: 15, y: 15, width: 30, height: 30 },
+            { x: 55, y: 15, width: 30, height: 30 },
+            { x: 35, y: 55, width: 30, height: 30 }
+        ]
+    },
+    'wide-margins': {
+        name: "Wide Margins",
+        description: "Four panels with extra wide margins",
+        panels: [
+            { x: 15, y: 15, width: 30, height: 30 },
+            { x: 55, y: 15, width: 30, height: 30 },
+            { x: 15, y: 55, width: 30, height: 30 },
+            { x: 55, y: 55, width: 30, height: 30 }
+        ]
+    },
+    'letterbox': {
+        name: "Letterbox",
+        description: "Wide horizontal panel with generous top and bottom margins",
+        panels: [
+            { x: 10, y: 35, width: 80, height: 30 }
+        ]
+    },
+    'pillarbox': {
+        name: "Pillarbox",
+        description: "Tall vertical panel with generous left and right margins",
+        panels: [
+            { x: 35, y: 10, width: 30, height: 80 }
+        ]
+    },
+    'floating-square': {
+        name: "Floating Square",
+        description: "Single square panel centered with generous margins",
+        panels: [
+            { x: 25, y: 25, width: 50, height: 50 }
+        ]
+    },
+    'vertical-thirds-centered': {
+        name: "Vertical Thirds Centered",
+        description: "Three vertical panels with extra gutter space",
+        panels: [
+            { x: 20, y: 10, width: 20, height: 80 },
+            { x: 45, y: 10, width: 20, height: 80 },
+            { x: 70, y: 10, width: 20, height: 80 }
+        ]
+    },
+    'horizontal-thirds-centered': {
+        name: "Horizontal Thirds Centered",
+        description: "Three horizontal panels with extra gutter space",
+        panels: [
+            { x: 10, y: 20, width: 80, height: 20 },
+            { x: 10, y: 45, width: 80, height: 20 },
+            { x: 10, y: 70, width: 80, height: 20 }
+        ]
     }
 };
 
