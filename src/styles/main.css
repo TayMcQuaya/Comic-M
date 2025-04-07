@@ -3138,3 +3138,158 @@ select.font-family option {
         min-height: 30px;
     }
 }
+
+/* Thought Bubble Tail Styles */
+.thought-bubble::after {
+    content: '';
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.thought-bubble::before {
+    content: '';
+    position: absolute;
+    width: 0px;
+    height: 0px;
+    background-color: white;
+    border: 0px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+/* Add a third circle using a pseudo-element on .text-content */
+.thought-bubble .text-content::before {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+/* Bottom positions */
+.thought-tail-bottom-left::after {
+    left: 12px;
+    bottom: -20px;
+}
+.thought-tail-bottom-left::before {
+    left: 18px;
+    bottom: -32px;
+}
+.thought-tail-bottom-left .text-content::before {
+    left: 24px;
+    bottom: -42px;
+}
+
+.thought-tail-bottom-center::after {
+    left: 50%;
+    bottom: -20px;
+    transform: translateX(-50%);
+}
+.thought-tail-bottom-center::before {
+    left: 50%;
+    bottom: -32px;
+    transform: translateX(-50%);
+}
+.thought-tail-bottom-center .text-content::before {
+    left: 50%;
+    bottom: -42px;
+    transform: translateX(-50%);
+}
+
+.thought-tail-bottom-right::after {
+    right: 12px;
+    bottom: -20px;
+}
+.thought-tail-bottom-right::before {
+    right: 18px;
+    bottom: -32px;
+}
+.thought-tail-bottom-right .text-content::before {
+    right: 24px;
+    bottom: -42px;
+}
+
+/* Left positions */
+.thought-tail-left-center::after {
+    left: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.thought-tail-left-center::before {
+    left: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.thought-tail-left-center .text-content::before {
+    left: -42px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Right positions */
+.thought-tail-right-center::after {
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.thought-tail-right-center::before {
+    right: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.thought-tail-right-center .text-content::before {
+    right: -42px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Top positions */
+.thought-tail-top-left::after {
+    left: 12px;
+    top: -20px;
+}
+.thought-tail-top-left::before {
+    left: 18px;
+    top: -32px;
+}
+.thought-tail-top-left .text-content::before {
+    left: 24px;
+    top: -42px;
+}
+
+.thought-tail-top-center::after {
+    left: 50%;
+    top: -20px;
+    transform: translateX(-50%);
+}
+.thought-tail-top-center::before {
+    left: 50%;
+    top: -32px;
+    transform: translateX(-50%);
+}
+.thought-tail-top-center .text-content::before {
+    left: 50%;
+    top: -42px;
+    transform: translateX(-50%);
+}
+
+.thought-tail-top-right::after {
+    right: 12px;
+    top: -20px;
+}
+.thought-tail-top-right::before {
+    right: 18px;
+    top: -32px;
+}
+.thought-tail-top-right .text-content::before {
+    right: 24px;
+    top: -42px;
+}

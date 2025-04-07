@@ -437,7 +437,7 @@ export const layouts = {
         name: "Pillarbox",
         description: "Tall vertical panel with generous left and right margins",
         panels: [
-            { x: 35, y: 10, width: 30, height: 80 }
+            { x: 25, y: 1, width: 50, height: 98 }
         ]
     },
     'floating-square': {
