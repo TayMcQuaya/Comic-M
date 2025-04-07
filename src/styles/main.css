@@ -98,6 +98,18 @@ body {
     text-shadow: 2px 2px 0 var(--shadow-color);
 }
 
+/* Button group for upload section */
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 3rem;
+}
+
+.button-group .primary-btn {
+    margin-top: 0;
+}
+
 .upload-area {
     border: 3px dashed var(--border-color);
     background: var(--card-bg);

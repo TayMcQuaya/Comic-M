@@ -803,6 +803,28 @@ class ComicCreator {
             document.querySelector('#layout-page').classList.add('active');
         });
 
+        // Load Project Button in Upload Page
+        document.querySelector('#load-project-btn').addEventListener('click', () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.style.display = 'none';
+            document.body.appendChild(input);
+
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    await this.loadProject(file);
+                    // After loading, go directly to the editor page
+                    document.querySelector('#upload-page').classList.remove('active');
+                    document.querySelector('#editor-page').classList.add('active');
+                }
+                document.body.removeChild(input);
+            });
+
+            input.click();
+        });
+
         // Add Text Button
         document.querySelector('#add-text-btn')?.addEventListener('click', () => {
             if (this.currentPanel) {
