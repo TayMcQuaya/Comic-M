@@ -545,17 +545,24 @@ body {
 
 .comic-panel {
     position: absolute;
-    background: #E0E0E0; /* Changed to bright grey for empty panels */
-    border: 3px solid #000000; /* Black border for unselected panels */
+    background: transparent;
+    border: 3px solid #000000;
     overflow: hidden;
     transition: all 0.3s ease;
     user-select: none;
-    /* box-shadow: 5px 5px 0 var(--shadow-color); Removed shadow */
-    transform: scale(1.02);
+    transform: none; /* Remove the scale transform */
+}
+
+.comic-panel::before {
+    display: none; /* Remove the pseudo-element that was adding an extra border */
+}
+
+.comic-panel:not(.has-image) {
+    background: #E0E0E0;
 }
 
 .comic-panel.has-image {
-    background: var(--card-bg); /* Dark background only when panel has an image */
+    background: transparent;
 }
 
 /* Remove hover color change */
@@ -602,23 +609,18 @@ body {
     position: absolute;
     top: 50%;
     left: 50%;
-    min-width: 100%;
-    min-height: 100%;
+    min-width: calc(100% + 2px); /* Add 1px on each side to ensure coverage */
+    min-height: calc(100% + 2px); /* Add 1px on each side to ensure coverage */
     width: auto;
     height: auto;
     max-width: none;
     max-height: none;
-    object-fit: none;
-    transform: translate(-50%, -50%) scale(1);
+    object-fit: cover; /* Change to cover to ensure no gaps */
+    transform: translate(-50%, -50%);
     transition: transform 0.3s ease;
     pointer-events: none;
     user-select: none;
     -webkit-user-drag: none;
-    /* Prevent any transparency during drag */
-    opacity: 1 !important;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
 }
 
 .comic-panel.selected img {
@@ -2625,376 +2627,42 @@ select.font-family option {
 
 /* Export mode - hide all editing UI elements */
 .exporting .comic-panel {
-    border: 3px solid #000000 !important; /* Black border for all panels during export */
-    box-shadow: 5px 5px 0 var(--shadow-color) !important;
+    border: 3px solid #000000 !important;
+    background: transparent !important;
+    box-shadow: none !important; /* Remove any shadow during export */
+    transform: none !important; /* Ensure no scaling during export */
+}
+
+.exporting .comic-panel::before {
+    display: none !important; /* Ensure pseudo-element is hidden during export */
+}
+
+.exporting .comic-panel:not(.has-image) {
+    background: #E0E0E0 !important;
 }
 
 .exporting .comic-panel.selected {
-    border-color: #000000 !important; /* Black border for selected panels too */
+    border: 3px solid #000000 !important;
 }
 
-.exporting .text-bubble .drag-handle,
-.exporting .text-bubble .resize-handle,
-.exporting .text-bubble .format-text-btn,
-.exporting .text-bubble .delete-text-btn {
-    display: none !important; /* Hide all text handles during export */
+.exporting .comic-panel img {
+    min-width: calc(100% + 2px) !important; /* Force image to slightly overflow */
+    min-height: calc(100% + 2px) !important;
+    object-fit: cover !important;
 }
 
-.exporting .text-bubble.selected-text {
-    border-color: inherit !important; /* No highlight borders during export */
-}
-
-/* Special handling for comic panels */
+/* Special handling for comic panels during export */
 .exporting .comic-panel:focus,
 .exporting .comic-panel:focus-visible {
     outline: none !important;
-    border-color: #000000 !important;
-    box-shadow: 5px 5px 0 var(--shadow-color) !important;
+    border: 3px solid #000000 !important;
+    box-shadow: none !important;
 }
 
-.thought-bubble {
-    border-radius: 50%;
+/* Remove any hover effects during export */
+.exporting .comic-panel:hover {
+    box-shadow: none !important;
 }
-
-.thought-bubble::before {
-    border-radius: 50%;
-}
-
-/* Thought bubble positions */
-/* Bottom positions */
-.thought-tail-bottom-left::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    left: 20px;
-    bottom: -20px;
-    right: auto;
-    top: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-bottom-left::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    left: 30px;
-    bottom: -30px;
-    right: auto;
-    top: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-bottom-center::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    left: 50%;
-    bottom: -20px;
-    right: auto;
-    top: auto;
-    transform: translateX(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-bottom-center::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    left: 50%;
-    bottom: -30px;
-    right: auto;
-    top: auto;
-    transform: translateX(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-bottom-right::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    left: auto;
-    right: 20px;
-    bottom: -20px;
-    top: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-bottom-right::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    left: auto;
-    right: 30px;
-    bottom: -30px;
-    top: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-/* Left positions */
-.thought-tail-left-center::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    top: 50%;
-    left: -20px;
-    right: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-left-center::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    top: 50%;
-    left: -30px;
-    right: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-/* Right positions */
-.thought-tail-right-center::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    top: 50%;
-    right: -20px;
-    left: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-right-center::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    top: 50%;
-    right: -30px;
-    left: auto;
-    bottom: auto;
-    transform: translateY(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-/* Top positions */
-.thought-tail-top-left::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    left: 20px;
-    top: -20px;
-    right: auto;
-    bottom: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-top-left::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    left: 30px;
-    top: -30px;
-    right: auto;
-    bottom: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-top-center::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    left: 50%;
-    top: -20px;
-    right: auto;
-    bottom: auto;
-    transform: translateX(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-top-center::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    left: 50%;
-    top: -30px;
-    right: auto;
-    bottom: auto;
-    transform: translateX(-50%);
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-top-right::before {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    right: 20px;
-    top: -20px;
-    left: auto;
-    bottom: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-.thought-tail-top-right::after {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 8px;
-    right: 30px;
-    top: -30px;
-    left: auto;
-    bottom: auto;
-    background: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
-    opacity: var(--bubble-opacity);
-}
-
-/* Whisper Bubble - Update to have dotted lines */
-.whisper-bubble {
-    border-style: dotted;
-    border-width: 2px;
-    border-color: #000;
-    background-color: white;
-}
-
-.whisper-bubble::before {
-    background-color: white;
-    border-radius: 15px;
-    opacity: var(--bubble-opacity);
-}
-
-/* Jagged Bubble - Remove black outline */
-.jagged-bubble {
-    border: none;
-    background-color: #ff5252;
-    clip-path: polygon(
-        0% 15%, 15% 0%, 85% 0%, 100% 15%, 
-        100% 85%, 85% 100%, 15% 100%, 0% 85%,
-        0% 60%, 5% 50%, 0% 40%
-    );
-    position: relative;
-}
-
-.jagged-bubble::before {
-    background-color: #ff5252;
-    border-radius: 0;
-    clip-path: polygon(
-        0% 15%, 15% 0%, 85% 0%, 100% 15%, 
-        100% 85%, 85% 100%, 15% 100%, 0% 85%,
-        0% 60%, 5% 50%, 0% 40%
-    );
-}
-
-/* Special handling for jagged bubble controls */
-.jagged-bubble .resize-handle,
-.jagged-bubble .format-text-btn,
-.jagged-bubble .delete-text-btn {
-    transform: none;
-}
-
-.jagged-bubble .resize-handle {
-    bottom: 5px;
-    right: 5px;
-}
-
-.jagged-bubble .format-text-btn {
-    bottom: 5px;
-    left: 5px;
-}
-
-.jagged-bubble .delete-text-btn {
-    top: 5px;
-    right: 5px;
-}
-
-/* Ensure controls are visible */
-.jagged-bubble .resize-handle,
-.jagged-bubble .format-text-btn,
-.jagged-bubble .delete-text-btn {
-    z-index: 5;
-}
-
-/* Add these styles at the end of the file */
 
 /* Modal Styles */
 .modal-overlay {
@@ -3223,92 +2891,250 @@ select.font-family option {
 .color-section {
     display: grid;
     grid-template-columns: 1fr; /* Force single column */
-    gap: 12px;
+    gap: 15px; /* Increase gap */
+}
+
+.color-control { /* Assuming this class wraps label + input */
+     display: block; /* Ensure they stack */
+}
+.color-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
 .effects-grid {
     display: grid;
-    grid-template-columns: 1fr; /* Already single column, ensure consistency */
+    grid-template-columns: 1fr;
     gap: 15px;
 }
 
 .effect-control {
-    display: flex;
-    flex-direction: column; /* Stack label and controls vertically */
-    gap: 5px;
+    display: block; /* Stack sections vertically */
 }
 
-.effect-control > div { /* Target the inner div holding checkboxes/inputs */
+.effect-control label.group-label { /* Style the Effect section label */
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.effect-control > div { /* The div containing checkbox/inputs */
     display: flex;
-    flex-wrap: wrap; /* Allow wrapping if needed */
+    flex-direction: column; /* Stack internal controls vertically */
+    align-items: flex-start; /* Align to the left */
+    gap: 8px;
+}
+
+/* Style the outline/shadow specific inner controls */
+.effect-control > div > div {
+    display: flex;
     align-items: center;
     gap: 8px;
 }
 
-/* Style for red sliders (Size and Line Spacing) */
-.red-slider {
-    accent-color: var(--primary-color);
-}
-
-.red-slider::-webkit-slider-thumb {
-    background: var(--primary-color);
-    border: 2px solid var(--text-color);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
-}
-
-.red-slider::-moz-range-thumb {
-    background: var(--primary-color);
-    border: 2px solid var(--text-color);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
-}
-
-/* Style adjustments for Text Formatting Popup */
-#text-format-popup {
-    padding: 15px 15px 50px 15px; /* Slightly reduce horizontal padding, keep bottom padding for buttons */
-}
-
-.text-style-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Force single column */
-    gap: 12px; /* Adjust gap for vertical stacking */
-}
-
-.style-control {
-    /* Minor adjustments if needed, but single column grid handles stacking */
-}
-
-/* Ensure slider controls take full width */
-.style-control .font-size-control,
-.style-control .line-height-control {
+.outline-control,
+.shadow-control {
     display: flex;
     align-items: center;
-    gap: 8px; /* Slightly reduce gap */
+    gap: 8px;
 }
-.style-control input[type="range"] {
+
+.outline-thickness {
+    width: 60px;
+    padding: 2px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.outline-thickness:disabled {
+    background-color: var(--disabled-bg);
+    cursor: not-allowed;
+}
+
+/* Ensure text remains smooth when scaled */
+.text-content {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.position-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.position-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    width: 150px;
+    margin: 0 auto;
+}
+
+.position-grid-btn {
+    width: 40px;
+    height: 40px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.position-grid-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.rotation-control {
+    margin-top: 10px;
+}
+
+.rotation-control label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.rotation-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rotation-slider input {
     flex-grow: 1;
 }
 
-.color-section {
-    display: grid;
-    grid-template-columns: 1fr; /* Force single column */
-    gap: 12px;
-}
+/* Google Fonts Integration */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
 
-.effects-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Already single column, ensure consistency */
-    gap: 15px;
-}
-
-.effect-control {
+/* Font preview styles for dropdown */
+.font-option {
     display: flex;
-    flex-direction: column; /* Stack label and controls vertically */
-    gap: 5px;
-}
-
-.effect-control > div { /* Target the inner div holding checkboxes/inputs */
-    display: flex;
-    flex-wrap: wrap; /* Allow wrapping if needed */
     align-items: center;
-    gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    margin: 2px 0;
+}
+
+.font-option:hover {
+    background-color: var(--hover-color);
+}
+
+.font-preview {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+    line-height: 1.5;
+    padding: 4px 0;
+}
+
+.font-family option {
+    min-height: 30px;
+}
+
+.font-category {
+    font-weight: bold;
+    color: #666;
+    padding: 8px;
+    background-color: #f5f5f5;
+    margin-top: 5px;
+    border-bottom: 1px solid #ddd;
+    pointer-events: none;
+}
+
+/* Font family specific preview styling */
+.font-arial { font-family: Arial, sans-serif; }
+.font-comic-sans { font-family: 'Comic Sans MS', cursive; }
+.font-times { font-family: 'Times New Roman', serif; }
+.font-impact { font-family: Impact, Haettenschweiler, sans-serif; font-size: 18px; font-weight: bold; }
+.font-bangers { font-family: 'Bangers', cursive; font-size: 18px; letter-spacing: 1px; }
+.font-luckiest-guy { font-family: 'Luckiest Guy', cursive; font-size: 18px; }
+.font-permanent-marker { font-family: 'Permanent Marker', cursive; }
+.font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
+.font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
+.font-comic-neue { font-family: 'Comic Neue', cursive; }
+.font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
+.font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
+.font-fredoka-one { font-family: 'Fredoka One', cursive; }
+.font-gloria-hallelujah { font-family: 'Gloria Hallelujah', cursive; font-size: 15px; }
+.font-architects-daughter { font-family: 'Architects Daughter', cursive; }
+.font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
+.font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
+
+/* Custom Select styling */
+.custom-select {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.custom-select select {
+    width: 100%;
+    padding: 8px 30px 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--card-bg);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+}
+
+.custom-select::after {
+    content: '\f0d7';
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #555;
+}
+
+.custom-select select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+}
+
+/* Custom select for the text formatting panel */
+.text-font-section {
+    margin-bottom: 15px;
+}
+
+.text-font-section select {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Style the font preview dropdown */
+select.font-family option {
+    padding: 8px;
+}
+
+/* Make the preview more visible */
+.font-family option[value] {
+    padding: 10px;
+    min-height: 40px;
+}
+
+/* Firefox specific styles */
+@-moz-document url-prefix() {
+    .font-option {
+        height: auto;
+        min-height: 30px;
+    }
 }
