@@ -434,10 +434,21 @@ export const layouts = {
         ]
     },
     'pillarbox': {
-        name: "Pillarbox",
-        description: "Tall vertical panel with generous left and right margins",
+        name: 'Pillarbox',
+        description: 'Tall panel with narrow side gutters',
         panels: [
+            // Main tall panel (50% width, 98% height, centered)
             { x: 25, y: 1, width: 50, height: 98 }
+        ]
+    },
+    'pillarbox-inset': {
+        name: 'Pillarbox with Top-Right Inset',
+        description: 'Tall panel with a small overlapping square in the top-right corner',
+        panels: [
+            // Main tall panel (shifted left)
+            { x: 5, y: 1, width: 50, height: 98 },
+            // Larger square overlapping top-right (shifted left)
+            { x: 45, y: 5, width: 48, height: 48 } 
         ]
     },
     'floating-square': {
