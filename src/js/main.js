@@ -34,6 +34,7 @@ class ComicCreator {
         this.setupLayoutSelection();
         this.setupComicEditor();
         this.setupEventListeners();
+        this.setupProjectControls(); // Add this line
         this.initializeUI();
     }
 
@@ -2751,6 +2752,123 @@ class ComicCreator {
     updateOutlineText(textElement) {
         if (textElement.hasAttribute('data-has-outline')) {
             textElement.setAttribute('data-text', textElement.textContent || textElement.innerText);
+        }
+    }
+
+    saveProject() {
+        // Save current page state before exporting
+        this.saveCurrentPageState();
+        
+        // Create project state object
+        const projectState = {
+            version: '1.0',
+            pages: this.pages.map(page => ({
+                ...page,
+                panelStates: page.panelStates.map(panel => ({
+                    ...panel,
+                    // Convert image data URLs to just IDs
+                    imageId: panel.imageId || null
+                }))
+            })),
+            images: this.uploadedImages.map(img => ({
+                id: img.id,
+                name: img.name,
+                width: img.width,
+                height: img.height,
+                src: img.src // Keep the data URL for now
+            })),
+            currentPageIndex: this.currentPageIndex
+        };
+        
+        // Create and trigger download
+        const blob = new Blob([JSON.stringify(projectState, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'comic-project.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    async loadProject(file) {
+        try {
+            const text = await file.text();
+            const projectState = JSON.parse(text);
+            
+            // Version check
+            if (!projectState.version) {
+                throw new Error('Invalid project file format');
+            }
+            
+            // Clear current state
+            this.uploadedImages = [];
+            this.pages = [];
+            this.currentPageIndex = 0;
+            
+            // Load images first
+            const loadedImages = await Promise.all(projectState.images.map(img => {
+                return new Promise((resolve) => {
+                    const image = new Image();
+                    image.onload = () => {
+                        resolve({
+                            id: img.id,
+                            name: img.name,
+                            src: img.src,
+                            width: img.width,
+                            height: img.height
+                        });
+                    };
+                    image.src = img.src;
+                });
+            }));
+            
+            this.uploadedImages = loadedImages;
+            
+            // Load pages
+            this.pages = projectState.pages;
+            this.currentPageIndex = projectState.currentPageIndex;
+            
+            // Update UI
+            this.updateImageLibrary();
+            
+            // Load the current page
+            await this.loadPageState(this.currentPageIndex);
+            
+            // Update navigation
+            this.updatePageIndicator();
+            this.updateNavigationButtons();
+            
+            console.log('Project loaded successfully');
+        } catch (error) {
+            console.error('Error loading project:', error);
+            alert('Error loading project file. Please make sure it is a valid comic project file.');
+        }
+    }
+
+    setupProjectControls() {
+        // Save Project button
+        const saveProjectBtn = document.getElementById('save-project-btn');
+        if (saveProjectBtn) {
+            saveProjectBtn.addEventListener('click', () => this.saveProject());
+        }
+        
+        // Load Project button
+        const loadProjectBtn = document.getElementById('load-project-btn');
+        if (loadProjectBtn) {
+            loadProjectBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        await this.loadProject(file);
+                    }
+                };
+                input.click();
+            });
         }
     }
 }
