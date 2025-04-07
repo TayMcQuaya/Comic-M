@@ -1663,20 +1663,27 @@ label {
 /* Create a smooth outline effect that stays behind text */
 .text-content[data-has-outline="true"] {
     position: relative;
-    z-index: 2;
 }
 
 .text-content[data-has-outline="true"]::before {
     content: attr(data-text);
     position: absolute;
     left: 0;
-    right: 0;
     top: 0;
+    right: 0;
     bottom: 0;
     z-index: -1;
     color: var(--outline-color, #000000);
     -webkit-text-stroke: var(--outline-width, 2px) var(--outline-color, #000000);
     text-stroke: var(--outline-width, 2px) var(--outline-color, #000000);
+    text-align: inherit;
+    font: inherit;
+    line-height: inherit;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    word-break: break-word;
+    padding: inherit;
+    pointer-events: none;
 }
 
 /* Ensure text appears above the outline */

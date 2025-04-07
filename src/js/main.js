@@ -2600,8 +2600,9 @@ class ComicCreator {
     }
     
     applyTextOutline(textElement, color, thickness = 2) {
-        // Store the current text content
+        // Store the current text content and computed styles
         const text = textElement.textContent || textElement.innerText;
+        const computedStyle = window.getComputedStyle(textElement);
         
         // Set the data attributes for the outline effect
         textElement.setAttribute('data-has-outline', 'true');
@@ -2612,10 +2613,49 @@ class ComicCreator {
         textElement.style.setProperty('--outline-width', `${thickness}px`);
         textElement.style.setProperty('--text-color', textElement.style.color || '#000000');
         
+        // Copy all relevant text styling properties to ensure perfect matching
+        const stylesToCopy = [
+            'fontFamily',
+            'fontSize',
+            'fontWeight',
+            'fontStyle',
+            'letterSpacing',
+            'wordSpacing',
+            'lineHeight',
+            'textTransform',
+            'textAlign',
+            'textDecoration',
+            'whiteSpace'
+        ];
+        
+        stylesToCopy.forEach(prop => {
+            const value = computedStyle[prop];
+            if (value) {
+                textElement.style[prop] = value;
+            }
+        });
+        
         // Add smooth text rendering
         textElement.style.webkitFontSmoothing = 'antialiased';
         textElement.style.mozOsxFontSmoothing = 'grayscale';
         textElement.style.textRendering = 'optimizeLegibility';
+        
+        // Create a MutationObserver to update the outline when text content changes
+        if (!textElement._outlineObserver) {
+            textElement._outlineObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'characterData' || mutation.type === 'childList') {
+                        this.updateOutlineText(textElement);
+                    }
+                });
+            });
+            
+            textElement._outlineObserver.observe(textElement, {
+                characterData: true,
+                childList: true,
+                subtree: true
+            });
+        }
     }
     
     removeTextOutline(textElement) {
@@ -2625,6 +2665,12 @@ class ComicCreator {
         textElement.style.removeProperty('--outline-color');
         textElement.style.removeProperty('--outline-width');
         textElement.style.removeProperty('--text-color');
+        
+        // Disconnect the observer if it exists
+        if (textElement._outlineObserver) {
+            textElement._outlineObserver.disconnect();
+            delete textElement._outlineObserver;
+        }
     }
     
     applyTextShadow(textElement, color) {
@@ -2751,7 +2797,8 @@ class ComicCreator {
     // Add a new method to update the outline text content when text changes
     updateOutlineText(textElement) {
         if (textElement.hasAttribute('data-has-outline')) {
-            textElement.setAttribute('data-text', textElement.textContent || textElement.innerText);
+            const text = textElement.textContent || textElement.innerText;
+            textElement.setAttribute('data-text', text);
         }
     }
 
