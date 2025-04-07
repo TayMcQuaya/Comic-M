@@ -244,17 +244,6 @@ export const layouts = {
         ]
     },
     // Add new layouts
-    'spiral-focus': {
-        name: "Spiral Focus",
-        description: "Panels arranged in a spiral pattern",
-        panels: [
-            { x: 25, y: 25, width: 50, height: 50 },
-            { x: 0, y: 0, width: 48, height: 48 },
-            { x: 52, y: 0, width: 48, height: 48 },
-            { x: 52, y: 52, width: 48, height: 48 },
-            { x: 0, y: 52, width: 48, height: 48 }
-        ]
-    },
     'cross-layout': {
         name: "Cross Layout",
         description: "Panels arranged in a cross pattern",
@@ -276,17 +265,6 @@ export const layouts = {
             { x: 0, y: 68, width: 32, height: 32 },
             { x: 34, y: 68, width: 32, height: 32 },
             { x: 68, y: 68, width: 32, height: 32 }
-        ]
-    },
-    'windmill': {
-        name: "Windmill Layout",
-        description: "Dynamic rotating panel arrangement",
-        panels: [
-            { x: 25, y: 25, width: 50, height: 50 },
-            { x: 0, y: 0, width: 45, height: 45 },
-            { x: 55, y: 0, width: 45, height: 45 },
-            { x: 0, y: 55, width: 45, height: 45 },
-            { x: 55, y: 55, width: 45, height: 45 }
         ]
     },
     'zigzag': {
