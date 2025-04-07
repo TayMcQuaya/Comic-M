@@ -2283,6 +2283,14 @@ class ComicCreator {
                                 </button>
                             </div>
                         </div>
+                        
+                        <div class="style-control">
+                            <label for="line-height">Line Spacing</label>
+                            <div class="line-height-control" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="range" id="line-height" class="line-height" min="0.8" max="5" step="0.1" value="1.2" style="flex-grow: 1;"> <!-- Changed max to 5 -->
+                                <span class="line-height-value" style="min-width: 30px; text-align: right;">1.2</span>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="color-section">
@@ -2629,6 +2637,27 @@ class ComicCreator {
                 textBox.style.setProperty('--bubble-opacity', '1');
             }
             // Save state after changing opacity
+            this.saveCurrentPageState();
+        });
+
+        // Line spacing slider
+        const lineHeightSlider = popup.querySelector('#line-height');
+        const lineHeightValue = popup.querySelector('.line-height-value');
+
+        // Initialize slider value
+        const currentLineHeight = textElement.style.lineHeight;
+        let initialValue = 1.2; // Default if 'normal' or not set
+        if (currentLineHeight && currentLineHeight !== 'normal') {
+            initialValue = parseFloat(currentLineHeight) || 1.2;
+        }
+        lineHeightSlider.value = initialValue;
+        lineHeightValue.textContent = initialValue.toFixed(1);
+
+        lineHeightSlider.addEventListener('input', () => {
+            const value = lineHeightSlider.value;
+            lineHeightValue.textContent = parseFloat(value).toFixed(1);
+            textElement.style.lineHeight = value;
+            // Save state after changing line height
             this.saveCurrentPageState();
         });
     }
@@ -3176,7 +3205,6 @@ class ComicCreator {
         // this.loadPageState(this.currentPageIndex);
         console.log('Page reorder complete.');
     }
-    // --- End Reorder Pages Functionality ---
 }
 
 // Initialize the comic creator when the DOM is loaded

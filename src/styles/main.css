@@ -685,17 +685,40 @@ img[draggable="false"] {
 
 /* Position Controls */
 .position-controls {
+    display: flex; /* Use flex to center the grid */
+    flex-direction: column; /* Stack vertically */
+    align-items: center; /* Center grid horizontally */
+    gap: 15px; /* Add space between items */
+}
+
+.position-grid {
     display: grid;
-    grid-template-areas:
-        ". up ."
-        "left . right"
-        ". down .";
-    gap: 5px;
-    background: var(--input-bg);
-    padding: 8px;
-    border-radius: 8px;
-    width: 90px;
-    margin: 0.2rem auto;
+    grid-template-columns: repeat(3, 1fr); /* Create a 3-column grid */
+    gap: 5px; /* Add space between grid items */
+    width: 150px; /* Keep the size */
+    margin: 0; /* Remove margin auto as parent flex centers it */
+    background-color: var(--input-bg); /* Add background */
+    padding: 10px; /* Add padding */
+    border-radius: 8px; /* Add border radius */
+    border: 1px solid var(--border-color);
+}
+
+.position-grid-btn {
+    width: 40px;
+    height: 40px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.position-grid-btn:hover {
+    background-color: var(--hover-color);
 }
 
 .position-btn {
@@ -2048,7 +2071,7 @@ label {
 
 .bubble-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* Changed from 3 to 2 columns */
     gap: 8px;
     margin-top: 10px;
 }
@@ -2319,72 +2342,77 @@ label {
 }
 
 .text-style-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 15px;
+    display: grid; /* Keep using grid */
+    grid-template-columns: 1fr; /* Ensure single column */
+    gap: 15px; /* Increase gap slightly */
 }
 
 .style-control {
-    display: flex;
-    flex-direction: column;
+    /* Remove any flex behavior that might cause side-by-side */
+    display: block; /* Ensure controls stack vertically */
 }
 
+/* Adjust label/control layout within style-control if needed */
 .style-control label {
-    font-size: 12px;
-    font-weight: bold;
+    display: block;
     margin-bottom: 5px;
+    font-weight: bold;
 }
 
-.size-control {
+/* Ensure slider controls still look okay */
+.style-control .font-size-control,
+.style-control .line-height-control {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
-
-.size-control input {
+.style-control input[type="range"] {
     flex-grow: 1;
 }
 
-.text-style-buttons,
-.text-align-buttons {
-    display: flex;
-    gap: 5px;
-}
-
 .color-section {
-    display: flex;
-    gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 15px; /* Increase gap */
 }
 
-.color-control {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
+.color-control { /* Assuming this class wraps label + input */
+     display: block; /* Ensure they stack */
 }
-
 .color-control label {
-    font-size: 12px;
+    display: block;
+    margin-bottom: 5px;
     font-weight: bold;
 }
 
 .effects-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: 1fr;
+    gap: 15px;
 }
 
 .effect-control {
+    display: block; /* Stack sections vertically */
+}
+
+.effect-control label.group-label { /* Style the Effect section label */
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.effect-control > div { /* The div containing checkbox/inputs */
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* Stack internal controls vertically */
+    align-items: flex-start; /* Align to the left */
     gap: 8px;
 }
 
-.effect-control label {
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 2px;
+/* Style the outline/shadow specific inner controls */
+.effect-control > div > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .outline-control,
@@ -3118,4 +3146,99 @@ select.font-family option {
 #reorder-modal .reorder-list li span /* Target specific list text */
 {
     color: #333; /* Dark gray for readability */
+}
+
+/* Style for line height control */
+.line-height-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.line-height {
+    flex-grow: 1;
+    accent-color: var(--primary-color);
+    height: 6px; /* Match zoom slider */
+    cursor: pointer;
+}
+
+.line-height-value {
+    min-width: 30px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Apply similar thumb style as zoom */
+.line-height::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--text-color);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+    margin-top: -5px; /* Adjust vertical centering */
+}
+
+.line-height::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--text-color);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+/* Style adjustments for Text Formatting Popup */
+#text-format-popup {
+    padding: 15px 15px 50px 15px; /* Slightly reduce horizontal padding, keep bottom padding for buttons */
+}
+
+.text-style-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 12px; /* Adjust gap for vertical stacking */
+}
+
+.style-control {
+    /* Minor adjustments if needed, but single column grid handles stacking */
+}
+
+/* Ensure slider controls take full width */
+.style-control .font-size-control,
+.style-control .line-height-control {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Slightly reduce gap */
+}
+.style-control input[type="range"] {
+    flex-grow: 1;
+}
+
+.color-section {
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 12px;
+}
+
+.effects-grid {
+    display: grid;
+    grid-template-columns: 1fr; /* Already single column, ensure consistency */
+    gap: 15px;
+}
+
+.effect-control {
+    display: flex;
+    flex-direction: column; /* Stack label and controls vertically */
+    gap: 5px;
+}
+
+.effect-control > div { /* Target the inner div holding checkboxes/inputs */
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping if needed */
+    align-items: center;
+    gap: 8px;
 }
