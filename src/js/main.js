@@ -26,6 +26,8 @@ class ComicCreator {
         }];
         this.currentPageIndex = 0;
         this.layouts = layouts; // Store layouts in the instance
+        this.useGlobalBackgroundStyle = false; // Global background toggle
+        this.globalBackgroundStyle = 'classic-white'; // Default global background style
         this.init();
     }
 
@@ -474,6 +476,10 @@ class ComicCreator {
                         Gradient Fade
                     </button>
                 </div>
+                <div class="global-background-control" style="margin-top: 10px; text-align: left; display: flex; align-items: center;">
+                    <input type="checkbox" id="use-global-background" ${this.useGlobalBackgroundStyle ? 'checked' : ''}>
+                    <label for="use-global-background" style="margin-left: 8px; font-size: 14px;">Apply to all pages</label>
+                </div>
             </div>
             <div class="control-group">
                 <h4 style="text-align: center;">Image Controls</h4>
@@ -585,6 +591,36 @@ class ComicCreator {
                 btn.classList.add('active');
             });
         });
+
+        // Add global background checkbox listener
+        const globalBackgroundCheckbox = controls.querySelector('#use-global-background');
+        if (globalBackgroundCheckbox) {
+            globalBackgroundCheckbox.addEventListener('change', (e) => {
+                this.useGlobalBackgroundStyle = e.target.checked;
+                
+                if (e.target.checked) {
+                    // Get current background style
+                    const canvas = document.querySelector('#comic-canvas');
+                    const backgroundClasses = [
+                        'classic-white', 'vintage-paper', 'dotted-pattern',
+                        'halftone', 'graph-paper', 'gradient-fade'
+                    ];
+                    const currentStyle = Array.from(canvas.classList)
+                        .find(cls => backgroundClasses.includes(cls)) || 'classic-white';
+                    
+                    // Set as global style
+                    this.globalBackgroundStyle = currentStyle;
+                    
+                    // Apply to all pages
+                    this.pages.forEach(page => {
+                        page.canvasBackgroundStyle = currentStyle;
+                    });
+                }
+                
+                // Save current page state
+                this.saveCurrentPageState();
+            });
+        }
     }
 
     clearPanelImage(panel) {
@@ -782,10 +818,26 @@ class ComicCreator {
         // Save canvas background style
         const canvas = document.querySelector('#comic-canvas');
         if (canvas) {
-            currentPage.canvasBackgroundStyle = Array.from(canvas.classList)
-                .find(cls => ['classic-white', 'vintage-paper', 'dotted-pattern', 
-                             'halftone', 'graph-paper', 'gradient-fade'].includes(cls)) 
-                || 'classic-white';
+            const backgroundClasses = [
+                'classic-white', 'vintage-paper', 'dotted-pattern',
+                'halftone', 'graph-paper', 'gradient-fade'
+            ];
+            
+            // Find current background style
+            const currentStyle = Array.from(canvas.classList)
+                .find(cls => backgroundClasses.includes(cls)) || 'classic-white';
+            
+            // If global background is enabled, update global style
+            if (this.useGlobalBackgroundStyle) {
+                this.globalBackgroundStyle = currentStyle;
+                // Set this style for all pages
+                this.pages.forEach(page => {
+                    page.canvasBackgroundStyle = currentStyle;
+                });
+            } else {
+                // Only update current page's background style
+                currentPage.canvasBackgroundStyle = currentStyle;
+            }
         }
         
         console.log(`Saved page ${this.currentPageIndex} with ${currentPage.panelStates.length} panel states and layout ID ${currentPage.layout}`);
@@ -1224,9 +1276,21 @@ class ComicCreator {
         
         // Set canvas background style
         const canvas = document.querySelector('#comic-canvas');
-        if (canvas && page.canvasBackgroundStyle) {
+        if (canvas) {
             canvas.className = ''; // Clear existing classes
-            canvas.classList.add(page.canvasBackgroundStyle);
+            
+            // If global background is enabled, use the global style
+            if (this.useGlobalBackgroundStyle) {
+                canvas.classList.add(this.globalBackgroundStyle);
+            } 
+            // Otherwise use the page-specific style
+            else if (page.canvasBackgroundStyle) {
+                canvas.classList.add(page.canvasBackgroundStyle);
+            }
+            // Default to classic white if no style is set
+            else {
+                canvas.classList.add('classic-white');
+            }
         }
         
         // Restore panel states
@@ -1566,6 +1630,16 @@ class ComicCreator {
 
         // Add the new style class
         canvas.classList.add(style);
+
+        // If global background is enabled, store it as the global style
+        if (this.useGlobalBackgroundStyle) {
+            this.globalBackgroundStyle = style;
+            
+            // Update all pages to use this background
+            this.pages.forEach(page => {
+                page.canvasBackgroundStyle = style;
+            });
+        }
 
         // Save the current page state
         this.saveCurrentPageState();
@@ -2949,6 +3023,8 @@ class ComicCreator {
         // Create project state object
         const projectState = {
             version: '1.0',
+            useGlobalBackgroundStyle: this.useGlobalBackgroundStyle,
+            globalBackgroundStyle: this.globalBackgroundStyle,
             pages: this.pages.map(page => ({
                 ...page,
                 panelStates: page.panelStates.map(panel => ({
@@ -2993,6 +3069,15 @@ class ComicCreator {
             this.uploadedImages = [];
             this.pages = [];
             this.currentPageIndex = 0;
+            
+            // Load global background settings if present
+            if (projectState.hasOwnProperty('useGlobalBackgroundStyle')) {
+                this.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle;
+            }
+            
+            if (projectState.hasOwnProperty('globalBackgroundStyle')) {
+                this.globalBackgroundStyle = projectState.globalBackgroundStyle;
+            }
             
             // Load images first
             const loadedImages = await Promise.all(projectState.images.map(img => {
