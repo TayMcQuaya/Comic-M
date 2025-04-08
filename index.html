@@ -73,8 +73,20 @@
             <div class="editor-container">
                 <!-- Left Sidebar: Image Library -->
                 <div class="editor-sidebar">
-                    <h3>Your Images</h3>
-                    <div id="editor-thumbnails" class="thumbnails-grid"></div>
+                    <!-- Add Tab Structure -->
+                    <div class="sidebar-tabs">
+                        <button class="tab-btn active" data-tab="panels">Panels</button>
+                        <button class="tab-btn" data-tab="backgrounds">Backgrounds</button>
+                        <button class="tab-btn" data-tab="stickers">Stickers</button>
+                    </div>
+                    <div class="sidebar-content">
+                        <!-- Existing Upload Area (will move slightly later if needed) -->
+                        <!-- The upload area might be better placed above the tabs, TBD -->
+                        
+                        <!-- Image Library (now within content area) -->
+                        <h3>Your Images</h3> 
+                        <div id="editor-thumbnails" class="thumbnails-grid"></div>
+                    </div>
                 </div>
 
                 <!-- Main Canvas Area -->
@@ -88,12 +100,18 @@
                         <h4>Panel Settings</h4>
                         <div class="panel-controls">
                             <div class="control-group">
-                                <label>Zoom</label>
-                                <input type="range" class="zoom-control" min="50" max="300" value="100">
-                                <span class="zoom-value">100%</span>
+                                <h4 style="text-align: center;">Image Controls</h4>
+                                <div class="zoom-group">
+                                    <label>Zoom</label>
+                                    <input type="range" class="zoom-control" min="50" max="300" value="100">
+                                    <span class="zoom-value">100%</span>
+                                    <button class="reset-zoom-btn">
+                                        <i class="fas fa-undo"></i> Reset Zoom
+                                    </button>
+                                </div>
                             </div>
                             <div class="control-group">
-                                <label>Position</label>
+                                <h4 style="text-align: center;">Position</h4>
                                 <div class="position-controls">
                                     <button class="position-btn up"><i class="fas fa-arrow-up"></i></button>
                                     <button class="position-btn left"><i class="fas fa-arrow-left"></i></button>
@@ -209,6 +227,16 @@
         <div class="modal-buttons">
             <button id="cancel-reorder-btn" class="secondary-btn">Cancel</button>
             <button id="confirm-reorder-btn" class="primary-btn">Confirm</button>
+        </div>
+    </div>
+
+    <!-- Select Panel Notification Modal -->
+    <div id="select-panel-modal-overlay" class="modal-overlay"></div>
+    <div id="select-panel-modal" class="modal">
+        <h3>Add Text</h3>
+        <p style="text-align: center; margin-bottom: 1.5rem; color: #555;">Please select a panel first to add text.</p>
+        <div class="modal-buttons">
+            <button id="ok-select-panel-btn" class="primary-btn">OK</button>
         </div>
     </div>
 </body>

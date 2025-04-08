@@ -28,6 +28,7 @@ class ComicCreator {
         this.layouts = layouts; // Store layouts in the instance
         this.useGlobalBackgroundStyle = false; // Global background toggle
         this.globalBackgroundStyle = 'classic-white'; // Default global background style
+        this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
         this.init();
     }
 
@@ -38,6 +39,7 @@ class ComicCreator {
         this.setupEventListeners();
         this.setupProjectControls(); // Add this line
         this.initializeUI();
+        this.setupSidebarTabs(); // Add this line to set up tab listeners
     }
 
     setupUploadArea() {
@@ -225,8 +227,40 @@ class ComicCreator {
         
         // Add keyboard event listener for delete key
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Delete' && this.currentPanel && this.currentPanel.querySelector('img')) {
-                this.clearPanelImage(this.currentPanel);
+            if (e.key === 'Delete') {
+                // Check current sidebar mode and selected element
+                switch (this.currentSidebarMode) {
+                    case 'panels':
+                        if (this.currentPanel && this.currentPanel.querySelector('img')) {
+                            this.clearPanelImage(this.currentPanel);
+                        }
+                        break;
+                    case 'backgrounds':
+                        const backgroundElement = document.querySelector('.canvas-background-image');
+                        if (backgroundElement) {
+                            backgroundElement.remove();
+                            // Clear state
+                            const currentPage = this.pages[this.currentPageIndex];
+                            if (currentPage) currentPage.backgroundState = null;
+                            this.deselectAll();
+                            this.updateRightSidebarView();
+                            this.saveCurrentPageState();
+                        }
+                        break;
+                    case 'stickers':
+                        if (this.currentSticker) {
+                            const stickerIdToDelete = this.currentSticker.id;
+                            this.currentSticker.remove();
+                            // Remove from state
+                            const pageState = this.pages[this.currentPageIndex];
+                            if (pageState && pageState.stickerStates) {
+                                pageState.stickerStates = pageState.stickerStates.filter(s => s.id !== stickerIdToDelete);
+                            }
+                            this.deselectAll();
+                            this.saveCurrentPageState();
+                        }
+                        break;
+                }
             }
         });
 
@@ -248,25 +282,70 @@ class ComicCreator {
 
         canvas.addEventListener('drop', (e) => {
             e.preventDefault();
+            const imageId = e.dataTransfer.getData('image/id');
+            if (!imageId) return; // Exit if no image ID is found
+            
+            const image = this.uploadedImages.find(img => String(img.id) === imageId);
+            if (!image) {
+                console.error('Image not found for ID:', imageId);
+                return;
+            }
+
             const panel = e.target.closest('.comic-panel');
-            if (panel) {
-                panel.classList.remove('drop-target');
-                const imageId = e.dataTransfer.getData('image/id');
-                console.log('Dropped image ID:', imageId); // Debug log
-                const image = this.uploadedImages.find(img => String(img.id) === imageId);
-                console.log('Found image:', image); // Debug log
-                if (image) {
-                    this.addImageToPanel(panel, image);
-                } else {
-                    console.error('Image not found for ID:', imageId);
-                }
+
+            // Handle drop based on current sidebar mode
+            switch (this.currentSidebarMode) {
+                case 'panels':
+                    if (panel) {
+                        panel.classList.remove('drop-target');
+                        console.log('Mode: Panels - Dropped image ID:', imageId, 'onto panel');
+                        this.addImageToPanel(panel, image);
+                    } else {
+                        console.log('Mode: Panels - Drop outside panel ignored.');
+                    }
+                    break;
+                
+                case 'backgrounds':
+                    // Allow drop anywhere on the canvas for background
+                    console.log('Mode: Backgrounds - Dropped image ID:', imageId, 'onto canvas');
+                    this.addBackgroundImage(image);
+                    // Remove drop-target from panel if dragged over one initially
+                    if (panel) panel.classList.remove('drop-target');
+                    break;
+
+                case 'stickers':
+                    // Allow drop anywhere on the canvas for stickers
+                    console.log('Mode: Stickers - Dropped image ID:', imageId, 'onto canvas');
+                    // Pass viewport drop coordinates (clientX, clientY)
+                    this.addSticker(image, e.clientX, e.clientY); 
+                    // Remove drop-target from panel if dragged over one initially
+                    if (panel) panel.classList.remove('drop-target');
+                    break;
+
+                default:
+                    console.warn('Unknown sidebar mode:', this.currentSidebarMode);
             }
         });
 
         canvas.addEventListener('click', (e) => {
             const panel = e.target.closest('.comic-panel');
-            if (panel) {
+            const textBox = e.target.closest('.text-bubble');
+            const sticker = e.target.closest('.canvas-sticker-image'); // Check for sticker click
+
+            if (sticker) {
+                // Clicked on a sticker - select it
+                this.selectSticker(sticker);
+            } else if (textBox) {
+                // Clicked inside a text box (or its controls, handled by text box listeners)
+                // Let the text box's own click listener handle selection/focus
+                // Do nothing here to avoid deselecting when clicking format buttons etc.
+                return; 
+            } else if (panel) {
+                // Clicked on a panel but not text/sticker inside it
                 this.selectPanel(panel);
+            } else {
+                // Clicked on the canvas background or empty area
+                this.deselectAll();
             }
         });
     }
@@ -446,57 +525,22 @@ class ComicCreator {
         const controls = document.querySelector('.panel-controls');
         if (!controls) return;
 
+        if (!panel) {
+            this.showSelectPanelModal();
+            return;
+        }
+
         // Clear existing controls
         controls.innerHTML = `
             <div class="control-group">
-                <h4 style="text-align: center;">Background Style</h4>
-                <div class="background-styles">
-                    <button class="style-btn" data-style="classic-white">
-                        <span class="preview classic-white"></span>
-                        Classic White
-                    </button>
-                    <button class="style-btn" data-style="vintage-paper">
-                        <span class="preview vintage-paper"></span>
-                        Vintage Paper
-                    </button>
-                    <button class="style-btn" data-style="dotted-pattern">
-                        <span class="preview dotted-pattern"></span>
-                        Dotted Pattern
-                    </button>
-                    <button class="style-btn" data-style="halftone">
-                        <span class="preview halftone"></span>
-                        Halftone
-                    </button>
-                    <button class="style-btn" data-style="graph-paper">
-                        <span class="preview graph-paper"></span>
-                        Graph Paper
-                    </button>
-                    <button class="style-btn" data-style="gradient-fade">
-                        <span class="preview gradient-fade"></span>
-                        Gradient Fade
-                    </button>
-                </div>
-                <div class="global-background-control" style="margin-top: 10px; text-align: left; display: flex; align-items: center;">
-                    <input type="checkbox" id="use-global-background" ${this.useGlobalBackgroundStyle ? 'checked' : ''}>
-                    <label for="use-global-background" style="margin-left: 8px; font-size: 14px;">Apply to all pages</label>
-                </div>
-            </div>
-            <div class="control-group">
                 <h4 style="text-align: center;">Image Controls</h4>
-                ${panel.querySelector('img') ? `
-                    <button class="delete-panel-image-btn" style="width: 100%; margin-bottom: 1rem;">
-                        <i class="fas fa-trash"></i> Remove Image
-                    </button>
-                ` : ''}
                 <div class="zoom-group">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-                        <label>Zoom</label>
-                        <button class="reset-zoom-btn" style="padding: 4px 8px; font-size: 14px;">
-                            <i class="fas fa-undo"></i> Reset
-                        </button>
-                    </div>
+                    <label>Zoom</label>
                     <input type="range" class="zoom-control" min="50" max="300" value="100">
                     <span class="zoom-value">100%</span>
+                    <button class="reset-zoom-btn">
+                        <i class="fas fa-undo"></i> Reset Zoom
+                    </button>
                 </div>
             </div>
             <div class="control-group">
@@ -511,40 +555,18 @@ class ComicCreator {
                            step="0.1" 
                            style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
                 </div>
-                <div class="position-controls">
-                    <button class="position-btn up"><i class="fas fa-chevron-up"></i></button>
-                    <button class="position-btn left"><i class="fas fa-chevron-left"></i></button>
-                    <button class="position-btn right"><i class="fas fa-chevron-right"></i></button>
-                    <button class="position-btn down"><i class="fas fa-chevron-down"></i></button>
+                <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
+                    <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
+                    <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
+                    <div style="grid-area: center;"></div>
+                    <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
+                    <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
                 </div>
-            </div>
-        `;
+            </div>`;
 
-        // Add event listener for delete button
-        const deleteBtn = controls.querySelector('.delete-panel-image-btn');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', () => this.clearPanelImage(panel));
-        }
-
-        // Get the current scale value
-        const img = panel.querySelector('img');
-        if (!img) return;
-
-        const currentScale = parseFloat(panel.dataset.currentScale) || 1;
-        const initialScale = parseFloat(panel.dataset.initialScale) || 1;
-        
-        // Update zoom control
+        // Add zoom control listeners
         const zoomControl = controls.querySelector('.zoom-control');
         if (zoomControl) {
-            // Convert scale to percentage relative to initial scale
-            const zoomPercentage = (currentScale / initialScale) * 100;
-            zoomControl.value = zoomPercentage;
-            const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
-            if (zoomValue) {
-                zoomValue.textContent = `${Math.round(zoomPercentage)}%`;
-            }
-
-            // Add zoom event listener
             zoomControl.addEventListener('input', (e) => this.handleZoom(e, panel));
         }
 
@@ -578,49 +600,6 @@ class ComicCreator {
         controls.querySelectorAll('.position-btn').forEach(btn => {
             btn.addEventListener('click', () => this.handlePositionChange(btn, panel));
         });
-
-        // Add background style event listeners
-        const styleButtons = controls.querySelectorAll('.style-btn');
-        styleButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const style = btn.dataset.style;
-                this.applyBackgroundStyle(style);
-                
-                // Update active state of buttons
-                styleButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-        // Add global background checkbox listener
-        const globalBackgroundCheckbox = controls.querySelector('#use-global-background');
-        if (globalBackgroundCheckbox) {
-            globalBackgroundCheckbox.addEventListener('change', (e) => {
-                this.useGlobalBackgroundStyle = e.target.checked;
-                
-                if (e.target.checked) {
-                    // Get current background style
-                    const canvas = document.querySelector('#comic-canvas');
-                    const backgroundClasses = [
-                        'classic-white', 'vintage-paper', 'dotted-pattern',
-                        'halftone', 'graph-paper', 'gradient-fade'
-                    ];
-                    const currentStyle = Array.from(canvas.classList)
-                        .find(cls => backgroundClasses.includes(cls)) || 'classic-white';
-                    
-                    // Set as global style
-                    this.globalBackgroundStyle = currentStyle;
-                    
-                    // Apply to all pages
-                    this.pages.forEach(page => {
-                        page.canvasBackgroundStyle = currentStyle;
-                    });
-                }
-                
-                // Save current page state
-                this.saveCurrentPageState();
-            });
-        }
     }
 
     clearPanelImage(panel) {
@@ -815,6 +794,19 @@ class ComicCreator {
             return panelState;
         });
 
+        // Save sticker states
+        const stickers = Array.from(document.querySelectorAll('.canvas-sticker-image'));
+        currentPage.stickerStates = stickers.map(sticker => ({
+            id: sticker.id,
+            imageId: sticker.dataset.imageId,
+            left: sticker.style.left,
+            top: sticker.style.top,
+            width: sticker.style.width,
+            height: sticker.style.height,
+            transform: sticker.style.transform,
+            zIndex: sticker.style.zIndex // Save zIndex too
+        }));
+
         // Save canvas background style
         const canvas = document.querySelector('#comic-canvas');
         if (canvas) {
@@ -895,7 +887,7 @@ class ComicCreator {
             if (this.currentPanel) {
                 this.addTextToPanel(this.currentPanel);
             } else {
-                alert('Please select a panel first');
+                this.showSelectPanelModal();
             }
         });
 
@@ -1237,22 +1229,30 @@ class ComicCreator {
     
     loadPageState(pageIndex) {
         const page = this.pages[pageIndex];
-        if (!page || !page.layout) return false;
-        
-        console.log(`Loading page ${pageIndex} with layout: ${page.layout}`);
-        
+        if (!page) {
+            console.error('Invalid page:', pageIndex);
+            return false;
+        }
+
+        const comicCanvas = document.querySelector('#comic-canvas');
+        if (!comicCanvas) {
+            console.error('Canvas element not found!');
+            return false;
+        }
+
+        // Clear existing elements
+        comicCanvas.querySelectorAll('.canvas-sticker-image').forEach(sticker => sticker.remove());
+        comicCanvas.querySelectorAll('.canvas-background-image').forEach(bg => bg.remove());
+
         // Set the current layout and create the comic structure
-        this.selectedLayout = page.layout; // This is now the layout ID
+        this.selectedLayout = page.layout;
         
-        // We need to check if page.layout is an ID string or a layout object
+        // Get layout configuration
         let layoutConfig;
         if (typeof page.layout === 'string') {
-            // It's an ID, look it up in this.layouts
             layoutConfig = this.layouts[page.layout];
         } else if (typeof page.layout === 'object') {
-            // It's an object, use it directly (this handles legacy data)
             layoutConfig = page.layout;
-            // Fix the page to store the ID for next time
             try {
                 const layoutId = Object.entries(this.layouts).find(
                     ([id, layout]) => JSON.stringify(layout) === JSON.stringify(page.layout)
@@ -1266,161 +1266,172 @@ class ComicCreator {
             }
         }
         
-        // Only proceed if we have a valid layout config
         if (!layoutConfig) {
             console.error(`Failed to find layout configuration for page ${pageIndex}`);
             return false;
         }
-        
+
+        // Create comic structure first
         this.createComic(layoutConfig);
-        
+
         // Set canvas background style
-        const canvas = document.querySelector('#comic-canvas');
-        if (canvas) {
-            canvas.className = ''; // Clear existing classes
-            
-            // If global background is enabled, use the global style
+        if (comicCanvas) {
+            comicCanvas.className = ''; // Clear existing classes
             if (this.useGlobalBackgroundStyle) {
-                canvas.classList.add(this.globalBackgroundStyle);
-            } 
-            // Otherwise use the page-specific style
-            else if (page.canvasBackgroundStyle) {
-                canvas.classList.add(page.canvasBackgroundStyle);
-            }
-            // Default to classic white if no style is set
-            else {
-                canvas.classList.add('classic-white');
+                comicCanvas.classList.add(this.globalBackgroundStyle);
+            } else if (page.canvasBackgroundStyle) {
+                comicCanvas.classList.add(page.canvasBackgroundStyle);
+            } else {
+                comicCanvas.classList.add('classic-white');
             }
         }
+
+        // Store the states we need to restore
+        const panelStates = page.panelStates || [];
+        const stickerStates = page.stickerStates || [];
         
+        // Restore background image if present
+        if (page.backgroundState && page.backgroundState.imageId) {
+            const bgImage = this.uploadedImages.find(img => String(img.id) === String(page.backgroundState.imageId));
+            if (bgImage) {
+                const bgImg = document.createElement('img');
+                bgImg.src = bgImage.src;
+                bgImg.alt = "Canvas Background";
+                bgImg.className = 'canvas-background-image';
+                bgImg.style.position = 'absolute';
+                bgImg.style.top = '0';
+                bgImg.style.left = '0';
+                bgImg.style.width = '100%';
+                bgImg.style.height = '100%';
+                bgImg.style.objectFit = 'cover';
+                bgImg.style.zIndex = '0';
+                bgImg.dataset.imageId = bgImage.id;
+                comicCanvas.insertBefore(bgImg, comicCanvas.firstChild);
+            } else {
+                console.warn(`Background image ID ${page.backgroundState.imageId} not found in uploaded images.`);
+            }
+        }
+
         // Restore panel states
         const panels = document.querySelectorAll('.comic-panel');
-        
-        // Check if we have panel states stored and if they match the layout's panel count
-        if (page.panelStates && page.panelStates.length > 0) {
-            // Make sure we only process as many panels as we have in the layout
-            const processablePanels = Math.min(panels.length, page.panelStates.length);
-            
+        if (panelStates.length > 0) {
+            const processablePanels = Math.min(panels.length, panelStates.length);
             console.log(`Restoring ${processablePanels} panel states`);
             
-            // Restore each panel's state
             for (let index = 0; index < processablePanels; index++) {
                 const panel = panels[index];
-                const state = page.panelStates[index];
+                const state = panelStates[index];
                 
-                // Set panel background style
                 if (state.backgroundStyle) {
                     panel.dataset.backgroundStyle = state.backgroundStyle;
-                    // Apply background styling here if needed
                 }
-                
-                // Restore image if it exists
+
                 if (state.imageId) {
                     const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
                     if (image) {
-                        // For images, we need to clear the panel first
-                        panel.innerHTML = '';
-                        
-                        // Create and add the image
                         const img = document.createElement('img');
-                        img.src = image.src;
-                        img.alt = image.name || 'Panel image';
-                        img.style.position = 'absolute';
-                        img.style.left = state.left || '50%';
-                        img.style.top = state.top || '50%';
-                        img.style.transform = state.transform || 'translate(-50%, -50%) scale(1)';
-                        
-                        // Set data attributes
-                        panel.dataset.imageId = state.imageId;
+                        img.src = image.dataUrl || image.src;
+                        img.alt = image.name;
+                        img.draggable = false;
                         img.dataset.imageId = state.imageId;
-                        panel.dataset.initialScale = state.initialScale || '1';
-                        panel.dataset.currentScale = state.currentScale || '1';
                         
-                        // Add the image to the panel
+                        Object.assign(img.style, {
+                            position: 'absolute',
+                            left: state.left || '50%',
+                            top: state.top || '50%',
+                            transform: state.transform || 'translate(-50%, -50%) scale(1)'
+                        });
+                        
                         panel.appendChild(img);
+                        panel.classList.add('has-image');
                         
-                        // Setup image dragging
+                        if (state.initialScale) panel.dataset.initialScale = state.initialScale;
+                        if (state.currentScale) panel.dataset.currentScale = state.currentScale;
+                        
                         this.setupImageDragging(img);
                     }
                 }
-                
-                // Restore text elements
-                if (state.textElements && state.textElements.length > 0) {
-                    state.textElements.forEach(textData => {
-                        // Create the text bubble
-                        const textContainer = this.addTextToPanel(panel);
+
+                // Restore text elements if any
+                if (state.textElements) {
+                    state.textElements.forEach(textState => {
+                        const textBubble = document.createElement('div');
+                        textBubble.className = 'text-bubble';
+                        textBubble.id = textState.id;
+                        textBubble.dataset.bubbleType = textState.bubbleType;
+                        textBubble.dataset.previousBubbleType = textState.previousBubbleType;
+                        textBubble.dataset.tailPosition = textState.tailPosition;
                         
-                        // Set the ID
-                        textContainer.id = textData.id;
+                        const textContent = document.createElement('div');
+                        textContent.className = 'text-content';
+                        textContent.innerHTML = textState.content;
                         
-                        // Store previous bubble type if it exists
-                        if (textData.previousBubbleType) {
-                            textContainer.dataset.previousBubbleType = textData.previousBubbleType;
+                        Object.assign(textBubble.style, textState.style);
+                        Object.assign(textContent.style, {
+                            fontFamily: textState.style.fontFamily,
+                            fontSize: textState.style.fontSize,
+                            fontWeight: textState.style.fontWeight,
+                            fontStyle: textState.style.fontStyle,
+                            textDecoration: textState.style.textDecoration,
+                            textAlign: textState.style.textAlign,
+                            textTransform: textState.style.textTransform,
+                            color: textState.style.color,
+                            opacity: textState.style.opacity,
+                            textShadow: textState.style.textShadow,
+                            lineHeight: textState.style.lineHeight
+                        });
+                        
+                        if (textState.style.hasOutline) {
+                            textContent.dataset.hasOutline = 'true';
+                            textContent.style.setProperty('--outline-width', textState.style.outlineWidth);
+                            textContent.style.setProperty('--outline-color', textState.style.outlineColor);
                         }
                         
-                        // Apply the bubble type
-                        textContainer.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble', 'no-bubble');
-                        textContainer.classList.add(textData.bubbleType);
-                        textContainer.dataset.bubbleType = textData.bubbleType;
+                        textBubble.appendChild(textContent);
+                        panel.appendChild(textBubble);
                         
-                        // Apply tail position if it exists
-                        if (textData.tailPosition) {
-                            const tailPrefix = textData.bubbleType === 'speech-bubble' ? 'speech-tail-' : 'thought-tail-';
-                            textContainer.classList.add(`${tailPrefix}${textData.tailPosition}`);
-                            textContainer.dataset.tailPosition = textData.tailPosition;
-                        }
-                        
-                        // Set content
-                        const textElement = textContainer.querySelector('.text-content');
-                        textElement.innerHTML = textData.content;
-                        
-                        // Apply styles
-                        const style = textData.style;
-                        
-                        // Apply bubble styles
-                        textContainer.style.left = style.left;
-                        textContainer.style.top = style.top;
-                        textContainer.style.width = style.width;
-                        textContainer.style.height = style.height;
-                        textContainer.style.transform = style.transform;
-                        textContainer.style.backgroundColor = style.backgroundColor;
-                        
-                        // Apply text styles
-                        textElement.style.fontFamily = style.fontFamily;
-                        textElement.style.fontSize = style.fontSize;
-                        textElement.style.fontWeight = style.fontWeight;
-                        textElement.style.fontStyle = style.fontStyle;
-                        textElement.style.textDecoration = style.textDecoration;
-                        textElement.style.textAlign = style.textAlign;
-                        textElement.style.textTransform = style.textTransform;
-                        textElement.style.color = style.color;
-                        textElement.style.opacity = style.opacity;
-                        textElement.style.textShadow = style.textShadow;
-
-                        // Apply bubble opacity
-                        textContainer.style.setProperty('--bubble-opacity', style.bubbleOpacity || '1');
-
-                        // Apply line height
-                        textElement.style.lineHeight = style.lineHeight || 'normal';
-
-                        // Apply outline styles if present
-                        if (style.hasOutline) {
-                            textElement.dataset.hasOutline = 'true';
-                            textElement.style.setProperty('--outline-width', style.outlineWidth || '2px');
-                            textElement.style.setProperty('--outline-color', style.outlineColor || '#000000');
-                            // Ensure outline text content is updated
-                            this.updateOutlineText(textElement);
-                        } else {
-                            textElement.dataset.hasOutline = 'false';
-                            // Optionally remove outline variables if needed, but the CSS should handle it
-                            // textElement.style.removeProperty('--outline-width');
-                            // textElement.style.removeProperty('--outline-color');
-                        }
+                        this.makeTextDraggable(textBubble, textBubble);
+                        this.makeTextResizable(textBubble, textBubble);
                     });
                 }
             }
         }
-        
+
+        // Restore stickers last
+        if (stickerStates.length > 0) {
+            console.log(`Restoring ${stickerStates.length} stickers`);
+            stickerStates.forEach(state => {
+                const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                if (image) {
+                    const stickerImg = document.createElement('img');
+                    stickerImg.id = state.id;
+                    stickerImg.src = image.dataUrl || image.src;
+                    stickerImg.alt = "Sticker";
+                    stickerImg.className = 'canvas-sticker-image';
+                    stickerImg.dataset.imageId = state.imageId;
+                    stickerImg.dataset.size = state.size || '100';
+                    
+                    Object.assign(stickerImg.style, {
+                        position: 'absolute',
+                        left: state.left,
+                        top: state.top,
+                        width: state.width || '200px',
+                        height: state.height || 'auto',
+                        transform: state.transform || 'scale(1)',
+                        zIndex: state.zIndex || '100',
+                        cursor: 'grab'
+                    });
+
+                    comicCanvas.appendChild(stickerImg);
+                    this.makeStickerDraggable(stickerImg);
+                    stickerImg.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.selectSticker(stickerImg);
+                    });
+                }
+            });
+        }
+
         return true;
     }
 
@@ -1627,21 +1638,25 @@ class ComicCreator {
             'halftone', 'graph-paper', 'gradient-fade'
         ];
         canvas.classList.remove(...backgroundClasses);
-
+        
         // Add the new style class
         canvas.classList.add(style);
 
-        // If global background is enabled, store it as the global style
+        // Update current page state
+        const currentPage = this.pages[this.currentPageIndex];
+        if (currentPage) {
+            currentPage.canvasBackgroundStyle = style;
+        }
+
+        // If global background is enabled, apply to all pages
         if (this.useGlobalBackgroundStyle) {
             this.globalBackgroundStyle = style;
-            
-            // Update all pages to use this background
             this.pages.forEach(page => {
                 page.canvasBackgroundStyle = style;
             });
         }
 
-        // Save the current page state
+        // Save the current state
         this.saveCurrentPageState();
     }
 
@@ -3352,6 +3367,793 @@ class ComicCreator {
         // Optionally, reload the current page visually if needed, though updating index should be sufficient
         // this.loadPageState(this.currentPageIndex);
         console.log('Page reorder complete.');
+    }
+
+    // --- NEW: Setup Sidebar Tab Switching --- 
+    setupSidebarTabs() {
+        const tabsContainer = document.querySelector('.sidebar-tabs');
+        if (!tabsContainer) return;
+
+        tabsContainer.addEventListener('click', (e) => {
+            const clickedTab = e.target.closest('.tab-btn');
+            if (!clickedTab) return;
+
+            const newMode = clickedTab.dataset.tab;
+            if (newMode === this.currentSidebarMode) return; // Do nothing if clicking the active tab
+
+            // Update the active tab visually
+            tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            clickedTab.classList.add('active');
+
+            // Update the internal mode state
+            this.currentSidebarMode = newMode;
+            console.log('Switched sidebar mode to:', this.currentSidebarMode);
+
+            // Update the right sidebar based on the selected mode
+            this.updateRightSidebarView();
+
+            // Deselect any currently selected item when switching modes
+            this.deselectAll(); 
+        });
+    }
+
+    // --- NEW: Update Right Sidebar View --- 
+    updateRightSidebarView() {
+        const propertiesPanel = document.querySelector('.properties-panel');
+        if (!propertiesPanel) return;
+
+        // Hide all potential sections first
+        const panelProps = propertiesPanel.querySelector('#panel-properties');
+        const textProps = propertiesPanel.querySelector('#text-properties');
+        const backgroundProps = propertiesPanel.querySelector('#background-properties'); // Assuming we add this ID later
+        const stickerProps = propertiesPanel.querySelector('#sticker-properties'); // Get sticker props section
+
+        if (panelProps) panelProps.style.display = 'none';
+        if (textProps) textProps.style.display = 'none';
+        if (backgroundProps) backgroundProps.style.display = 'none';
+        if (stickerProps) stickerProps.style.display = 'none'; // Hide sticker props too
+
+        // Show the relevant section based on mode AND current selection
+        switch (this.currentSidebarMode) {
+            case 'panels':
+                console.log("Right sidebar: Panels tab active.");
+                // Show panel controls ONLY if a panel is selected
+                if (this.currentPanel) {
+                    this.updatePanelControls(this.currentPanel);
+                } else if (panelProps) {
+                    // Optional: Show a default message if no panel is selected
+                    panelProps.innerHTML = '<h4>Panel Settings</h4><div class="panel-controls"><p>Select a panel to see its properties.</p></div>';
+                    panelProps.style.display = 'block';
+                }
+                break;
+            case 'backgrounds':
+                 console.log("Right sidebar: Backgrounds tab active.");
+                // Always show background controls when this tab is active
+                this.updateBackgroundControls(this.currentBackground); // Pass current background if it exists
+                break;
+            case 'stickers':
+                 console.log("Right sidebar: Stickers tab active.");
+                 // Show sticker controls ONLY if a sticker is selected
+                 if (this.currentSticker) {
+                     this.updateStickerControls(this.currentSticker);
+                 } else if (stickerProps) {
+                    // Optional: Show a default message if no sticker is selected
+                    stickerProps.innerHTML = '<h4>Sticker Settings</h4><div class="panel-controls"><p>Select a sticker to see its properties.</p></div>';
+                    stickerProps.style.display = 'block';
+                 } else {
+                    // Ensure sticker props div exists for the message
+                    this.updateStickerControls(null); 
+                 }
+                break;
+            default:
+                 console.warn("Unknown sidebar mode:", this.currentSidebarMode);
+        }
+    }
+
+    // --- Update Background Controls ---
+    updateBackgroundControls(backgroundElement) {
+        console.log("Updating controls for background:", backgroundElement ? backgroundElement.dataset.imageId : 'None');
+        const propertiesPanel = document.querySelector('.properties-panel');
+        if (!propertiesPanel) return;
+
+        let bgProps = propertiesPanel.querySelector('#background-properties');
+        if (!bgProps) {
+            bgProps = document.createElement('div');
+            bgProps.id = 'background-properties';
+            bgProps.className = 'properties-section';
+            propertiesPanel.appendChild(bgProps);
+        }
+
+        // Hide others
+        propertiesPanel.querySelectorAll('.properties-section:not(#background-properties)')
+           .forEach(sec => sec.style.display = 'none');
+
+        // Show background controls
+        bgProps.innerHTML = `
+            <h4>Background Settings</h4>
+            <div class="panel-controls">
+                <div class="control-group">
+                    <h4 style="text-align: center;">Background Style</h4>
+                    <div class="background-styles">
+                        <button class="style-btn" data-style="classic-white">
+                            <span class="preview classic-white"></span>
+                            Classic White
+                        </button>
+                        <button class="style-btn" data-style="vintage-paper">
+                            <span class="preview vintage-paper"></span>
+                            Vintage Paper
+                        </button>
+                        <button class="style-btn" data-style="dotted-pattern">
+                            <span class="preview dotted-pattern"></span>
+                            Dotted Pattern
+                        </button>
+                        <button class="style-btn" data-style="halftone">
+                            <span class="preview halftone"></span>
+                            Halftone
+                        </button>
+                        <button class="style-btn" data-style="graph-paper">
+                            <span class="preview graph-paper"></span>
+                            Graph Paper
+                        </button>
+                        <button class="style-btn" data-style="gradient-fade">
+                            <span class="preview gradient-fade"></span>
+                            Gradient Fade
+                        </button>
+                    </div>
+                    <div class="global-background-control" style="margin-top: 10px; text-align: left; display: flex; align-items: center;">
+                        <input type="checkbox" id="use-global-background" ${this.useGlobalBackgroundStyle ? 'checked' : ''}>
+                        <label for="use-global-background" style="margin-left: 8px; font-size: 14px;">Apply to all pages</label>
+                    </div>
+                </div>
+                ${backgroundElement ? `
+                <div class="control-group">
+                    <h4 style="text-align: center;">Position</h4>
+                    <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
+                        <label style="font-size: 16px;">Step Size: </label>
+                        <input type="number" 
+                               class="step-size-input" 
+                               value="1" 
+                               min="0.1" 
+                               max="20" 
+                               step="0.1" 
+                               style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
+                    </div>
+                    <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
+                        <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
+                        <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
+                        <div style="grid-area: center;"></div>
+                        <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
+                        <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
+                    </div>
+                </div>
+                ` : '<p>Select a background image by dragging it onto the canvas while the "Backgrounds" tab is active.</p>'}
+            </div>`;
+
+        bgProps.style.display = 'block';
+
+        // Add global background checkbox listener
+        const globalBackgroundCheckbox = bgProps.querySelector('#use-global-background');
+        if (globalBackgroundCheckbox) {
+            globalBackgroundCheckbox.addEventListener('change', (e) => {
+                this.useGlobalBackgroundStyle = e.target.checked;
+                
+                if (e.target.checked) {
+                    // Get current background style
+                    const canvas = document.querySelector('#comic-canvas');
+                    const backgroundClasses = [
+                        'classic-white', 'vintage-paper', 'dotted-pattern',
+                        'halftone', 'graph-paper', 'gradient-fade'
+                    ];
+                    const currentStyle = Array.from(canvas.classList)
+                        .find(cls => backgroundClasses.includes(cls)) || 'classic-white';
+                    
+                    // Set as global style
+                    this.globalBackgroundStyle = currentStyle;
+                    
+                    // Apply to all pages
+                    this.pages.forEach(page => {
+                        page.canvasBackgroundStyle = currentStyle;
+                    });
+                }
+                
+                // Save current page state
+                this.saveCurrentPageState();
+            });
+        }
+
+        // Add event listeners if we have a background element
+        if (backgroundElement) {
+            // Delete button listener
+            const deleteBtn = bgProps.querySelector('.delete-background-btn');
+            if (deleteBtn) {
+                deleteBtn.onclick = () => {
+                    backgroundElement.remove();
+                    // Clear state
+                    const currentPage = this.pages[this.currentPageIndex];
+                    if (currentPage) currentPage.backgroundState = null;
+                    this.deselectAll();
+                    this.updateRightSidebarView();
+                    this.saveCurrentPageState();
+                };
+            }
+
+            // Zoom control listener
+            const zoomControl = bgProps.querySelector('.zoom-control');
+            if (zoomControl) {
+                const currentScale = parseFloat(backgroundElement.dataset.scale) || 1;
+                zoomControl.value = currentScale * 100;
+                const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
+                if (zoomValue) {
+                    zoomValue.textContent = `${Math.round(currentScale * 100)}%`;
+                }
+
+                zoomControl.addEventListener('input', (e) => {
+                    const scale = parseFloat(e.target.value) / 100;
+                    backgroundElement.style.transform = `scale(${scale})`;
+                    backgroundElement.dataset.scale = scale;
+                    zoomValue.textContent = `${Math.round(scale * 100)}%`;
+                    this.saveCurrentPageState();
+                });
+            }
+
+            // Reset zoom button listener
+            const resetZoomBtn = bgProps.querySelector('.reset-zoom-btn');
+            if (resetZoomBtn) {
+                resetZoomBtn.addEventListener('click', () => {
+                    backgroundElement.style.transform = 'scale(1)';
+                    backgroundElement.dataset.scale = '1';
+                    if (zoomControl) {
+                        zoomControl.value = 100;
+                        const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
+                        if (zoomValue) {
+                            zoomValue.textContent = '100%';
+                        }
+                    }
+                    this.saveCurrentPageState();
+                });
+            }
+
+            // Position controls
+            const positionBtns = bgProps.querySelectorAll('.position-btn');
+            positionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const stepSizeInput = bgProps.querySelector('.step-size-input');
+                    let step = parseFloat(stepSizeInput?.value || '1');
+                    if (isNaN(step) || step < 0.1 || step > 20) step = 1;
+
+                    const currentLeft = parseFloat(backgroundElement.style.left) || 50;
+                    const currentTop = parseFloat(backgroundElement.style.top) || 50;
+
+                    if (btn.classList.contains('up')) {
+                        backgroundElement.style.top = `${(currentTop - step).toFixed(1)}%`;
+                    } else if (btn.classList.contains('down')) {
+                        backgroundElement.style.top = `${(currentTop + step).toFixed(1)}%`;
+                    } else if (btn.classList.contains('left')) {
+                        backgroundElement.style.left = `${(currentLeft - step).toFixed(1)}%`;
+                    } else if (btn.classList.contains('right')) {
+                        backgroundElement.style.left = `${(currentLeft + step).toFixed(1)}%`;
+                    }
+                    this.saveCurrentPageState();
+                });
+            });
+        }
+
+        // Add background style button listeners
+        const styleButtons = bgProps.querySelectorAll('.style-btn');
+        styleButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const style = btn.dataset.style;
+                // If there's a custom background image, remove it first
+                const existingBg = document.querySelector('.canvas-background-image');
+                if (existingBg) {
+                    existingBg.remove();
+                    const currentPage = this.pages[this.currentPageIndex];
+                    if (currentPage) currentPage.backgroundState = null;
+                }
+                this.applyBackgroundStyle(style);
+                styleButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.saveCurrentPageState();
+            });
+        });
+
+        // Set active state for current background style
+        const canvas = document.querySelector('#comic-canvas');
+        if (canvas) {
+            const backgroundClasses = [
+                'classic-white', 'vintage-paper', 'dotted-pattern',
+                'halftone', 'graph-paper', 'gradient-fade'
+            ];
+            const currentStyle = Array.from(canvas.classList)
+                .find(cls => backgroundClasses.includes(cls));
+            if (currentStyle) {
+                const activeBtn = bgProps.querySelector(`[data-style="${currentStyle}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                }
+            }
+        }
+    }
+
+    // --- Update Sticker Controls ---
+    updateStickerControls(stickerElement) {
+        console.log("Updating controls for sticker:", stickerElement ? stickerElement.id : 'None');
+
+        const stickerProps = document.querySelector('.properties-panel');
+        if (!stickerProps) return;
+
+        if (!stickerElement) {
+            stickerProps.innerHTML = `
+                <div class="panel-properties">
+                    <h4>Select a sticker to edit its properties</h4>
+                </div>`;
+            return;
+        }
+
+        if (stickerElement) {
+            stickerProps.innerHTML = `
+                <h4>Sticker Settings</h4>
+                <div class="panel-controls">
+                    <div class="control-group">
+                        <h4 style="text-align: center;">Image Controls</h4>
+                        <button class="danger-btn delete-sticker-btn" style="width: 100%; margin-bottom: 1rem;">
+                            <i class="fas fa-trash"></i> Delete Sticker
+                        </button>
+                        <div class="zoom-group">
+                            <label>Size</label>
+                            <input type="range" class="size-control" min="10" max="500" value="200">
+                            <span class="size-value">200%</span>
+                            <button class="reset-size-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
+                                <i class="fas fa-undo"></i> Reset Size
+                            </button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <h4 style="text-align: center;">Position</h4>
+                        <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
+                            <label style="font-size: 16px;">Step Size: </label>
+                            <input type="number" 
+                                   class="step-size-input" 
+                                   value="1" 
+                                   min="0.1" 
+                                   max="20" 
+                                   step="0.1" 
+                                   style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
+                        </div>
+                        <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
+                            <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
+                            <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
+                            <div style="grid-area: center;"></div>
+                            <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
+                            <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
+                        </div>
+                    </div>
+                </div>`;
+            stickerProps.style.display = 'block';
+
+            // Add delete listener
+            const deleteBtn = stickerProps.querySelector('.delete-sticker-btn');
+            if (deleteBtn) {
+                deleteBtn.onclick = () => {
+                    const stickerIdToDelete = stickerElement.id;
+                    stickerElement.remove();
+                    
+                    // Remove from state
+                    const pageState = this.pages[this.currentPageIndex];
+                    if (pageState && pageState.stickerStates) {
+                        pageState.stickerStates = pageState.stickerStates.filter(s => s.id !== stickerIdToDelete);
+                    }
+
+                    this.deselectAll();
+                    this.saveCurrentPageState();
+                };
+            }
+
+            // Size control listener
+            const sizeControl = stickerProps.querySelector('.size-control');
+            if (sizeControl) {
+                const currentSize = parseFloat(stickerElement.dataset.size) || 200;
+                sizeControl.value = currentSize;
+                const sizeValue = sizeControl.parentElement.querySelector('.size-value');
+                if (sizeValue) {
+                    sizeValue.textContent = `${Math.round(currentSize)}%`;
+                }
+
+                sizeControl.addEventListener('input', (e) => {
+                    const size = parseFloat(e.target.value);
+                    const scale = size / 100;
+                    stickerElement.style.width = `${scale * 100}px`; // Base size is 100px
+                    stickerElement.style.height = 'auto'; // Maintain aspect ratio
+                    stickerElement.dataset.size = size;
+                    sizeValue.textContent = `${Math.round(size)}%`;
+                    this.saveCurrentPageState();
+                });
+            }
+
+            // Reset size button listener
+            const resetSizeBtn = stickerProps.querySelector('.reset-size-btn');
+            if (resetSizeBtn) {
+                resetSizeBtn.addEventListener('click', () => {
+                    stickerElement.style.width = '200px';
+                    stickerElement.style.height = 'auto';
+                    stickerElement.dataset.size = '200';
+                    if (sizeControl) {
+                        sizeControl.value = 200;
+                        const sizeValue = sizeControl.parentElement.querySelector('.size-value');
+                        if (sizeValue) {
+                            sizeValue.textContent = '200%';
+                        }
+                    }
+                    this.saveCurrentPageState();
+                });
+            }
+
+            // Position controls
+            const positionBtns = stickerProps.querySelectorAll('.position-btn');
+            positionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const stepSizeInput = stickerProps.querySelector('.step-size-input');
+                    let step = parseFloat(stepSizeInput?.value || '1');
+                    if (isNaN(step) || step < 0.1 || step > 20) step = 1;
+
+                    const currentLeft = parseFloat(stickerElement.style.left);
+                    const currentTop = parseFloat(stickerElement.style.top);
+
+                    if (btn.classList.contains('up')) {
+                        stickerElement.style.top = `${(currentTop - step)}px`;
+                    } else if (btn.classList.contains('down')) {
+                        stickerElement.style.top = `${(currentTop + step)}px`;
+                    } else if (btn.classList.contains('left')) {
+                        stickerElement.style.left = `${(currentLeft - step)}px`;
+                    } else if (btn.classList.contains('right')) {
+                        stickerElement.style.left = `${(currentLeft + step)}px`;
+                    }
+
+                    // Ensure sticker stays within canvas bounds
+                    const canvas = document.querySelector('#comic-canvas');
+                    if (canvas) {
+                        const canvasRect = canvas.getBoundingClientRect();
+                        const stickerRect = stickerElement.getBoundingClientRect();
+                        
+                        const newLeft = Math.max(0, Math.min(parseFloat(stickerElement.style.left), canvasRect.width - stickerRect.width));
+                        const newTop = Math.max(0, Math.min(parseFloat(stickerElement.style.top), canvasRect.height - stickerRect.height));
+                        
+                        stickerElement.style.left = `${newLeft}px`;
+                        stickerElement.style.top = `${newTop}px`;
+                    }
+
+                    this.saveCurrentPageState();
+                });
+            });
+        }
+    }
+
+    // --- Add Background Image --- 
+    addBackgroundImage(image) {
+        console.log("Adding Background Image:", image.name);
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) {
+            console.error("Canvas element not found!");
+            return;
+        }
+
+        // Store current states before making changes
+        const currentPage = this.pages[this.currentPageIndex];
+        const existingPanelStates = currentPage.panelStates ? [...currentPage.panelStates] : [];
+        const existingStickerStates = currentPage.stickerStates ? [...currentPage.stickerStates] : [];
+
+        // Remove existing background image for this page if any
+        const existingBg = canvas.querySelector('.canvas-background-image');
+        if (existingBg) {
+            existingBg.remove();
+        }
+
+        // Create the new background image element
+        const bgImg = document.createElement('img');
+        bgImg.src = image.src;
+        bgImg.alt = "Canvas Background";
+        bgImg.className = 'canvas-background-image'; // Add class for identification
+        bgImg.style.position = 'absolute';
+        bgImg.style.top = '0';
+        bgImg.style.left = '0';
+        bgImg.style.width = '100%'; // Cover the entire canvas
+        bgImg.style.height = '100%';
+        bgImg.style.objectFit = 'cover'; // Or 'contain' depending on desired behavior
+        bgImg.style.zIndex = '0'; // Ensure it's behind panels and stickers
+        bgImg.dataset.imageId = image.id; // Store image ID
+
+        // Prepend to the canvas so it's behind other elements
+        canvas.insertBefore(bgImg, canvas.firstChild);
+
+        // Update the page state while preserving existing states
+        currentPage.backgroundState = {
+            imageId: image.id
+        };
+        currentPage.panelStates = existingPanelStates;
+        currentPage.stickerStates = existingStickerStates;
+
+        console.log('Background state saved for page:', this.currentPageIndex, {
+            background: currentPage.backgroundState,
+            panels: currentPage.panelStates.length,
+            stickers: currentPage.stickerStates.length
+        });
+
+        // Save the overall page state
+        this.saveCurrentPageState();
+    }
+
+    // --- Add Sticker --- 
+    addSticker(image, dropX, dropY) {
+        console.log("Adding Sticker:", image.name, "at viewport coords", dropX, dropY);
+        const stickerCanvas = document.querySelector('#comic-canvas');
+        if (!stickerCanvas) {
+            console.error('Canvas element not found!');
+            return;
+        }
+
+        const canvasRect = stickerCanvas.getBoundingClientRect();
+        const relativeX = dropX - canvasRect.left;
+        const relativeY = dropY - canvasRect.top;
+
+        const stickerId = `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const stickerImg = document.createElement('img');
+        
+        Object.assign(stickerImg, {
+            id: stickerId,
+            src: image.dataUrl || image.src,
+            alt: "Sticker",
+            className: 'canvas-sticker-image'
+        });
+
+        Object.assign(stickerImg.dataset, {
+            imageId: image.id,
+            size: '200'
+        });
+
+        Object.assign(stickerImg.style, {
+            position: 'absolute',
+            width: '200px',
+            height: 'auto',
+            cursor: 'grab',
+            zIndex: '100'
+        });
+
+        // Wait for image to load to get dimensions and set position
+        stickerImg.onload = () => {
+            const imgWidth = stickerImg.offsetWidth;
+            const imgHeight = stickerImg.offsetHeight;
+            const canvasWidth = stickerCanvas.offsetWidth;
+            const canvasHeight = stickerCanvas.offsetHeight;
+
+            // Calculate bounded position
+            let finalLeft = Math.max(0, Math.min(relativeX - imgWidth / 2, canvasWidth - imgWidth));
+            let finalTop = Math.max(0, Math.min(relativeY - imgHeight / 2, canvasHeight - imgHeight));
+
+            Object.assign(stickerImg.style, {
+                left: `${finalLeft}px`,
+                top: `${finalTop}px`
+            });
+
+            // Save state after position is set
+            if (!this.pages[this.currentPageIndex].stickerStates) {
+                this.pages[this.currentPageIndex].stickerStates = [];
+            }
+            
+            this.pages[this.currentPageIndex].stickerStates = this.pages[this.currentPageIndex].stickerStates.filter(s => s.id !== stickerId);
+            
+            this.pages[this.currentPageIndex].stickerStates.push({
+                id: stickerId,
+                imageId: image.id,
+                left: stickerImg.style.left,
+                top: stickerImg.style.top,
+                width: stickerImg.style.width,
+                height: stickerImg.style.height,
+                transform: stickerImg.style.transform || 'scale(1)',
+                zIndex: stickerImg.style.zIndex,
+                size: stickerImg.dataset.size
+            });
+
+            this.saveCurrentPageState();
+        };
+
+        stickerCanvas.appendChild(stickerImg);
+        this.makeStickerDraggable(stickerImg);
+        
+        stickerImg.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectSticker(stickerImg);
+        });
+
+        this.selectSticker(stickerImg);
+    }
+
+    // --- Make Sticker Draggable --- 
+    makeStickerDraggable(element) {
+        let isDragging = false;
+        let startX, startY;
+        let originalX, originalY;
+
+        const onMouseDown = (e) => {
+            if (e.button !== 0) return; // Only handle left mouse button
+            e.preventDefault();
+            e.stopPropagation();
+
+            isDragging = true;
+            element.style.cursor = 'grabbing';
+            element.style.zIndex = '1000'; // Bring to front while dragging
+
+            startX = e.clientX;
+            startY = e.clientY;
+            originalX = parseFloat(element.style.left);
+            originalY = parseFloat(element.style.top);
+
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp, { once: true });
+        };
+
+        const onMouseMove = (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            
+            const canvasRect = document.querySelector('#comic-canvas').getBoundingClientRect();
+            const stickerRect = element.getBoundingClientRect();
+            
+            let newX = originalX + dx;
+            let newY = originalY + dy;
+            
+            // Boundary checks
+            newX = Math.max(0, Math.min(newX, canvasRect.width - stickerRect.width));
+            newY = Math.max(0, Math.min(newY, canvasRect.height - stickerRect.height));
+            
+            element.style.left = `${newX}px`;
+            element.style.top = `${newY}px`;
+        };
+
+        const onMouseUp = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            element.style.cursor = 'grab';
+            element.style.zIndex = '100';
+
+            document.removeEventListener('mousemove', onMouseMove);
+
+            // Update state
+            const pageState = this.pages[this.currentPageIndex];
+            if (pageState?.stickerStates) {
+                const stickerState = pageState.stickerStates.find(s => s.id === element.id);
+                if (stickerState) {
+                    Object.assign(stickerState, {
+                        left: element.style.left,
+                        top: element.style.top,
+                        width: element.style.width,
+                        height: element.style.height,
+                        transform: element.style.transform,
+                        zIndex: element.style.zIndex,
+                        size: element.dataset.size
+                    });
+                    this.saveCurrentPageState();
+                }
+            }
+        };
+
+        element.addEventListener('mousedown', onMouseDown);
+        element.addEventListener('dragstart', (e) => e.preventDefault());
+    }
+
+    // --- Select Sticker --- 
+    selectSticker(stickerElement) {
+        console.log('Selecting sticker:', stickerElement.id);
+        // Deselect any other selected element (panel, text, background, other sticker)
+        this.deselectAll();
+
+        this.currentSticker = stickerElement;
+        stickerElement.classList.add('selected-sticker'); // Add a specific class for styling
+        
+        // Update the right sidebar with sticker controls
+        this.updateStickerControls(stickerElement);
+    }
+
+    // --- Deselect All Elements --- 
+    deselectAll() {
+        const propertiesPanel = document.querySelector('.properties-panel'); // Get panel ref
+
+        if (this.currentPanel) {
+            this.currentPanel.classList.remove('selected');
+            const img = this.currentPanel.querySelector('img');
+            if (img) {
+                img.style.cursor = 'default';
+                img.style.pointerEvents = 'none';
+            }
+            this.currentPanel = null;
+            // Hide panel props if they exist
+             if (propertiesPanel) {
+                const panelProps = propertiesPanel.querySelector('#panel-properties');
+                 if (panelProps) panelProps.style.display = 'none';
+             }
+        }
+        if (this.currentTextBox) {
+            this.currentTextBox.classList.remove('selected-text');
+            this.currentTextBox = null;
+             // Hide text props if they exist
+             if (propertiesPanel) {
+                const textProps = propertiesPanel.querySelector('#text-properties');
+                if (textProps) textProps.style.display = 'none';
+            }
+        }
+        if (this.currentBackground) {
+            this.currentBackground.classList.remove('selected-background');
+            this.currentBackground = null;
+             // Hide background props if they exist
+            if (propertiesPanel) {
+                const bgProps = propertiesPanel.querySelector('#background-properties');
+                if (bgProps) bgProps.style.display = 'none';
+            }
+        }
+        if (this.currentSticker) {
+            this.currentSticker.classList.remove('selected-sticker');
+            this.currentSticker.style.zIndex = '100'; // Reset z-index on deselect too
+            this.currentSticker = null;
+             // Hide sticker props if they exist
+             if (propertiesPanel) {
+                 const stickerProps = propertiesPanel.querySelector('#sticker-properties');
+                 if (stickerProps) stickerProps.style.display = 'none';
+             }
+        }
+        
+         // After deselecting everything, update the sidebar based on the current mode
+         // This ensures the correct default message or empty state is shown.
+         this.updateRightSidebarView(); 
+    }
+
+    loadPage(pageIndex) {
+        // ... existing code ...
+        
+        // Apply the page's background style
+        if (this.useGlobalBackgroundStyle) {
+            this.applyBackgroundStyle(this.globalBackgroundStyle);
+        } else if (page.canvasBackgroundStyle) {
+            this.applyBackgroundStyle(page.canvasBackgroundStyle);
+        } else {
+            this.applyBackgroundStyle('classic-white'); // Default style
+        }
+        
+        // ... existing code ...
+    }
+
+    showSelectPanelModal() {
+        const modal = document.getElementById('select-panel-modal');
+        const overlay = document.getElementById('select-panel-modal-overlay');
+        
+        if (!modal || !overlay) return;
+        
+        // Show the modal and overlay
+        overlay.style.display = 'block';
+        modal.style.display = 'block';
+        
+        // Trigger transitions by adding active class after a short delay
+        setTimeout(() => {
+            modal.classList.add('active');
+            overlay.classList.add('active');
+        }, 10);
+        
+        const okButton = document.getElementById('ok-select-panel-btn');
+        if (okButton) {
+            okButton.onclick = () => {
+                modal.classList.remove('active');
+                overlay.classList.remove('active');
+                // Wait for transition before hiding
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    overlay.style.display = 'none';
+                }, 300);
+            };
+        }
     }
 }
 
