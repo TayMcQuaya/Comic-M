@@ -1696,7 +1696,12 @@ label {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    padding: 10px;
+    padding: 3px 3px 10px 3px; /* Reduced padding - 25% less on top/sides, kept bottom */
+}
+
+/* Specific padding for thought bubbles */
+.thought-bubble .text-content {
+    padding: 10px; /* Increased padding for thought bubbles */
 }
 
 /* Create a smooth outline effect that stays behind text */
@@ -1762,7 +1767,8 @@ label {
 /* Thought Bubble */
 .thought-bubble {
     border-radius: 50%;
-    background-color:white
+    background-color: white;
+    position: relative;
 }
 
 .thought-bubble::before {
@@ -1776,6 +1782,235 @@ label {
     border-radius: inherit;
     z-index: 1;
     opacity: var(--bubble-opacity);
+}
+
+/* Thought bubble tails */
+/* Bottom positions */
+.thought-tail-bottom-left::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
+    left: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-bottom-left::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -32px;
+    left: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.thought-tail-bottom-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-bottom-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.thought-tail-bottom-right::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
+    right: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-bottom-right::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -32px;
+    right: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+/* Left positions */
+.thought-tail-left-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-left-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+/* Right positions */
+.thought-tail-right-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-right-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    right: -32px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+/* Top positions */
+.thought-tail-top-left::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -18px;
+    left: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-top-left::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    left: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.thought-tail-top-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-top-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.thought-tail-top-right::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -18px;
+    right: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-top-right::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    right: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
 }
 
 /* Update all bubble types to use the background pseudo-element */
@@ -2237,7 +2472,7 @@ label {
 
 /* Left positions */
 .thought-preview-tail-left-center:before {
-    top: 50%;
+    top: 52%;
     left: -9px;
     right: auto;
     bottom: auto;
@@ -2254,7 +2489,7 @@ label {
 
 /* Right positions */
 .thought-preview-tail-right-center:before {
-    top: 50%;
+    top: 52%;
     right: -9px;
     left: auto;
     bottom: auto;
@@ -2271,7 +2506,7 @@ label {
 
 /* Top positions */
 .thought-preview-tail-top-left:before {
-    left: 8px;
+    left: 16px;
     top: -9px;
     right: auto;
     bottom: auto;
@@ -2301,7 +2536,7 @@ label {
 }
 
 .thought-preview-tail-top-right:before {
-    right: 8px;
+    right: 16px;
     top: -9px;
     left: auto;
     bottom: auto;
@@ -3140,7 +3375,7 @@ select.font-family option {
 /* Firefox specific styles */
 @-moz-document url-prefix() {
     .font-option {
-        height: auto;
+    height: auto;
         min-height: 30px;
     }
 }
@@ -3425,7 +3660,7 @@ select.font-family option {
 
 .effects-grid {
     display: grid;
-    grid-template-columns: 1fr;
+        grid-template-columns: 1fr;
     gap: 15px;
 }
 
@@ -3661,1204 +3896,271 @@ select.font-family option {
 
 /* Export mode - hide all editing UI elements */
 .exporting .comic-panel {
-    border: 3px solid #000000 !important;
-    background: transparent !important;
-    box-shadow: none !important; /* Remove any shadow during export */
-    transform: none !important; /* Ensure no scaling during export */
+    font-weight: normal;
+    color: var(--text-color);
 }
 
-.exporting .comic-panel::before {
-    display: none !important; /* Ensure pseudo-element is hidden during export */
-}
-
-.exporting .comic-panel:not(.has-image) {
-    background: #E0E0E0 !important;
-}
-
-.exporting .comic-panel.selected {
-    border: 3px solid #000000 !important;
-}
-
-.exporting .comic-panel img {
-    min-width: calc(100% + 2px) !important; /* Force image to slightly overflow */
-    min-height: calc(100% + 2px) !important;
-    object-fit: cover !important;
-}
-
-/* Special handling for comic panels during export */
-.exporting .comic-panel:focus,
-.exporting .comic-panel:focus-visible {
-    outline: none !important;
-    border: 3px solid #000000 !important;
-    box-shadow: none !important;
-}
-
-/* Remove any hover effects during export */
-.exporting .comic-panel:hover {
-    box-shadow: none !important;
-}
-
-/* Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 999;
-    display: none; /* Hidden by default */
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    background-color: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    width: 90%;
-    max-width: 400px;
-    display: none; /* Hidden by default */
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.modal.active .modal-overlay,
-.modal.active {
-    display: block;
-    opacity: 1;
-}
-
-.modal.active {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.modal h3 {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    color: var(--primary-color); /* Keep title color primary */
-}
-
-.modal input[type="text"] {
-    width: 100%;
-    padding: 0.8rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    box-sizing: border-box;
-}
-
-.modal-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-}
-
-/* Reuse existing button styles if possible, or define secondary */
-.secondary-btn {
-    background-color: #6c757d; /* Example secondary color */
-    color: white;
-    padding: 0.7rem 1.2rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease;
-}
-
-.secondary-btn:hover {
-    background-color: #5a6268;
-}
-
-.modal-buttons button {
-    min-width: 80px;
-    text-align: center;
-}
-
-/* Reorder Pages Modal Specific Styles */
-#reorder-modal p {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    color: #555;
-}
-
-.reorder-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1.5rem 0;
-    max-height: 60vh; /* Prevent modal from getting too tall */
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.reorder-list li {
-    display: flex;
-    align-items: center;
-    padding: 0.8rem 1rem;
-    background-color: #f9f9f9;
-    border-bottom: 1px solid #ddd;
-    cursor: grab;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
-    user-select: none; /* Prevent text selection during drag */
-}
-
-.reorder-list li:last-child {
-    border-bottom: none;
-}
-
-.reorder-list li:hover {
-    background-color: #f1f1f1;
-}
-
-.reorder-list li i {
-    margin-right: 0.8rem;
-    color: #777;
-    cursor: grab;
-}
-
-.reorder-list li span {
-    flex-grow: 1;
-}
-
-/* Dragging Styles */
-.reorder-list li.dragging {
-    opacity: 0.5;
-    background-color: #e0e0e0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-/* Style for the drop target area */
-.reorder-list li.drag-over {
-    background-color: #d0eaff; /* Light blue highlight */
-    border-top: 2px solid #007bff; /* Blue line to indicate drop position */
-    margin-top: -2px; /* Compensate for border */
-}
-
-/* Set default text color for modal content */
-.modal,
-.modal p,
-.modal input[type="text"],
-#reorder-modal .reorder-list li span /* Target specific list text */
-{
-    color: #333; /* Dark gray for readability */
-}
-
-/* Style for line height control */
-.line-height-control {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.line-height {
-    flex-grow: 1;
-    accent-color: var(--primary-color);
-    height: 6px; /* Match zoom slider */
-    cursor: pointer;
-}
-
-.line-height-value {
-    min-width: 30px;
-    text-align: right;
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-/* Apply similar thumb style as zoom */
-.line-height::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: var(--primary-color);
+/* Thought Bubble */
+.thought-bubble {
     border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid var(--text-color);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
-    margin-top: -5px; /* Adjust vertical centering */
-}
-
-.line-height::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid var(--text-color);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
-}
-
-/* Style adjustments for Text Formatting Popup */
-#text-format-popup {
-    padding: 15px 15px 50px 15px; /* Slightly reduce horizontal padding, keep bottom padding for buttons */
-}
-
-.text-style-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Force single column */
-    gap: 12px; /* Adjust gap for vertical stacking */
-}
-
-.style-control {
-    /* Minor adjustments if needed, but single column grid handles stacking */
-}
-
-/* Ensure slider controls take full width */
-.style-control .font-size-control,
-.style-control .line-height-control {
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Slightly reduce gap */
-}
-.style-control input[type="range"] {
-    flex-grow: 1;
-}
-
-.color-section {
-    display: grid;
-    grid-template-columns: 1fr; /* Force single column */
-    gap: 15px; /* Increase gap */
-}
-
-.color-control { /* Assuming this class wraps label + input */
-     display: block; /* Ensure they stack */
-}
-.color-control label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.effects-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-}
-
-.effect-control {
-    display: block; /* Stack sections vertically */
-}
-
-.effect-control label.group-label { /* Style the Effect section label */
-    display: block;
-    font-weight: bold;
-    margin-bottom: 8px;
-}
-
-.effect-control > div { /* The div containing checkbox/inputs */
-    display: flex;
-    flex-direction: column; /* Stack internal controls vertically */
-    align-items: flex-start; /* Align to the left */
-    gap: 8px;
-}
-
-/* Style the outline/shadow specific inner controls */
-.effect-control > div > div {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.outline-control,
-.shadow-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.outline-thickness {
-    width: 60px;
-    padding: 2px 4px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 12px;
-}
-
-.outline-thickness:disabled {
-    background-color: var(--disabled-bg);
-    cursor: not-allowed;
-}
-
-/* Ensure text remains smooth when scaled */
-.text-content {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-}
-
-.position-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.position-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    width: 150px;
-    margin: 0 auto;
-}
-
-.position-grid-btn {
-    width: 40px;
-    height: 40px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.2s;
-}
-
-.position-grid-btn:hover {
-    background-color: var(--hover-color);
-}
-
-.rotation-control {
-    margin-top: 10px;
-}
-
-.rotation-control label {
-    display: block;
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.rotation-slider {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.rotation-slider input {
-    flex-grow: 1;
-}
-
-/* Google Fonts Integration */
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
-
-/* Font preview styles for dropdown */
-.font-option {
-    display: flex;
-    align-items: center;
-    padding: 6px 10px;
-    cursor: pointer;
-    margin: 2px 0;
-}
-
-.font-option:hover {
-    background-color: var(--hover-color);
-}
-
-.font-preview {
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-    width: 100%;
-    line-height: 1.5;
-    padding: 4px 0;
-}
-
-.font-family option {
-    min-height: 30px;
-}
-
-.font-category {
-    font-weight: bold;
-    color: #666;
-    padding: 8px;
-    background-color: #f5f5f5;
-    margin-top: 5px;
-    border-bottom: 1px solid #ddd;
-    pointer-events: none;
-}
-
-/* Font family specific preview styling */
-.font-arial { font-family: Arial, sans-serif; }
-.font-comic-sans { font-family: 'Comic Sans MS', cursive; }
-.font-times { font-family: 'Times New Roman', serif; }
-.font-impact { font-family: Impact, Haettenschweiler, sans-serif; font-size: 18px; font-weight: bold; }
-.font-bangers { font-family: 'Bangers', cursive; font-size: 18px; letter-spacing: 1px; }
-.font-luckiest-guy { font-family: 'Luckiest Guy', cursive; font-size: 18px; }
-.font-permanent-marker { font-family: 'Permanent Marker', cursive; }
-.font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
-.font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
-.font-comic-neue { font-family: 'Comic Neue', cursive; }
-.font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
-.font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
-.font-fredoka-one { font-family: 'Fredoka One', cursive; }
-.font-gloria-hallelujah { font-family: 'Gloria Hallelujah', cursive; font-size: 15px; }
-.font-architects-daughter { font-family: 'Architects Daughter', cursive; }
-.font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
-.font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
-
-/* Custom Select styling */
-.custom-select {
-    position: relative;
-    display: inline-block;
-    width: 100%;
-}
-
-.custom-select select {
-    width: 100%;
-    padding: 8px 30px 8px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--card-bg);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    cursor: pointer;
-}
-
-.custom-select::after {
-    content: '\f0d7';
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: #555;
-}
-
-.custom-select select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
-}
-
-/* Custom select for the text formatting panel */
-.text-font-section {
-    margin-bottom: 15px;
-}
-
-.text-font-section select {
-    width: 100%;
-    max-width: 100%;
-}
-
-/* Style the font preview dropdown */
-select.font-family option {
-    padding: 8px;
-}
-
-/* Make the preview more visible */
-.font-family option[value] {
-    padding: 10px;
-    min-height: 40px;
-}
-
-/* Firefox specific styles */
-@-moz-document url-prefix() {
-    .font-option {
-        height: auto;
-        min-height: 30px;
-    }
-}
-
-/* Export mode - hide all editing UI elements */
-.exporting .comic-panel {
-    border: 3px solid #000000 !important;
-    background: transparent !important;
-    box-shadow: none !important; /* Remove any shadow during export */
-    transform: none !important; /* Ensure no scaling during export */
-}
-
-.exporting .comic-panel::before {
-    display: none !important; /* Ensure pseudo-element is hidden during export */
-}
-
-.exporting .comic-panel:not(.has-image) {
-    background: #E0E0E0 !important;
-}
-
-.exporting .comic-panel.selected {
-    border: 3px solid #000000 !important;
-}
-
-.exporting .comic-panel img {
-    min-width: calc(100% + 2px) !important; /* Force image to slightly overflow */
-    min-height: calc(100% + 2px) !important;
-    object-fit: cover !important;
-}
-
-/* Special handling for comic panels during export */
-.exporting .comic-panel:focus,
-.exporting .comic-panel:focus-visible {
-    outline: none !important;
-    border: 3px solid #000000 !important;
-    box-shadow: none !important;
-}
-
-/* Remove any hover effects during export */
-.exporting .comic-panel:hover {
-    box-shadow: none !important;
-}
-
-/* Modal Styles */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    z-index: 999;
-    display: none; /* Hidden by default */
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.modal {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) scale(0.9);
-    background-color: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    width: 90%;
-    max-width: 400px;
-    display: none; /* Hidden by default */
-    opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.modal.active .modal-overlay,
-.modal.active {
-    display: block;
-    opacity: 1;
-}
-
-.modal.active {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.modal h3 {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    color: var(--primary-color); /* Keep title color primary */
-}
-
-.modal input[type="text"] {
-    width: 100%;
-    padding: 0.8rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    box-sizing: border-box;
-}
-
-.modal-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-}
-
-/* Reuse existing button styles if possible, or define secondary */
-.secondary-btn {
-    background-color: #6c757d; /* Example secondary color */
-    color: white;
-    padding: 0.7rem 1.2rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease;
-}
-
-.secondary-btn:hover {
-    background-color: #5a6268;
-}
-
-.modal-buttons button {
-    min-width: 80px;
-    text-align: center;
-}
-
-/* Reorder Pages Modal Specific Styles */
-#reorder-modal p {
-    text-align: center;
-    margin-bottom: 1.5rem;
-    color: #555;
-}
-
-.reorder-list {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 1.5rem 0;
-    max-height: 60vh; /* Prevent modal from getting too tall */
-    overflow-y: auto;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.reorder-list li {
-    display: flex;
-    align-items: center;
-    padding: 0.8rem 1rem;
-    background-color: #f9f9f9;
-    border-bottom: 1px solid #ddd;
-    cursor: grab;
-    transition: background-color 0.2s ease, box-shadow 0.2s ease;
-    user-select: none; /* Prevent text selection during drag */
-}
-
-.reorder-list li:last-child {
-    border-bottom: none;
-}
-
-.reorder-list li:hover {
-    background-color: #f1f1f1;
-}
-
-.reorder-list li i {
-    margin-right: 0.8rem;
-    color: #777;
-    cursor: grab;
-}
-
-.reorder-list li span {
-    flex-grow: 1;
-}
-
-/* Dragging Styles */
-.reorder-list li.dragging {
-    opacity: 0.5;
-    background-color: #e0e0e0;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-}
-
-/* Style for the drop target area */
-.reorder-list li.drag-over {
-    background-color: #d0eaff; /* Light blue highlight */
-    border-top: 2px solid #007bff; /* Blue line to indicate drop position */
-    margin-top: -2px; /* Compensate for border */
-}
-
-/* Set default text color for modal content */
-.modal,
-.modal p,
-.modal input[type="text"],
-#reorder-modal .reorder-list li span /* Target specific list text */
-{
-    color: #333; /* Dark gray for readability */
-}
-
-/* Style for line height control */
-.line-height-control {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.line-height {
-    flex-grow: 1;
-    accent-color: var(--primary-color);
-    height: 6px; /* Match zoom slider */
-    cursor: pointer;
-}
-
-.line-height-value {
-    min-width: 30px;
-    text-align: right;
-    font-size: 12px;
-    color: var(--text-muted);
-}
-
-/* Apply similar thumb style as zoom */
-.line-height::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid var(--text-color);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
-    margin-top: -5px; /* Adjust vertical centering */
-}
-
-.line-height::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid var(--text-color);
-    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
-}
-
-/* Style adjustments for Text Formatting Popup */
-#text-format-popup {
-    padding: 15px 15px 50px 15px; /* Slightly reduce horizontal padding, keep bottom padding for buttons */
-}
-
-.text-style-grid {
-    display: grid;
-    grid-template-columns: 1fr; /* Force single column */
-    gap: 12px; /* Adjust gap for vertical stacking */
-}
-
-.style-control {
-    /* Minor adjustments if needed, but single column grid handles stacking */
-}
-
-/* Ensure slider controls take full width */
-.style-control .font-size-control,
-.style-control .line-height-control {
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Slightly reduce gap */
-}
-.style-control input[type="range"] {
-    flex-grow: 1;
-}
-
-.color-section {
-    display: grid;
-    grid-template-columns: 1fr; /* Force single column */
-    gap: 15px; /* Increase gap */
-}
-
-.color-control { /* Assuming this class wraps label + input */
-     display: block; /* Ensure they stack */
-}
-.color-control label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.effects-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
-}
-
-.effect-control {
-    display: block; /* Stack sections vertically */
-}
-
-.effect-control label.group-label { /* Style the Effect section label */
-    display: block;
-    font-weight: bold;
-    margin-bottom: 8px;
-}
-
-.effect-control > div { /* The div containing checkbox/inputs */
-    display: flex;
-    flex-direction: column; /* Stack internal controls vertically */
-    align-items: flex-start; /* Align to the left */
-    gap: 8px;
-}
-
-/* Style the outline/shadow specific inner controls */
-.effect-control > div > div {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.outline-control,
-.shadow-control {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.outline-thickness {
-    width: 60px;
-    padding: 2px 4px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    font-size: 12px;
-}
-
-.outline-thickness:disabled {
-    background-color: var(--disabled-bg);
-    cursor: not-allowed;
-}
-
-/* Ensure text remains smooth when scaled */
-.text-content {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
-}
-
-.position-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.position-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 5px;
-    width: 150px;
-    margin: 0 auto;
-}
-
-.position-grid-btn {
-    width: 40px;
-    height: 40px;
-    background-color: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.2s;
-}
-
-.position-grid-btn:hover {
-    background-color: var(--hover-color);
-}
-
-.rotation-control {
-    margin-top: 10px;
-}
-
-.rotation-control label {
-    display: block;
-    font-size: 12px;
-    font-weight: bold;
-    margin-bottom: 5px;
-}
-
-.rotation-slider {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.rotation-slider input {
-    flex-grow: 1;
-}
-
-/* Google Fonts Integration */
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
-
-/* Font preview styles for dropdown */
-.font-option {
-    display: flex;
-    align-items: center;
-    padding: 6px 10px;
-    cursor: pointer;
-    margin: 2px 0;
-}
-
-.font-option:hover {
-    background-color: var(--hover-color);
-}
-
-.font-preview {
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block;
-    width: 100%;
-    line-height: 1.5;
-    padding: 4px 0;
-}
-
-.font-family option {
-    min-height: 30px;
-}
-
-.font-category {
-    font-weight: bold;
-    color: #666;
-    padding: 8px;
-    background-color: #f5f5f5;
-    margin-top: 5px;
-    border-bottom: 1px solid #ddd;
-    pointer-events: none;
-}
-
-/* Font family specific preview styling */
-.font-arial { font-family: Arial, sans-serif; }
-.font-comic-sans { font-family: 'Comic Sans MS', cursive; }
-.font-times { font-family: 'Times New Roman', serif; }
-.font-impact { font-family: Impact, Haettenschweiler, sans-serif; font-size: 18px; font-weight: bold; }
-.font-bangers { font-family: 'Bangers', cursive; font-size: 18px; letter-spacing: 1px; }
-.font-luckiest-guy { font-family: 'Luckiest Guy', cursive; font-size: 18px; }
-.font-permanent-marker { font-family: 'Permanent Marker', cursive; }
-.font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
-.font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
-.font-comic-neue { font-family: 'Comic Neue', cursive; }
-.font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
-.font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
-.font-fredoka-one { font-family: 'Fredoka One', cursive; }
-.font-gloria-hallelujah { font-family: 'Gloria Hallelujah', cursive; font-size: 15px; }
-.font-architects-daughter { font-family: 'Architects Daughter', cursive; }
-.font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
-.font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
-
-/* Custom Select styling */
-.custom-select {
-    position: relative;
-    display: inline-block;
-    width: 100%;
-}
-
-.custom-select select {
-    width: 100%;
-    padding: 8px 30px 8px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    background-color: var(--card-bg);
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    cursor: pointer;
-}
-
-.custom-select::after {
-    content: '\f0d7';
-    font-family: 'Font Awesome 5 Free';
-    font-weight: 900;
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-    color: #555;
-}
-
-.custom-select select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
-}
-
-/* Custom select for the text formatting panel */
-.text-font-section {
-    margin-bottom: 15px;
-}
-
-.text-font-section select {
-    width: 100%;
-    max-width: 100%;
-}
-
-/* Style the font preview dropdown */
-select.font-family option {
-    padding: 8px;
-}
-
-/* Make the preview more visible */
-.font-family option[value] {
-    padding: 10px;
-    min-height: 40px;
-}
-
-/* Firefox specific styles */
-@-moz-document url-prefix() {
-    .font-option {
-        height: auto;
-        min-height: 30px;
-    }
-}
-
-/* Thought Bubble Tail Styles */
-.thought-bubble::after {
-    content: '';
-    position: absolute;
-    width: 15px;
-    height: 15px;
     background-color: white;
-    border: 2px solid #000;
-    border-radius: 50%;
-    z-index: 1;
+    position: relative;
 }
 
 .thought-bubble::before {
     content: '';
     position: absolute;
-    width: 0px;
-    height: 0px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: white;
-    border: 0px solid #000;
-    border-radius: 50%;
+    border-radius: inherit;
     z-index: 1;
+    opacity: var(--bubble-opacity);
 }
 
-/* Add a third circle using a pseudo-element on .text-content */
-.thought-bubble .text-content::before {
+/* Specific padding for thought bubbles */
+.thought-bubble .text-content {
+    padding: 10px; /* Increased padding for thought bubbles */
+}
+
+/* Thought bubble tails */
+/* Add a third bubble using a custom property with attr() */
+.thought-tail-bottom-left,
+.thought-tail-bottom-center,
+.thought-tail-bottom-right,
+.thought-tail-left-center,
+.thought-tail-right-center,
+.thought-tail-top-left,
+.thought-tail-top-center,
+.thought-tail-top-right {
+    --bubble-trail-color: white;
+}
+
+/* Bottom tails */
+.thought-tail-bottom-left::after {
     content: '';
     position: absolute;
-    width: 6px;
-    height: 6px;
-    background-color: white;
+    width: 16px;
+    height: 16px;
+    bottom: -15px;
+    left: 20px;
+    background-color: var(--bubble-trail-color);
     border: 2px solid #000;
     border-radius: 50%;
     z-index: 1;
 }
 
-/* Bottom positions */
-.thought-tail-bottom-left::after {
-    left: 12px;
-    bottom: -20px;
-}
 .thought-tail-bottom-left::before {
-    left: 18px;
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     bottom: -32px;
-}
-.thought-tail-bottom-left .text-content::before {
-    left: 24px;
-    bottom: -42px;
+    left: 17px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
 }
 
 .thought-tail-bottom-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
     left: 50%;
-    bottom: -20px;
     transform: translateX(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
 }
+
 .thought-tail-bottom-center::before {
-    left: 50%;
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     bottom: -32px;
-    transform: translateX(-50%);
-}
-.thought-tail-bottom-center .text-content::before {
     left: 50%;
-    bottom: -42px;
     transform: translateX(-50%);
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
 }
 
 .thought-tail-bottom-right::after {
-    right: 12px;
-    bottom: -20px;
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
+    right: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
 }
+
 .thought-tail-bottom-right::before {
-    right: 18px;
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     bottom: -32px;
-}
-.thought-tail-bottom-right .text-content::before {
-    right: 24px;
-    bottom: -42px;
+    right: 20px;
+    background-color: white;
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
 }
 
 /* Left positions */
 .thought-tail-left-center::after {
-    left: -20px;
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: -15px;
     top: 50%;
     transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: -14px 3px 0 -4px var(--bubble-trail-color), -14px 3px 0 -2px #000;
 }
+
 .thought-tail-left-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     left: -32px;
-    top: 50%;
+    top: 52%;
     transform: translateY(-50%);
-}
-.thought-tail-left-center .text-content::before {
-    left: -42px;
-    top: 50%;
-    transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
 }
 
 /* Right positions */
 .thought-tail-right-center::after {
-    right: -20px;
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    right: -15px;
     top: 50%;
     transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 14px 3px 0 -4px var(--bubble-trail-color), 14px 3px 0 -2px #000;
 }
+
 .thought-tail-right-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     right: -32px;
-    top: 50%;
+    top: 52%;
     transform: translateY(-50%);
-}
-.thought-tail-right-center .text-content::before {
-    right: -42px;
-    top: 50%;
-    transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
 }
 
 /* Top positions */
 .thought-tail-top-left::after {
-    left: 12px;
-    top: -20px;
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -15px;
+    left: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: -3px -14px 0 -4px var(--bubble-trail-color), -3px -14px 0 -2px #000;
 }
+
 .thought-tail-top-left::before {
-    left: 18px;
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     top: -32px;
-}
-.thought-tail-top-left .text-content::before {
-    left: 24px;
-    top: -42px;
+    left: 17px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
 }
 
 .thought-tail-top-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -15px;
     left: 50%;
-    top: -20px;
     transform: translateX(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 0 -14px 0 -4px var(--bubble-trail-color), 0 -14px 0 -2px #000;
 }
+
 .thought-tail-top-center::before {
-    left: 50%;
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
     top: -32px;
-    transform: translateX(-50%);
-}
-.thought-tail-top-center .text-content::before {
     left: 50%;
-    top: -42px;
     transform: translateX(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
 }
 
 .thought-tail-top-right::after {
-    right: 12px;
-    top: -20px;
-}
-.thought-tail-top-right::before {
-    right: 18px;
-    top: -32px;
-}
-.thought-tail-top-right .text-content::before {
-    right: 24px;
-    top: -42px;
-}
-
-/* Global Background Controls */
-.global-background-control {
-    margin-top: 10px;
-    padding: 8px;
-    background-color: var(--input-bg);
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-}
-
-.global-background-control input[type="checkbox"] {
+    content: '';
+    position: absolute;
     width: 16px;
     height: 16px;
-    cursor: pointer;
+    top: -15px;
+    right: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 3px -14px 0 -4px var(--bubble-trail-color), 3px -14px 0 -2px #000;
 }
 
-.global-background-control label {
-    cursor: pointer;
-    font-weight: normal;
-    color: var(--text-color);
+.thought-tail-top-right::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    right: 17px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
 }

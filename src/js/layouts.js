@@ -451,6 +451,180 @@ export const layouts = {
             { x: 45, y: 5, width: 48, height: 48 } 
         ]
     },
+    'pillarbox-inset-top-left': {
+        name: 'Pillarbox with Top-Left Inset',
+        description: 'Tall panel with an overlapping square in the top-left corner',
+        panels: [
+            // Main tall panel (shifted right)
+            { x: 45, y: 1, width: 50, height: 98 },
+            // Square overlapping top-left
+            { x: 7, y: 5, width: 48, height: 48 }
+        ]
+    },
+    'pillarbox-inset-bottom-right': {
+        name: 'Pillarbox with Bottom-Right Inset',
+        description: 'Tall panel with an overlapping square in the bottom-right corner',
+        panels: [
+            // Main tall panel (shifted left)
+            { x: 5, y: 1, width: 50, height: 98 },
+            // Square overlapping bottom-right
+            { x: 45, y: 50, width: 48, height: 48 }
+        ]
+    },
+    'pillarbox-inset-bottom-left': {
+        name: 'Pillarbox with Bottom-Left Inset',
+        description: 'Tall panel with an overlapping square in the bottom-left corner',
+        panels: [
+            // Main tall panel (shifted right)
+            { x: 45, y: 1, width: 50, height: 98 },
+            // Square overlapping bottom-left
+            { x: 7, y: 50, width: 48, height: 48 }
+        ]
+    },
+    'pillarbox-dual-insets': {
+        name: 'Pillarbox with Dual Insets',
+        description: 'Tall panel with insets in opposite corners',
+        panels: [
+            // Main tall panel (centered)
+            { x: 25, y: 1, width: 50, height: 98 },
+            // Top-right inset
+            { x: 65, y: 5, width: 30, height: 30 },
+            // Bottom-left inset
+            { x: 5, y: 65, width: 30, height: 30 }
+        ]
+    },
+    'landscape-inset-top-right': {
+        name: 'Landscape with Top-Right Inset',
+        description: 'Wide panel with an overlapping square in the top-right corner',
+        panels: [
+            // Main landscape panel
+            { x: 1, y: 25, width: 98, height: 50 },
+            // Inset in top-right
+            { x: 65, y: 5, width: 30, height: 30 }
+        ]
+    },
+    'landscape-inset-bottom-left': {
+        name: 'Landscape with Bottom-Left Inset',
+        description: 'Wide panel with an overlapping square in the bottom-left corner',
+        panels: [
+            // Main landscape panel
+            { x: 1, y: 25, width: 98, height: 50 },
+            // Inset in bottom-left
+            { x: 5, y: 65, width: 30, height: 30 }
+        ]
+    },
+    'square-with-corner-insets': {
+        name: 'Square with Corner Insets',
+        description: 'Large central square with smaller squares in three corners',
+        panels: [
+            // Main square panel
+            { x: 15, y: 15, width: 70, height: 70 },
+            // Top-left inset
+            { x: 5, y: 5, width: 20, height: 20 },
+            // Top-right inset
+            { x: 75, y: 5, width: 20, height: 20 },
+            // Bottom-right inset
+            { x: 75, y: 75, width: 20, height: 20 }
+        ]
+    },
+    'triple-vertical-inset': {
+        name: 'Triple Vertical with Inset',
+        description: 'Three vertical panels with an overlapping inset',
+        panels: [
+            // Three vertical panels
+            { x: 0, y: 0, width: 30, height: 100 },
+            { x: 33, y: 0, width: 34, height: 100 },
+            { x: 70, y: 0, width: 30, height: 100 },
+            // Inset overlapping the middle
+            { x: 45, y: 35, width: 30, height: 30 }
+        ]
+    },
+    'grid-with-center-inset': {
+        name: 'Grid with Center Inset',
+        description: '2×2 grid with a central overlapping inset',
+        panels: [
+            // 2×2 grid
+            { x: 0, y: 0, width: 49, height: 49 },
+            { x: 51, y: 0, width: 49, height: 49 },
+            { x: 0, y: 51, width: 49, height: 49 },
+            { x: 51, y: 51, width: 49, height: 49 },
+            // Central overlapping inset
+            { x: 35, y: 35, width: 30, height: 30 }
+        ]
+    },
+    'diagonal-inset': {
+        name: 'Diagonal with Inset',
+        description: 'Diagonal panel arrangement with corner inset',
+        panels: [
+            // Diagonal panels
+            { x: 0, y: 0, width: 65, height: 65 },
+            { x: 35, y: 35, width: 65, height: 65 },
+            // Corner inset
+            { x: 75, y: 5, width: 20, height: 20 }
+        ]
+    },
+    'l-shape-inset': {
+        name: 'L-Shape with Inset',
+        description: 'L-shaped panel arrangement with inset',
+        panels: [
+            // L-shape panels
+            { x: 0, y: 0, width: 70, height: 60 },
+            { x: 0, y: 62, width: 100, height: 38 },
+            // Inset
+            { x: 75, y: 10, width: 20, height: 20 }
+        ]
+    },
+    'inset-inception': {
+        name: 'Inset Inception',
+        description: 'Inset within an inset for layered storytelling',
+        panels: [
+            // Main panel
+            { x: 5, y: 5, width: 90, height: 90 },
+            // First inset
+            { x: 65, y: 15, width: 30, height: 30 },
+            // Second inset (within first)
+            { x: 75, y: 25, width: 15, height: 15 }
+        ]
+    },
+    'panoramic-with-insets': {
+        name: 'Panoramic with Insets',
+        description: 'Wide panoramic panel with smaller inset panels',
+        panels: [
+            // Main panoramic panel
+            { x: 0, y: 30, width: 100, height: 40 },
+            // Top-left inset
+            { x: 5, y: 5, width: 25, height: 20 },
+            // Top-right inset
+            { x: 70, y: 5, width: 25, height: 20 },
+            // Bottom-left inset
+            { x: 5, y: 75, width: 25, height: 20 },
+            // Bottom-right inset
+            { x: 70, y: 75, width: 25, height: 20 }
+        ]
+    },
+    'staggered-insets': {
+        name: 'Staggered Insets',
+        description: 'Main panel with staggered inset pattern',
+        panels: [
+            // Main panel
+            { x: 10, y: 10, width: 80, height: 80 },
+            // Staggered insets
+            { x: 70, y: 5, width: 20, height: 20 },
+            { x: 60, y: 30, width: 15, height: 15 },
+            { x: 75, y: 50, width: 10, height: 10 }
+        ]
+    },
+    'floating-insets': {
+        name: 'Floating Insets',
+        description: 'Multiple small inset panels without a main panel',
+        panels: [
+            { x: 10, y: 10, width: 35, height: 35 },
+            { x: 55, y: 10, width: 35, height: 35 },
+            { x: 10, y: 55, width: 35, height: 35 },
+            { x: 55, y: 55, width: 35, height: 35 },
+            { x: 35, y: 35, width: 30, height: 30 }
+        ]
+    },
     'floating-square': {
         name: "Floating Square",
         description: "Single square panel centered with generous margins",
