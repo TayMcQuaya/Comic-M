@@ -393,8 +393,14 @@ class ComicCreator {
             img.alt = image.name;
             console.log('[addImageToPanel] Created img element with src:', img.src); // <<< Debug log
             
-            // Clear existing content and add new image
-            panel.innerHTML = '';
+            // Find and remove any existing image in the panel
+            const existingImg = panel.querySelector('img');
+            if (existingImg) {
+                existingImg.remove();
+                console.log('[addImageToPanel] Removed existing image from panel.');
+            }
+            
+            // Append the new image
             panel.appendChild(img);
             console.log('[addImageToPanel] Appended img to panel:', panel); // <<< Debug log
             
@@ -632,8 +638,13 @@ class ComicCreator {
     clearPanelImage(panel) {
         if (!panel) return;
         
-        // Remove the image and reset panel state
-        panel.innerHTML = '';
+        // Find and remove the image element specifically
+        const img = panel.querySelector('img');
+        if (img) {
+            img.remove();
+        }
+        
+        // Reset panel state related to the image
         delete panel.dataset.imageId;
         delete panel.dataset.initialScale;
         delete panel.dataset.currentScale;
