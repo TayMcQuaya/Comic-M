@@ -66,21 +66,25 @@ class ComicCreator {
     }
 
     async handleImageUpload(files) {
+        console.log('[handleImageUpload] Starting upload process with files:', files);
         const imagePromises = Array.from(files)
             .filter(file => file.type.startsWith('image/'))
             .map(file => {
                 return new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = (e) => {
+                        console.log('[handleImageUpload] FileReader loaded for:', file.name);
                         const img = new Image();
                         img.onload = () => {
-                            resolve({
+                            const imageData = {
                                 id: Date.now() + Math.random(),
                                 name: file.name,
                                 src: e.target.result,
                                 width: img.width,
                                 height: img.height
-                            });
+                            };
+                            console.log('[handleImageUpload] Image processed:', imageData.name, 'with ID:', imageData.id);
+                            resolve(imageData);
                         };
                         img.src = e.target.result;
                     };
@@ -89,7 +93,9 @@ class ComicCreator {
             });
 
         const newImages = await Promise.all(imagePromises);
+        console.log('[handleImageUpload] All images processed:', newImages.length, 'images');
         this.uploadedImages.push(...newImages);
+        console.log('[handleImageUpload] Current uploadedImages array:', this.uploadedImages.length, 'total images');
         this.updateImageLibrary();
         this.enableNextButton();
     }
@@ -147,9 +153,12 @@ class ComicCreator {
     setupDragAndDrop(container, image) {
         container.addEventListener('dragstart', (e) => {
             container.classList.add('dragging');
-            // Set both data types for compatibility
-            e.dataTransfer.setData('image/id', image.id.toString());
-            e.dataTransfer.setData('reorder/id', image.id.toString());
+            // Set the data transfer in multiple formats to ensure compatibility
+            const imageIdStr = image.id.toString();
+            console.log('[Drag Start] Setting dataTransfer for image/id:', imageIdStr);
+            e.dataTransfer.setData('text/plain', imageIdStr);  // Add this format
+            e.dataTransfer.setData('image/id', imageIdStr);
+            e.dataTransfer.setData('reorder/id', imageIdStr);
             e.dataTransfer.effectAllowed = 'copyMove';
         });
 
@@ -282,16 +291,30 @@ class ComicCreator {
 
         canvas.addEventListener('drop', (e) => {
             e.preventDefault();
-            const imageId = e.dataTransfer.getData('image/id');
-            if (!imageId) return; // Exit if no image ID is found
+            console.log('[Canvas Drop] Drop event detected.');
+            
+            // Try different formats to get the image ID
+            let imageId = e.dataTransfer.getData('image/id') || 
+                         e.dataTransfer.getData('text/plain') ||
+                         e.dataTransfer.getData('reorder/id');
+            
+            console.log('[Canvas Drop] Retrieved image/id from dataTransfer:', imageId);
+
+            if (!imageId) {
+                console.log('[Canvas Drop] No image/id found in dataTransfer. Exiting.');
+                return;
+            }
             
             const image = this.uploadedImages.find(img => String(img.id) === imageId);
+            console.log('[Canvas Drop] Found image object in uploadedImages:', image);
             if (!image) {
-                console.error('Image not found for ID:', imageId);
+                console.error('[Canvas Drop] Image not found in uploadedImages for ID:', imageId); // <<< Error log if not found
                 return;
             }
 
             const panel = e.target.closest('.comic-panel');
+            console.log('[Canvas Drop] Target panel (if any):', panel); // <<< Debug log
+            console.log('[Canvas Drop] Current sidebar mode:', this.currentSidebarMode); // <<< Debug log
 
             // Handle drop based on current sidebar mode
             switch (this.currentSidebarMode) {
@@ -358,20 +381,22 @@ class ComicCreator {
 
     addImageToPanel(panel, image) {
         if (!panel || !image) {
-            console.error('Cannot add image to panel: invalid panel or image', { panel, image });
+            console.error('[addImageToPanel] Cannot add image: invalid panel or image', { panel, image }); // <<< Keep existing error log
             return;
         }
         
-        console.log('Adding image to panel:', image); // Debug log
+        console.log('[addImageToPanel] Called with panel:', panel, 'and image:', image); // <<< Debug log
         
         try {
             const img = document.createElement('img');
             img.src = image.src;
             img.alt = image.name;
+            console.log('[addImageToPanel] Created img element with src:', img.src); // <<< Debug log
             
             // Clear existing content and add new image
             panel.innerHTML = '';
             panel.appendChild(img);
+            console.log('[addImageToPanel] Appended img to panel:', panel); // <<< Debug log
             
             // Set initial image styles
             img.style.position = 'absolute';
@@ -3832,10 +3857,10 @@ class ComicCreator {
 
     // --- Add Background Image --- 
     addBackgroundImage(image) {
-        console.log("Adding Background Image:", image.name);
+        console.log("[addBackgroundImage] Called with image:", image); // <<< Debug log
         const canvas = document.querySelector('#comic-canvas');
         if (!canvas) {
-            console.error("Canvas element not found!");
+            console.error("[addBackgroundImage] Canvas element not found!"); // <<< Keep existing error log
             return;
         }
 
@@ -3855,6 +3880,7 @@ class ComicCreator {
         bgImg.src = image.src;
         bgImg.alt = "Canvas Background";
         bgImg.className = 'canvas-background-image'; // Add class for identification
+        console.log('[addBackgroundImage] Created img element with src:', bgImg.src); // <<< Debug log
         bgImg.style.position = 'absolute';
         bgImg.style.top = '0';
         bgImg.style.left = '0';
@@ -3866,6 +3892,7 @@ class ComicCreator {
 
         // Prepend to the canvas so it's behind other elements
         canvas.insertBefore(bgImg, canvas.firstChild);
+        console.log('[addBackgroundImage] Inserted img into canvas:', canvas); // <<< Debug log
 
         // Update the page state while preserving existing states
         currentPage.backgroundState = {
@@ -3886,10 +3913,10 @@ class ComicCreator {
 
     // --- Add Sticker --- 
     addSticker(image, dropX, dropY) {
-        console.log("Adding Sticker:", image.name, "at viewport coords", dropX, dropY);
+        console.log("[addSticker] Called with image:", image, "at viewport coords", dropX, dropY); // <<< Keep existing log
         const stickerCanvas = document.querySelector('#comic-canvas');
         if (!stickerCanvas) {
-            console.error('Canvas element not found!');
+            console.error('[addSticker] Canvas element not found!'); // <<< Keep existing error log
             return;
         }
 
@@ -3906,6 +3933,7 @@ class ComicCreator {
             alt: "Sticker",
             className: 'canvas-sticker-image'
         });
+        console.log('[addSticker] Created img element with src:', stickerImg.src); // <<< Debug log
 
         Object.assign(stickerImg.dataset, {
             imageId: image.id,
@@ -3959,6 +3987,7 @@ class ComicCreator {
         };
 
         stickerCanvas.appendChild(stickerImg);
+        console.log('[addSticker] Appended img to canvas:', stickerCanvas); // <<< Debug log
         this.makeStickerDraggable(stickerImg);
         
         stickerImg.addEventListener('click', (e) => {
