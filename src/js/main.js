@@ -797,6 +797,7 @@ class ComicCreator {
                         height: textBubble.style.height,
                         transform: textBubble.style.transform,
                         backgroundColor: textBubble.style.backgroundColor,
+                        bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
                         fontFamily: textElement.style.fontFamily,
                         fontSize: textElement.style.fontSize,
                         fontWeight: textElement.style.fontWeight,
@@ -1524,6 +1525,15 @@ class ComicCreator {
                             textShadow: textState.style.textShadow,
                             lineHeight: textState.style.lineHeight || 'normal'
                         });
+                        
+                        // Set bubble background color from saved state (fallback to white if not set)
+                        textBubble.style.setProperty('--bubble-background-color', 
+                            textState.style.bubbleBackgroundColor || textState.style.backgroundColor || 'white');
+                        
+                        // Set bubble opacity if saved
+                        if (textState.style.bubbleOpacity) {
+                            textBubble.style.setProperty('--bubble-opacity', textState.style.bubbleOpacity);
+                        }
                         
                         if (textState.style.hasOutline) {
                             textContent.dataset.hasOutline = 'true';
@@ -2328,11 +2338,17 @@ class ComicCreator {
                 </div>
                 <div class="control-group">
                     <label>Text Color</label>
-                    <input type="color" class="font-color" value="#000000">
+                    <div class="color-picker-container">
+                        <input type="color" class="font-color" value="#000000">
+                        <div class="hex-display font-color-hex">#000000</div>
+                    </div>
                 </div>
                 <div class="control-group">
                     <label>Bubble Color</label>
-                    <input type="color" class="bubble-color" value="#ffffff">
+                    <div class="color-picker-container">
+                        <input type="color" class="bubble-color" value="#ffffff">
+                        <div class="hex-display bubble-color-hex">#ffffff</div>
+                    </div>
                 </div>
                 <div class="control-group">
                     <label>Text Style</label>
@@ -2366,10 +2382,16 @@ class ComicCreator {
         textProperties.querySelector('.font-size-value').textContent = `${fontSizeValue}px`;
         
         const fontColor = textProperties.querySelector('.font-color');
-        fontColor.value = this.rgbToHex(computedStyle.color) || '#000000';
+        const fontColorHex = textProperties.querySelector('.font-color-hex');
+        const fontColorValue = this.rgbToHex(computedStyle.color) || '#000000';
+        fontColor.value = fontColorValue;
+        fontColorHex.textContent = fontColorValue;
         
         const bubbleColor = textProperties.querySelector('.bubble-color');
-        bubbleColor.value = this.rgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff';
+        const bubbleColorHex = textProperties.querySelector('.bubble-color-hex');
+        const bubbleColorValue = this.rgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff';
+        bubbleColor.value = bubbleColorValue;
+        bubbleColorHex.textContent = bubbleColorValue;
         
         const rotation = textProperties.querySelector('.rotation');
         const transform = textBox.style.transform;
@@ -2407,16 +2429,84 @@ class ComicCreator {
         
         fontColor.addEventListener('input', () => {
             textElement.style.color = fontColor.value;
+            fontColorHex.textContent = fontColor.value.toUpperCase();
             
             // Save state after changing font color
             this.saveCurrentPageState();
         });
         
+        // Allow user to enter hex color directly
+        fontColorHex.contentEditable = true;
+        fontColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Validate hex format
+                const hexValue = fontColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    fontColor.value = hexValue;
+                    textElement.style.color = hexValue;
+                    this.saveCurrentPageState();
+                } else {
+                    // Reset to current value if invalid
+                    fontColorHex.textContent = fontColor.value.toUpperCase();
+                }
+                fontColorHex.blur();
+            }
+        });
+        fontColorHex.addEventListener('blur', () => {
+            // Validate hex format when user clicks away
+            const hexValue = fontColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                fontColor.value = hexValue;
+                textElement.style.color = hexValue;
+                this.saveCurrentPageState();
+            } else {
+                // Reset to current value if invalid
+                fontColorHex.textContent = fontColor.value.toUpperCase();
+            }
+        });
+        
         bubbleColor.addEventListener('input', () => {
+            // Set both the background color and the CSS variable for the ::before element
             textBox.style.backgroundColor = bubbleColor.value;
+            textBox.style.setProperty('--bubble-background-color', bubbleColor.value);
+            bubbleColorHex.textContent = bubbleColor.value.toUpperCase();
             
             // Save state after changing bubble color
             this.saveCurrentPageState();
+        });
+        
+        // Allow user to enter hex color directly for bubble color
+        bubbleColorHex.contentEditable = true;
+        bubbleColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Validate hex format
+                const hexValue = bubbleColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    bubbleColor.value = hexValue;
+                    textBox.style.backgroundColor = hexValue;
+                    textBox.style.setProperty('--bubble-background-color', hexValue);
+                    this.saveCurrentPageState();
+                } else {
+                    // Reset to current value if invalid
+                    bubbleColorHex.textContent = bubbleColor.value.toUpperCase();
+                }
+                bubbleColorHex.blur();
+            }
+        });
+        bubbleColorHex.addEventListener('blur', () => {
+            // Validate hex format when user clicks away
+            const hexValue = bubbleColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                bubbleColor.value = hexValue;
+                textBox.style.backgroundColor = hexValue;
+                textBox.style.setProperty('--bubble-background-color', hexValue);
+                this.saveCurrentPageState();
+            } else {
+                // Reset to current value if invalid
+                bubbleColorHex.textContent = bubbleColor.value.toUpperCase();
+            }
         });
         
         const boldBtn = textProperties.querySelector('.bold-btn');
@@ -2662,11 +2752,17 @@ class ComicCreator {
                     <div class="color-section">
                         <div class="color-control">
                             <label for="text-color">Text Color</label>
-                            <input type="color" id="text-color" class="text-color" value="${this.rgbToHex(window.getComputedStyle(textElement).color)}">
+                            <div class="color-picker-container">
+                                <input type="color" id="text-color" class="text-color" value="${this.rgbToHex(window.getComputedStyle(textElement).color)}">
+                                <div class="hex-display text-color-hex">${this.rgbToHex(window.getComputedStyle(textElement).color).toUpperCase()}</div>
+                            </div>
                         </div>
                         <div class="color-control">
                             <label for="bubble-color">Bubble Color</label>
-                            <input type="color" id="bubble-color" class="bubble-color" value="${this.rgbToHex(window.getComputedStyle(textBox).backgroundColor)}">
+                            <div class="color-picker-container">
+                                <input type="color" id="bubble-color" class="bubble-color" value="${this.rgbToHex(window.getComputedStyle(textBox).backgroundColor)}">
+                                <div class="hex-display bubble-color-hex">${this.rgbToHex(window.getComputedStyle(textBox).backgroundColor).toUpperCase()}</div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2679,11 +2775,17 @@ class ComicCreator {
                             <div class="outline-control">
                                 <input type="checkbox" id="text-outline" ${textElement.style.webkitTextStroke ? 'checked' : ''}>
                                 <input type="number" id="outline-thickness" class="outline-thickness" value="${this.getOutlineThickness(textElement)}" min="1" max="5" step="0.5" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
-                                <input type="color" id="outline-color" value="${this.getOutlineColor(textElement)}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                <div class="color-picker-container">
+                                    <input type="color" id="outline-color" value="${this.getOutlineColor(textElement)}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                    <div class="hex-display outline-color-hex" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>${this.getOutlineColor(textElement).toUpperCase()}</div>
+                                </div>
                             </div>
                             <div class="shadow-control">
                                 <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
-                                <input type="color" id="shadow-color" value="${this.getShadowColor(textElement)}" ${!textElement.style.textShadow ? 'disabled' : ''}>
+                                <div class="color-picker-container">
+                                    <input type="color" id="shadow-color" value="${this.getShadowColor(textElement)}" ${!textElement.style.textShadow ? 'disabled' : ''}>
+                                    <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${this.getShadowColor(textElement).toUpperCase()}</div>
+                                </div>
                             </div>
                             <div class="opacity-control">
                                 <label>
@@ -2884,72 +2986,219 @@ class ComicCreator {
         });
         
         // Colors
-        popup.querySelector('#text-color').addEventListener('input', (e) => {
+        const textColorPicker = popup.querySelector('#text-color');
+        const textColorHex = popup.querySelector('.text-color-hex');
+        
+        textColorPicker.addEventListener('input', (e) => {
             textElement.style.color = e.target.value;
+            textColorHex.textContent = e.target.value.toUpperCase();
         });
         
-        popup.querySelector('#bubble-color').addEventListener('input', (e) => {
+        // Allow user to enter hex color directly for text color
+        textColorHex.contentEditable = true;
+        textColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Validate hex format
+                const hexValue = textColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    textColorPicker.value = hexValue;
+                    textElement.style.color = hexValue;
+                } else {
+                    // Reset to current value if invalid
+                    textColorHex.textContent = textColorPicker.value.toUpperCase();
+                }
+                textColorHex.blur();
+            }
+        });
+        
+        textColorHex.addEventListener('blur', () => {
+            // Validate hex format when user clicks away
+            const hexValue = textColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                textColorPicker.value = hexValue;
+                textElement.style.color = hexValue;
+            } else {
+                // Reset to current value if invalid
+                textColorHex.textContent = textColorPicker.value.toUpperCase();
+            }
+        });
+        
+        const bubbleColorPicker = popup.querySelector('#bubble-color');
+        const bubbleColorHex = popup.querySelector('.bubble-color-hex');
+        
+        bubbleColorPicker.addEventListener('input', (e) => {
             textBox.style.backgroundColor = e.target.value;
+            textBox.style.setProperty('--bubble-background-color', e.target.value);
+            bubbleColorHex.textContent = e.target.value.toUpperCase();
+        });
+        
+        // Allow user to enter hex color directly for bubble color
+        bubbleColorHex.contentEditable = true;
+        bubbleColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                // Validate hex format
+                const hexValue = bubbleColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    bubbleColorPicker.value = hexValue;
+                    textBox.style.backgroundColor = hexValue;
+                    textBox.style.setProperty('--bubble-background-color', hexValue);
+                } else {
+                    // Reset to current value if invalid
+                    bubbleColorHex.textContent = bubbleColorPicker.value.toUpperCase();
+                }
+                bubbleColorHex.blur();
+            }
+        });
+        
+        bubbleColorHex.addEventListener('blur', () => {
+            // Validate hex format when user clicks away
+            const hexValue = bubbleColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                bubbleColorPicker.value = hexValue;
+                textBox.style.backgroundColor = hexValue;
+                textBox.style.setProperty('--bubble-background-color', hexValue);
+            } else {
+                // Reset to current value if invalid
+                bubbleColorHex.textContent = bubbleColorPicker.value.toUpperCase();
+            }
         });
         
         // Text outline
         const textOutlineCheckbox = popup.querySelector('#text-outline');
         const outlineThicknessInput = popup.querySelector('#outline-thickness');
         const outlineColorPicker = popup.querySelector('#outline-color');
-
+        const outlineColorHex = popup.querySelector('.outline-color-hex');
+        
         textOutlineCheckbox.addEventListener('change', () => {
             if (textOutlineCheckbox.checked) {
                 outlineThicknessInput.disabled = false;
                 outlineColorPicker.disabled = false;
-                this.applyTextOutline(textElement, outlineColorPicker.value, parseFloat(outlineThicknessInput.value));
+                outlineColorHex.removeAttribute('disabled');
+                
+                this.applyTextOutline(textElement, outlineColorPicker.value, outlineThicknessInput.value);
             } else {
                 outlineThicknessInput.disabled = true;
                 outlineColorPicker.disabled = true;
+                outlineColorHex.setAttribute('disabled', true);
+                
                 this.removeTextOutline(textElement);
             }
             
             // Save state after changing outline
             this.saveCurrentPageState();
         });
-
+        
         outlineThicknessInput.addEventListener('input', () => {
             if (textOutlineCheckbox.checked) {
-                this.applyTextOutline(textElement, outlineColorPicker.value, parseFloat(outlineThicknessInput.value));
+                this.applyTextOutline(textElement, outlineColorPicker.value, outlineThicknessInput.value);
+                
                 // Save state after changing outline thickness
                 this.saveCurrentPageState();
             }
         });
-
+        
         outlineColorPicker.addEventListener('input', () => {
             if (textOutlineCheckbox.checked) {
-                this.applyTextOutline(textElement, outlineColorPicker.value, parseFloat(outlineThicknessInput.value));
+                const thickness = outlineThicknessInput.value;
+                this.applyTextOutline(textElement, outlineColorPicker.value, thickness);
+                outlineColorHex.textContent = outlineColorPicker.value.toUpperCase();
+                
                 // Save state after changing outline color
                 this.saveCurrentPageState();
+            }
+        });
+        
+        // Allow direct hex input for outline color
+        outlineColorHex.contentEditable = true;
+        outlineColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !outlineColorHex.hasAttribute('disabled')) {
+                e.preventDefault();
+                const hexValue = outlineColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    outlineColorPicker.value = hexValue;
+                    const thickness = outlineThicknessInput.value;
+                    this.applyTextOutline(textElement, hexValue, thickness);
+                    this.saveCurrentPageState();
+                } else {
+                    outlineColorHex.textContent = outlineColorPicker.value.toUpperCase();
+                }
+                outlineColorHex.blur();
+            }
+        });
+        
+        outlineColorHex.addEventListener('blur', () => {
+            if (!outlineColorHex.hasAttribute('disabled')) {
+                const hexValue = outlineColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    outlineColorPicker.value = hexValue;
+                    const thickness = outlineThicknessInput.value;
+                    this.applyTextOutline(textElement, hexValue, thickness);
+                    this.saveCurrentPageState();
+                } else {
+                    outlineColorHex.textContent = outlineColorPicker.value.toUpperCase();
+                }
             }
         });
         
         // Text shadow
         const textShadowCheckbox = popup.querySelector('#text-shadow');
         const shadowColorPicker = popup.querySelector('#shadow-color');
-
+        const shadowColorHex = popup.querySelector('.shadow-color-hex');
+        
         textShadowCheckbox.addEventListener('change', () => {
             if (textShadowCheckbox.checked) {
                 shadowColorPicker.disabled = false;
+                shadowColorHex.removeAttribute('disabled');
                 this.applyTextShadow(textElement, shadowColorPicker.value);
             } else {
                 shadowColorPicker.disabled = true;
+                shadowColorHex.setAttribute('disabled', true);
                 this.removeTextShadow(textElement);
             }
             
             // Save state after changing shadow
             this.saveCurrentPageState();
         });
-
+        
         shadowColorPicker.addEventListener('input', () => {
             if (textShadowCheckbox.checked) {
                 this.applyTextShadow(textElement, shadowColorPicker.value);
+                shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
+                
                 // Save state after changing shadow color
                 this.saveCurrentPageState();
+            }
+        });
+        
+        // Allow direct hex input for shadow color
+        shadowColorHex.contentEditable = true;
+        shadowColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !shadowColorHex.hasAttribute('disabled')) {
+                e.preventDefault();
+                const hexValue = shadowColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    shadowColorPicker.value = hexValue;
+                    this.applyTextShadow(textElement, hexValue);
+                    this.saveCurrentPageState();
+                } else {
+                    shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
+                }
+                shadowColorHex.blur();
+            }
+        });
+        
+        shadowColorHex.addEventListener('blur', () => {
+            if (!shadowColorHex.hasAttribute('disabled')) {
+                const hexValue = shadowColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    shadowColorPicker.value = hexValue;
+                    this.applyTextShadow(textElement, hexValue);
+                    this.saveCurrentPageState();
+                } else {
+                    shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
+                }
             }
         });
         
