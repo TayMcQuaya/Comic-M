@@ -591,8 +591,13 @@ class ComicCreator {
 
         // Add zoom control listeners
         const zoomControl = controls.querySelector('.zoom-control');
+        const zoomValue = controls.querySelector('.zoom-value');
+        
         if (zoomControl) {
             zoomControl.addEventListener('input', (e) => this.handleZoom(e, panel));
+            
+            // Make zoom value editable using the helper function
+            this.makeSliderValueEditable(zoomControl, zoomValue, '%', 0);
         }
 
         // Add reset zoom button listener
@@ -610,10 +615,7 @@ class ComicCreator {
                 // Update zoom control and value display
                 if (zoomControl) {
                     zoomControl.value = 100;
-                    const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
-                    if (zoomValue) {
-                        zoomValue.textContent = '100%';
-                    }
+                    zoomValue.textContent = '100%';
                 }
 
                 // Save the current page state
@@ -2947,6 +2949,9 @@ class ComicCreator {
             fontSizeValue.textContent = `${fontSizeSlider.value}px`;
         });
         
+        // Make font size value editable
+        this.makeSliderValueEditable(fontSizeSlider, fontSizeValue, 'px', 0);
+
         // Text style buttons
         popup.querySelector('.bold-btn').addEventListener('click', () => {
             const isBold = textElement.style.fontWeight === 'bold';
@@ -3230,6 +3235,9 @@ class ComicCreator {
             
             textBox.style.transform = `${translate} rotate(${value}deg)`;
         });
+        
+        // Make rotation value editable
+        this.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
 
         // Add text content change observer
         const observer = new MutationObserver(() => {
@@ -3275,6 +3283,9 @@ class ComicCreator {
             // Save state after changing line height
             this.saveCurrentPageState();
         });
+        
+        // Make line height value editable
+        this.makeSliderValueEditable(lineHeightSlider, lineHeightValue, '', 1);
     }
     
     // Helper methods for text formatting
@@ -4283,6 +4294,9 @@ class ComicCreator {
                     sizeValue.textContent = `${Math.round(size)}%`;
                     this.saveCurrentPageState();
                 });
+                
+                // Make size value editable
+                this.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
             }
 
             // Reset size button listener
@@ -4748,6 +4762,88 @@ class ComicCreator {
                 }, 300);
             };
         }
+    }
+
+    // --- Make Slider Value Editable ---
+    makeSliderValueEditable(slider, valueDisplay, unitSuffix = '', precision = 0) {
+        // Add editable class for styling
+        valueDisplay.classList.add('editable-slider-value');
+        valueDisplay.contentEditable = true;
+        
+        // Store the unit suffix and precision for formatting
+        valueDisplay.dataset.unitSuffix = unitSuffix;
+        valueDisplay.dataset.precision = precision;
+        
+        // Handle Enter key and Escape key
+        valueDisplay.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                
+                // Get the numeric value from the text (remove unit suffix)
+                let value = valueDisplay.textContent.replace(unitSuffix, '').trim();
+                value = parseFloat(value);
+                
+                // Validate the value
+                if (!isNaN(value)) {
+                    // Clamp value to slider's min/max
+                    const min = parseFloat(slider.min);
+                    const max = parseFloat(slider.max);
+                    value = Math.min(Math.max(value, min), max);
+                    
+                    // Update slider value
+                    slider.value = value;
+                    
+                    // Trigger input event on slider to activate its listeners
+                    slider.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    // Update the display with formatted value (this will happen in the slider's input handler)
+                    
+                    // Remove focus
+                    valueDisplay.blur();
+                } else {
+                    // Revert to current slider value
+                    const formattedValue = precision > 0 
+                        ? parseFloat(slider.value).toFixed(precision) 
+                        : Math.round(slider.value);
+                    valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
+                    valueDisplay.blur();
+                }
+            } else if (e.key === 'Escape') {
+                // Revert to current slider value
+                const formattedValue = precision > 0 
+                    ? parseFloat(slider.value).toFixed(precision) 
+                    : Math.round(slider.value);
+                valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
+                valueDisplay.blur();
+            }
+        });
+        
+        // Handle blur event (clicking away)
+        valueDisplay.addEventListener('blur', () => {
+            // Get the numeric value from the text
+            let value = valueDisplay.textContent.replace(unitSuffix, '').trim();
+            value = parseFloat(value);
+            
+            // Validate the value
+            if (!isNaN(value) && value !== parseFloat(slider.value)) {
+                // Clamp value to slider's min/max
+                const min = parseFloat(slider.min);
+                const max = parseFloat(slider.max);
+                value = Math.min(Math.max(value, min), max);
+                
+                // Update slider value
+                slider.value = value;
+                
+                // Trigger input event on slider to activate its listeners
+                slider.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+                // Revert to current slider value or format correctly
+                const formattedValue = precision > 0 
+                    ? parseFloat(slider.value).toFixed(precision) 
+                    : Math.round(slider.value);
+                valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
+            }
+        });
     }
 }
 

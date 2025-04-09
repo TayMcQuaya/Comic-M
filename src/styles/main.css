@@ -3929,3 +3929,26 @@ input[type="color"] {
     background-color: #dc3545;
     border-left: 4px solid #bd2130;
 }
+
+/* Editable slider value styles */
+.editable-slider-value {
+    cursor: text;
+    padding: 2px 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    min-width: 40px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.editable-slider-value:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: var(--border-color);
+}
+
+.editable-slider-value:focus {
+    outline: none;
+    background-color: #000;
+    border-color: var(--primary-color, #0275d8);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb, 2, 117, 216), 0.25);
+}
