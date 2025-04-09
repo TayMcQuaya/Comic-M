@@ -1674,9 +1674,19 @@ label {
     cursor: grab;
     box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
     user-select: none;
-    transition: transform 0.1s, border-color 0.2s;
+    transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
     overflow: visible;
     --bubble-opacity: 1;
+}
+
+.text-bubble:hover {
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.25);
+    border-color: #444;
+}
+
+.text-bubble:hover:not(.selected-text) {
+    outline: 1px dashed rgba(128, 128, 128, 0.5);
+    outline-offset: 1px;
 }
 
 .text-bubble::before {
@@ -1703,7 +1713,7 @@ label {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    padding: 3px 3px 10px 3px; /* Reduced padding - 25% less on top/sides, kept bottom */
+    padding: 5px 2px 5px 2px; /* Reduced padding - 25% less on top/sides, kept bottom */
 }
 
 /* Specific padding for thought bubbles */
@@ -1744,8 +1754,11 @@ label {
 }
 
 .selected-text {
-    border: 2px solid #007bff;
+    border: 3px solid #ffcc00 !important; /* Bright yellow, thicker border */
     z-index: 100;
+    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5), 0 0 0 2px rgba(255, 204, 0, 0.3); /* Yellow glow */
+    outline: 1px dashed rgba(255, 204, 0, 0.7); /* Dashed outline for better visibility on various backgrounds */
+    outline-offset: 1px;
 }
 
 .dragging-text {
