@@ -393,14 +393,8 @@ class ComicCreator {
             img.alt = image.name;
             console.log('[addImageToPanel] Created img element with src:', img.src); // <<< Debug log
             
-            // Find and remove any existing image in the panel
-            const existingImg = panel.querySelector('img');
-            if (existingImg) {
-                existingImg.remove();
-                console.log('[addImageToPanel] Removed existing image from panel.');
-            }
-            
-            // Append the new image
+            // Clear existing content and add new image
+            panel.innerHTML = '';
             panel.appendChild(img);
             console.log('[addImageToPanel] Appended img to panel:', panel); // <<< Debug log
             
@@ -638,13 +632,8 @@ class ComicCreator {
     clearPanelImage(panel) {
         if (!panel) return;
         
-        // Find and remove the image element specifically
-        const img = panel.querySelector('img');
-        if (img) {
-            img.remove();
-        }
-        
-        // Reset panel state related to the image
+        // Remove the image and reset panel state
+        panel.innerHTML = '';
         delete panel.dataset.imageId;
         delete panel.dataset.initialScale;
         delete panel.dataset.currentScale;
@@ -732,18 +721,6 @@ class ComicCreator {
 
     saveCurrentPageState() {
         console.log(`Saving current page state for page ${this.currentPageIndex}`);
-        
-        // Check if canvas exists before querying DOM elements
-        const canvas = document.querySelector('#comic-canvas');
-        if (!canvas) {
-            console.warn("saveCurrentPageState called when canvas not found. Skipping visual state saving.");
-            // If canvas doesn't exist, we can't save visual state from it.
-            // We might still want to save non-DOM state if there was any, but currently
-            // all saved state relies on reading the DOM elements within the canvas.
-            // So, returning here prevents errors when saving state during navigation away from editor.
-            return; 
-        }
-
         const currentPage = this.pages[this.currentPageIndex];
         if (!currentPage) {
             console.error("Cannot save state - current page not found");
@@ -816,12 +793,10 @@ class ComicCreator {
                     tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
                     content: textElement.innerHTML,
                     style: {
-                        // Save pixel values for left/top
-                        left: textBubble.style.left, 
+                        left: textBubble.style.left,
                         top: textBubble.style.top,
-                        // Only save width/height if they are explicitly set
-                        ...(textBubble.style.width && { width: textBubble.style.width }),
-                        ...(textBubble.style.height && { height: textBubble.style.height }),
+                        width: textBubble.style.width,
+                        height: textBubble.style.height,
                         transform: textBubble.style.transform,
                         backgroundColor: textBubble.style.backgroundColor,
                         bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
@@ -860,54 +835,8 @@ class ComicCreator {
             zIndex: sticker.style.zIndex // Save zIndex too
         }));
 
-        // ---> NEW: Save canvas text elements
-        const canvasTextBubbles = Array.from(canvas.querySelectorAll(':scope > .text-bubble')); // Select only direct children
-        currentPage.canvasTextElements = canvasTextBubbles.map(textBubble => {
-            const textElement = textBubble.querySelector('.text-content');
-            const bubbleClasses = Array.from(textBubble.classList)
-                .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
-                                'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
-                                'no-bubble'].includes(cls));
-            const tailPositionClass = Array.from(textBubble.classList)
-                .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
-                
-            return {
-                id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
-                bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
-                previousBubbleType: textBubble.dataset.previousBubbleType || '',
-                tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
-                content: textElement.innerHTML,
-                style: { // Save styles relevant for canvas positioning (pixels)
-                    left: textBubble.style.left,
-                    top: textBubble.style.top,
-                    // Only save width/height if they are explicitly set
-                    ...(textBubble.style.width && { width: textBubble.style.width }),
-                    ...(textBubble.style.height && { height: textBubble.style.height }),
-                    transform: textBubble.style.transform,
-                    zIndex: textBubble.style.zIndex, // Save z-index
-                    backgroundColor: textBubble.style.backgroundColor,
-                    bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
-                    fontFamily: textElement.style.fontFamily,
-                    fontSize: textElement.style.fontSize,
-                    fontWeight: textElement.style.fontWeight,
-                    fontStyle: textElement.style.fontStyle,
-                    textDecoration: textElement.style.textDecoration,
-                    textAlign: textElement.style.textAlign,
-                    textTransform: textElement.style.textTransform,
-                    color: textElement.style.color,
-                    opacity: textElement.style.opacity,
-                    bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
-                    textShadow: textElement.style.textShadow,
-                    lineHeight: textElement.style.lineHeight || 'normal',
-                    hasOutline: textElement.dataset.hasOutline === 'true',
-                    outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
-                    outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000'
-                }
-            };
-        });
-        // <--- END NEW
-
         // Save canvas background style
+        const canvas = document.querySelector('#comic-canvas');
         if (canvas) {
             const backgroundClasses = [
                 'classic-white', 'vintage-paper', 'dotted-pattern',
@@ -983,22 +912,10 @@ class ComicCreator {
 
         // Add Text Button
         document.querySelector('#add-text-btn')?.addEventListener('click', () => {
-            switch (this.currentSidebarMode) {
-                case 'panels':
-                    if (this.currentPanel) {
-                        this.addTextToPanel(this.currentPanel);
-                    } else {
-                        // If no panel selected in panels mode, show modal
-                        this.showSelectPanelModal();
-                    }
-                    break;
-                case 'backgrounds':
-                case 'stickers':
-                    // Add text directly to canvas in backgrounds or stickers mode
-                    this.addTextToCanvas(); 
-                    break;
-                default:
-                    console.warn('Add Text button clicked in unknown mode:', this.currentSidebarMode);
+            if (this.currentPanel) {
+                this.addTextToPanel(this.currentPanel);
+            } else {
+                this.showSelectPanelModal();
             }
         });
 
@@ -1596,8 +1513,7 @@ class ComicCreator {
                             textBubble.classList.add(tailClass);
                         }
                         
-                        // Apply styles directly (left/top are now pixels)
-                        Object.assign(textBubble.style, textState.style); 
+                        Object.assign(textBubble.style, textState.style);
                         Object.assign(textContent.style, {
                             fontFamily: textState.style.fontFamily,
                             fontSize: textState.style.fontSize,
@@ -1749,132 +1665,6 @@ class ComicCreator {
                 }
             });
         }
-
-        // ---> NEW: Restore canvas text elements
-        const canvasTextStates = page.canvasTextElements || [];
-        if (canvasTextStates.length > 0) {
-            console.log(`Restoring ${canvasTextStates.length} canvas text elements`);
-            canvasTextStates.forEach(textState => {
-                // Create elements (similar to panel text restore)
-                const textBubble = document.createElement('div');
-                textBubble.className = 'text-bubble';
-                textBubble.id = textState.id;
-                textBubble.dataset.bubbleType = textState.bubbleType;
-                textBubble.dataset.previousBubbleType = textState.previousBubbleType;
-                textBubble.dataset.tailPosition = textState.tailPosition;
-
-                const textContent = document.createElement('div');
-                textContent.className = 'text-content';
-                textContent.contentEditable = true;
-                textContent.innerHTML = textState.content;
-                textContent.style.outline = 'none';
-                textContent.style.wordWrap = 'break-word';
-
-                // Apply bubble styling
-                textBubble.classList.add(textState.bubbleType || 'speech-bubble');
-                if (textState.tailPosition) {
-                    const tailClass = `${textState.bubbleType.split('-')[0]}-tail-${textState.tailPosition}`;
-                    textBubble.classList.add(tailClass);
-                }
-
-                // Apply styles MANUALLY, skipping width/height if not present
-                // Object.assign(textBubble.style, textState.style); // REMOVE this line
-                if (textState.style) { // Check if style object exists
-                    textBubble.style.left = textState.style.left || ''; 
-                    textBubble.style.top = textState.style.top || '';
-                    if (textState.style.width) textBubble.style.width = textState.style.width;
-                    if (textState.style.height) textBubble.style.height = textState.style.height;
-                    if (textState.style.transform) textBubble.style.transform = textState.style.transform; // Apply rotation etc.
-                    textBubble.style.backgroundColor = textState.style.backgroundColor || '';
-                    textBubble.style.zIndex = textState.style.zIndex || '100'; // Default zIndex for canvas text
-                }
-
-                // Apply styles to the inner text content element
-                if (textState.style) { // Check again for inner styles
-                    Object.assign(textContent.style, {
-                        fontFamily: textState.style.fontFamily,
-                        fontSize: textState.style.fontSize,
-                        fontWeight: textState.style.fontWeight,
-                        fontStyle: textState.style.fontStyle,
-                        textDecoration: textState.style.textDecoration,
-                        textAlign: textState.style.textAlign,
-                        textTransform: textState.style.textTransform,
-                        color: textState.style.color,
-                        opacity: textState.style.opacity,
-                        textShadow: textState.style.textShadow,
-                        lineHeight: textState.style.lineHeight || 'normal'
-                    });
-                }
-                textBubble.style.setProperty('--bubble-background-color', textState.style.bubbleBackgroundColor || textState.style.backgroundColor || 'white');
-                if (textState.style.bubbleOpacity) {
-                    textBubble.style.setProperty('--bubble-opacity', textState.style.bubbleOpacity);
-                }
-                if (textState.style.hasOutline) {
-                    textContent.dataset.hasOutline = 'true';
-                    textContent.style.setProperty('--outline-width', textState.style.outlineWidth);
-                    textContent.style.setProperty('--outline-color', textState.style.outlineColor);
-                }
-
-                // Add control handles (same as panel text restore)
-                const dragHandle = document.createElement('div');
-                dragHandle.className = 'drag-handle';
-                dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
-                dragHandle.title = 'Drag to move';
-                const resizeHandle = document.createElement('div');
-                resizeHandle.className = 'resize-handle';
-                resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
-                resizeHandle.title = 'Drag to resize';
-                const formatButton = document.createElement('div');
-                formatButton.className = 'format-text-btn';
-                formatButton.innerHTML = '<i class="fas fa-palette"></i>';
-                formatButton.title = 'Format text';
-                const deleteButton = document.createElement('div');
-                deleteButton.className = 'delete-text-btn';
-                deleteButton.innerHTML = '<i class="fas fa-times"></i>';
-                deleteButton.title = 'Delete text';
-
-                // Append elements
-                textBubble.appendChild(textContent);
-                textBubble.appendChild(dragHandle);
-                textBubble.appendChild(resizeHandle);
-                textBubble.appendChild(formatButton);
-                textBubble.appendChild(deleteButton);
-                comicCanvas.appendChild(textBubble); // Append directly to canvas
-
-                // Add listeners
-                this.makeCanvasTextDraggable(textBubble, dragHandle); // Use canvas drag function
-                this.makeTextResizable(textBubble, resizeHandle); 
-                deleteButton.addEventListener('click', () => {
-                    textBubble.remove();
-                    const popup = document.getElementById('text-format-popup');
-                    if (popup) popup.style.display = 'none';
-                    this.deselectAll(); 
-                    this.saveCurrentPageState(); // Save state after deletion
-                });
-                formatButton.addEventListener('click', (e) => {
-                    this.showTextFormatPopup(textBubble, e);
-                });
-                textBubble.addEventListener('click', (e) => {
-                    if (e.target !== textContent && !e.target.closest('.format-text-btn') && 
-                        !e.target.closest('.resize-handle') && !e.target.closest('.delete-text-btn')) {
-                        this.selectTextBox(textBubble);
-                        e.stopPropagation();
-                    }
-                });
-                textContent.addEventListener('click', (e) => {
-                    const rect = textContent.getBoundingClientRect();
-                    const isNearEdge = 
-                        e.clientX - rect.left < 10 || 
-                        rect.right - e.clientX < 10 || 
-                        e.clientY - rect.top < 10 || 
-                        rect.bottom - e.clientY < 10;
-                    if (isNearEdge) {
-                        this.selectTextBox(textBubble);
-                    }
-                });
-            });
-        }
-        // <--- END NEW
 
         return true;
     }
@@ -2223,14 +2013,9 @@ class ComicCreator {
         textContainer.id = textId;
         textContainer.dataset.bubbleType = 'speech-bubble';
         textContainer.style.position = 'absolute';
-        // Use pixels, position near panel center initially
-        const panelRect = panel.getBoundingClientRect(); 
-        // Use clientWidth/Height which includes padding
-        const initialLeft = Math.max(0, (panel.clientWidth / 2) - 50); // Approx center minus half default width
-        const initialTop = Math.max(0, (panel.clientHeight / 2) - 25); // Approx center minus half default height
-        textContainer.style.left = `${initialLeft}px`; 
-        textContainer.style.top = `${initialTop}px`;
-        // textContainer.style.transform = 'translate(-50%, -50%)'; // No longer using transform for centering
+        textContainer.style.left = '50%';
+        textContainer.style.top = '50%';
+        textContainer.style.transform = 'translate(-50%, -50%)';
         textContainer.style.minWidth = '100px';
         textContainer.style.minHeight = '50px';
         textContainer.style.padding = '10px';
@@ -2446,10 +2231,7 @@ class ComicCreator {
         });
         
         document.addEventListener('mouseup', () => {
-            if (!isResizing) return; // Check if we were actually resizing
             isResizing = false;
-            // Save state immediately after resizing finishes
-            this.saveCurrentPageState(); 
         });
     }
     
@@ -2759,33 +2541,20 @@ class ComicCreator {
             this.saveCurrentPageState();
         });
         
-        // Find the rotation slider and its value display within textProperties
-        const rotationSlider = textProperties.querySelector('.rotation');
-        const rotationValueDisplay = textProperties.querySelector('.rotation-value');
-
-        // Initialize slider and display
-        const currentTransform = textBox.style.transform || '';
-        const currentRotateMatch = currentTransform.match(/rotate\(([-\d.]+)deg\)/);
-        const initialRotationValue = currentRotateMatch ? parseFloat(currentRotateMatch[1]) : 0;
-        if (rotationSlider) rotationSlider.value = initialRotationValue;
-        if (rotationValueDisplay) rotationValueDisplay.textContent = `${Math.round(initialRotationValue)}°`;
-
-        // Add listener to the slider
-        if (rotationSlider) {
-            rotationSlider.addEventListener('input', () => {
-                const value = rotationSlider.value;
-                rotationValue.textContent = `${Math.round(value)}°`;
-                
-                // Apply ONLY rotation, position is handled by left/top
-                textBox.style.transform = `rotate(${value}deg)`;
-
-                // Save state
-                this.saveCurrentPageState(); 
-            });
-        }
-        
-        // Make rotation value editable
-        this.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
+        rotation.addEventListener('input', () => {
+            const value = rotation.value;
+            textProperties.querySelector('.rotation-value').textContent = `${value}°`;
+            
+            // Preserve the translate part of the transform
+            const transform = textBox.style.transform;
+            const translateMatch = transform.match(/translate\(([^)]+)\)/);
+            const translate = translateMatch ? `translate(${translateMatch[1]})` : 'translate(-50%, -50%)';
+            
+            textBox.style.transform = `${translate} rotate(${value}deg)`;
+            
+            // Save state after changing rotation
+            this.saveCurrentPageState();
+        });
         
         // Set the active state for the text style buttons
         if (textElement.style.fontWeight === 'bold') boldBtn.classList.add('active');
@@ -3455,23 +3224,16 @@ class ComicCreator {
         const rotationSlider = popup.querySelector('#rotation');
         const rotationValue = popup.querySelector('.rotation-value');
         
-        // Initialize based on current rotation
-        const currentTransform = textBox.style.transform || '';
-        const currentRotateMatch = currentTransform.match(/rotate\(([-\d.]+)deg\)/);
-        const initialRotationValue = currentRotateMatch ? parseFloat(currentRotateMatch[1]) : 0;
-        rotationSlider.value = initialRotationValue;
-        rotationValue.textContent = `${Math.round(initialRotationValue)}°`;
-
-        // Add listener
         rotationSlider.addEventListener('input', () => {
             const value = rotationSlider.value;
-            rotationValue.textContent = `${Math.round(value)}°`;
+            rotationValue.textContent = `${value}°`;
             
-            // Apply ONLY rotation, position is handled by left/top
-            textBox.style.transform = `rotate(${value}deg)`;
-
-            // Save state
-            this.saveCurrentPageState(); 
+            // Preserve the translate part of the transform
+            const transform = textBox.style.transform;
+            const translateMatch = transform.match(/translate\(([^)]+)\)/);
+            const translate = translateMatch ? `translate(${translateMatch[1]})` : 'translate(-50%, -50%)';
+            
+            textBox.style.transform = `${translate} rotate(${value}deg)`;
         });
         
         // Make rotation value editable
@@ -5082,342 +4844,6 @@ class ComicCreator {
                 valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
             }
         });
-    }
-
-    addTextToCanvas() {
-        const canvas = document.querySelector('#comic-canvas');
-        if (!canvas) {
-            console.error("Cannot add text, canvas not found.");
-            return;
-        }
-
-        // Determine z-index based on current mode
-        const zIndex = this.currentSidebarMode === 'backgrounds' ? '5' : '100'; // Below panels for bg, same level as stickers otherwise
-
-        // Create text container
-        const textId = `canvas_text_${Date.now()}`;
-        const textContainer = document.createElement('div');
-        textContainer.className = 'text-bubble speech-bubble'; // Default style
-        textContainer.id = textId;
-        textContainer.dataset.bubbleType = 'speech-bubble';
-        textContainer.style.position = 'absolute';
-        // Center position based on canvas, not panel
-        const canvasRect = canvas.getBoundingClientRect();
-        // Position top-left corner near center initially
-        const initialLeft = Math.max(0, (canvasRect.width / 2) - 50); // Approx center minus half default width
-        const initialTop = Math.max(0, (canvasRect.height / 2) - 25); // Approx center minus half default height
-        textContainer.style.left = `${initialLeft}px`; 
-        textContainer.style.top = `${initialTop}px`;
-        // textContainer.style.transform = 'translate(-50%, -50%)'; // REMOVE this centering transform
-        textContainer.style.minWidth = '100px';
-        textContainer.style.padding = '10px';
-        textContainer.style.zIndex = zIndex; // Set z-index based on mode
-
-        // Create editable text element
-        const textElement = document.createElement('div');
-        textElement.className = 'text-content';
-        textElement.contentEditable = true;
-        textElement.innerHTML = 'Click to edit text';
-        textElement.style.outline = 'none';
-        textElement.style.wordWrap = 'break-word';
-        textElement.style.color = '#000000';
-
-        // Add control handles (same as addTextToPanel)
-        const dragHandle = document.createElement('div');
-        dragHandle.className = 'drag-handle';
-        dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
-        dragHandle.title = 'Drag to move';
-
-        const resizeHandle = document.createElement('div');
-        resizeHandle.className = 'resize-handle';
-        resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
-        resizeHandle.title = 'Drag to resize';
-
-        const formatButton = document.createElement('div');
-        formatButton.className = 'format-text-btn';
-        formatButton.innerHTML = '<i class="fas fa-palette"></i>';
-        formatButton.title = 'Format text';
-
-        const deleteButton = document.createElement('div');
-        deleteButton.className = 'delete-text-btn';
-        deleteButton.innerHTML = '<i class="fas fa-times"></i>';
-        deleteButton.title = 'Delete text';
-
-        // Append elements
-        textContainer.appendChild(textElement);
-        textContainer.appendChild(dragHandle);
-        textContainer.appendChild(resizeHandle);
-        textContainer.appendChild(formatButton);
-        textContainer.appendChild(deleteButton);
-        canvas.appendChild(textContainer); // Append directly to canvas
-
-        // Make draggable (needs adaptation for canvas)
-        this.makeCanvasTextDraggable(textContainer, dragHandle); // Use a new/adapted function
-
-        // Make resizable (should work as is)
-        this.makeTextResizable(textContainer, resizeHandle);
-
-        // Setup delete functionality (same as addTextToPanel)
-        deleteButton.addEventListener('click', () => {
-            textContainer.remove();
-            const popup = document.getElementById('text-format-popup');
-            if (popup) popup.style.display = 'none';
-            // No text properties panel to hide specifically here, deselectAll handles it
-            this.deselectAll(); 
-            this.saveCurrentPageState(); // Save state after deletion
-        });
-
-        // Setup formatting button (same as addTextToPanel)
-        formatButton.addEventListener('click', (e) => {
-            this.showTextFormatPopup(textContainer, e);
-        });
-
-        // Setup text selection (same logic, just ensure it works on canvas)
-        textContainer.addEventListener('click', (e) => {
-            if (e.target !== textElement && !e.target.closest('.format-text-btn') && 
-                !e.target.closest('.resize-handle') && !e.target.closest('.delete-text-btn')) {
-                this.selectTextBox(textContainer);
-                e.stopPropagation();
-            }
-        });
-        textElement.addEventListener('click', (e) => {
-            const rect = textElement.getBoundingClientRect();
-            const isNearEdge = 
-                e.clientX - rect.left < 10 || 
-                rect.right - e.clientX < 10 || 
-                e.clientY - rect.top < 10 || 
-                rect.bottom - e.clientY < 10;
-            if (isNearEdge) {
-                this.selectTextBox(textContainer);
-            }
-        });
-
-        // Automatically select the new text box
-        this.selectTextBox(textContainer);
-
-        // Save state immediately after adding
-        this.saveCurrentPageState(); 
-
-        return textContainer;
-    }
-
-    // NEW function for canvas text dragging (pixel-based)
-    makeCanvasTextDraggable(element, handle) {
-        let isDragging = false;
-        let startX, startY;
-        let originalX, originalY; // Store initial style.left/top in pixels
-        const canvas = document.querySelector('#comic-canvas');
-        let canvasPaddingBoxWidth, canvasPaddingBoxHeight; // Store canvas client dimensions
-
-        const onMouseDown = (e) => {
-            // Check if drag should start
-            if (e.button !== 0) return;
-            const isHandle = e.target === handle || e.target.closest('.drag-handle');
-            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
-            if (!isHandle && !isBubbleBorder) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Start dragging state
-            isDragging = true;
-            element.style.cursor = 'grabbing';
-            element.dataset.originalZIndex = element.style.zIndex || '100';
-            element.style.zIndex = '1000';
-
-            // Record initial positions and dimensions
-            startX = e.clientX;
-            startY = e.clientY;
-            // Use currentStyle values for origin, fallback if not set
-            originalX = parseFloat(element.style.left) || 0;
-            originalY = parseFloat(element.style.top) || 0;
-            // Get canvas client dimensions (includes padding, excludes border)
-            canvasPaddingBoxWidth = canvas.clientWidth;
-            canvasPaddingBoxHeight = canvas.clientHeight;
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-
-            // Calculate mouse movement delta
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            // Get current element dimensions (use offsetWidth/Height for reliable size)
-            const elementWidth = element.offsetWidth;
-            const elementHeight = element.offsetHeight;
-
-            // Calculate the element's desired new position relative to the canvas padding box
-            let desiredCanvasX = originalX + dx;
-            let desiredCanvasY = originalY + dy;
-
-            // Clamp the desired position to stay within the canvas padding box boundaries
-            const clampedCanvasX = Math.max(
-                0, // Min X relative to padding box
-                Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth) // Max X relative to padding box
-            );
-            const clampedCanvasY = Math.max(
-                0, // Min Y relative to padding box
-                Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight) // Max Y relative to padding box
-            );
-
-            // Apply the clamped, canvas-relative position
-            element.style.left = `${clampedCanvasX}px`;
-            element.style.top = `${clampedCanvasY}px`;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            element.style.cursor = 'grab';
-            element.style.zIndex = element.dataset.originalZIndex || '100';
-            document.removeEventListener('mousemove', onMouseMove);
-            this.saveCurrentPageState();
-        };
-
-        // Initialize cursor and add mousedown listeners
-        handle.style.cursor = 'grab';
-        handle.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('dragstart', (e) => e.preventDefault());
-    }
-
-    makeTextResizable(element, handle) {
-        let isResizing = false;
-        let startX, startY;
-        let startWidth, startHeight;
-        
-        handle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startWidth = element.offsetWidth;
-            startHeight = element.offsetHeight;
-            
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            element.style.width = `${startWidth + deltaX}px`;
-            element.style.height = `${startHeight + deltaY}px`;
-        });
-        
-        document.addEventListener('mouseup', () => {
-            if (!isResizing) return; // Check if we were actually resizing
-            isResizing = false;
-            // Save state immediately after resizing finishes
-            this.saveCurrentPageState(); 
-        });
-    }
-
-    // Rewritten for pixel-based dragging relative to canvas, applied relative to panel
-    makeTextDraggable(element, handle) {
-        let isDragging = false;
-        let startX, startY;
-        let originalElementX_panel, originalElementY_panel; // Element initial style.left/top relative to panel
-        let panelOffsetX, panelOffsetY; // Panel offset relative to canvas padding box
-        let canvasPaddingBoxWidth, canvasPaddingBoxHeight;
-        const canvas = document.querySelector('#comic-canvas');
-
-        const onMouseDown = (e) => {
-            const panel = element.parentElement;
-            if (!panel || !panel.classList.contains('comic-panel') || !canvas) return;
-
-            // Check if drag should start
-            if (e.button !== 0) return;
-            const isHandle = e.target === handle || e.target.closest('.drag-handle');
-            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
-            if (!isHandle && !isBubbleBorder) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Start dragging state
-            isDragging = true;
-            element.style.cursor = 'grabbing';
-            element.dataset.originalZIndex = element.style.zIndex || '10';
-            element.style.zIndex = '1000';
-
-            // Record initial positions and dimensions
-            startX = e.clientX;
-            startY = e.clientY;
-            originalElementX_panel = parseFloat(element.style.left) || 0;
-            originalElementY_panel = parseFloat(element.style.top) || 0;
-            
-            // Get panel offset relative to canvas padding box
-            // offsetLeft/Top are relative to offsetParent, which might not be the canvas
-            // Use getBoundingClientRect for robust calculation
-            const panelRect = panel.getBoundingClientRect();
-            const canvasRect = canvas.getBoundingClientRect();
-            const canvasBorder = parseFloat(window.getComputedStyle(canvas).borderLeftWidth) || 0;
-            panelOffsetX = panelRect.left - (canvasRect.left + canvasBorder);
-            panelOffsetY = panelRect.top - (canvasRect.top + canvasBorder);
-
-            // Get canvas client dimensions
-            canvasPaddingBoxWidth = canvas.clientWidth;
-            canvasPaddingBoxHeight = canvas.clientHeight;
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            const elementWidth = element.offsetWidth;
-            const elementHeight = element.offsetHeight;
-
-            // Calculate element's desired new position relative to the CANVAS padding box
-            let desiredCanvasX = panelOffsetX + originalElementX_panel + dx;
-            let desiredCanvasY = panelOffsetY + originalElementY_panel + dy;
-
-            // Clamp the desired CANVAS position to stay within the CANVAS padding box boundaries
-            const clampedCanvasX = Math.max(
-                0, 
-                Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth)
-            );
-            const clampedCanvasY = Math.max(
-                0, 
-                Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight)
-            );
-
-            // Convert the clamped CANVAS position back to a position relative to the PANEL padding box
-            const finalPanelX = clampedCanvasX - panelOffsetX;
-            const finalPanelY = clampedCanvasY - panelOffsetY;
-
-            // Apply the clamped, PANEL-relative position
-            element.style.left = `${finalPanelX}px`;
-            element.style.top = `${finalPanelY}px`;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            element.style.cursor = 'grab';
-            element.style.zIndex = element.dataset.originalZIndex || '10';
-            document.removeEventListener('mousemove', onMouseMove);
-            this.saveCurrentPageState();
-        };
-
-        // Initialize cursor and add listeners
-        handle.style.cursor = 'grab';
-        handle.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('dragstart', (e) => e.preventDefault());
     }
 }
 

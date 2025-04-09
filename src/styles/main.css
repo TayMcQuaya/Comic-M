@@ -1676,6 +1676,7 @@ label {
     user-select: none;
     transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
     overflow: visible;
+    transform-origin: center center; /* ADD THIS LINE */
     --bubble-opacity: 1;
     --bubble-background-color: white;
 }
