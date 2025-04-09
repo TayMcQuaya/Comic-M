@@ -5,15 +5,18 @@ A powerful, browser-based comic creation tool that lets you design professional-
 ## Features
 
 - **Rich Panel Layout Library**: Over 35 different panel layouts including single-panel, standard grids (2x1, 1x2, 2x2, 3x1, 1x3, 3x2, 3x3), manga-inspired styles, and numerous creative and dynamic layouts like spirals, diagonals, insets, and cinematic arrangements.
-- **Image Management**: Upload and organize your own images with drag-and-drop functionality.
-- **Advanced Image Controls**: Adjust images within panels with zoom and pan functionality.
+- **Image Management**: Upload and organize your own images with drag-and-drop functionality. Reorder images in the library.
+- **Advanced Image Controls**: Adjust images within panels with zoom and pan functionality. Fine-tune zoom using direct numerical input.
+- **Stickers**: Add sticker images to panels. Stickers stay within panel boundaries and automatically layer behind text.
+- **Backgrounds**: Add custom background images to the entire canvas or apply predefined style patterns (vintage paper, halftone, etc.). Apply custom images or styles to all pages.
 - **Text Customization**: Add speech bubbles (including standard, whisper, and jagged styles), thought bubbles, and captions with customizable fonts, sizes, colors, and effects.
-- **Advanced Text Effects**: Includes smooth text outlines positioned behind the text, shadow effects, and 50% opacity control for text elements.
-- **Save & Load Projects**: Save your entire comic project (pages, images, text, styles) to a JSON file and load it later to continue working.
-- **Multi-page Support**: Create multi-page comics with different layouts per page.
-- **Background Styling**: Apply different background styles to panels.
-- **PDF Export**: Download your finished comic as a high-quality PDF.
+- **Advanced Text Effects**: Includes smooth text outlines positioned behind the text, shadow effects, adjustable line spacing, and 50% opacity control for text elements.
+- **Fine Control**: Sliders for zoom, size, rotation, and line height now support direct numerical input for precise adjustments.
+- **Save & Load Projects**: Save your entire comic project (pages, images, text, styles, backgrounds, stickers) to a JSON file and load it later to continue working.
+- **Multi-page Support**: Create multi-page comics with different layouts per page. Reorder pages easily via a drag-and-drop interface.
+- **PDF Export**: Download your finished comic as a high-quality PDF, prompting for a custom filename.
 - **Responsive Design**: Works on various screen sizes and devices.
+- **Modern UI**: Includes tabbed sidebars, clear controls, and user feedback notifications.
 
 ## Getting Started
 
@@ -60,38 +63,44 @@ The built files will be in the `dist` directory and can be served from any stati
    - Click the upload area or drag and drop images to import them.
    - Alternatively, click "Load Project" to load a previously saved `.json` file.
    - All uploaded images appear in your library for easy access.
+   - Drag images within the library to reorder them.
 
 2. **Choose a Layout**:
    - Browse through the extensive list of available panel layouts.
    - Each layout shows a preview and description.
    - Click on your preferred layout to select it for the current page.
 
-3. **Add Images to Panels**:
-   - Click on a panel, then click an image from your library to place it.
-   - Alternatively, drag images directly from your library to panels.
+3. **Add Images / Backgrounds / Stickers**:
+   - Use the sidebar tabs to switch between adding Panel Images, Backgrounds, or Stickers.
+   - **Panel Images**: Drag images from your library to panels.
+   - **Backgrounds**: Drag images from your library onto the canvas (outside panels) or select a predefined style. Use the "Apply This Image to All Pages" button if needed.
+   - **Stickers**: Drag images from your library onto a specific panel. (Note: Stickers must be dropped *on* a panel).
 
-4. **Adjust Images**:
-   - Use the zoom slider to resize images within panels.
-   - Use the position controls to pan and position images perfectly.
-   - Images automatically maintain their aspect ratio.
+4. **Adjust Elements**:
+   - **Panel Images**: Use the zoom slider/input and position controls in the right sidebar.
+   - **Stickers**: Select a sticker, then use the size slider/input and position controls in the right sidebar.
+   - Images and stickers automatically maintain their aspect ratio.
 
-5. **Add Text and Speech Bubbles**:
+5. **Add Text and Bubbles**:
    - Select a panel, then click the "Add Text" button.
-   - Choose from various font families optimized for comics.
-   - Adjust size, color, and apply effects like outlines, shadows, and opacity.
-   - Select bubble styles (standard, whisper - dotted, jagged - no outline).
-   - Drag to position text anywhere within the panel.
+   - Click the palette icon on a text bubble to open the formatting popup.
+   - Choose fonts, adjust size/color/line-height (using slider or direct input), apply styles (bold, italic, etc.).
+   - Select bubble styles (speech, thought, caption, shout, whisper, jagged, or no bubble).
+   - Position the bubble tail.
+   - Apply effects like outlines (with thickness/color control), shadows, and opacity.
+   - Drag to position text anywhere within the panel; use the rotation slider/input for angles.
 
 6. **Manage Pages**:
    - Add new pages to create longer comics.
-   - Each page can have a different layout.
+   - Each page can have a different layout and background.
    - Navigate between pages using the page controls.
+   - Click "Reorder Pages" to open a modal where you can drag-and-drop pages into a new sequence.
 
 7. **Save Your Project**:
-   - Click the "Save Project" button in the editor toolbar to download your current work as a `comic-project.json` file.
+   - Click the "Save Project" button in the editor toolbar to download your current work as a `.json` file (you'll be prompted for a filename).
 
 8. **Export Your Comic**:
-   - Click the "Download Comic" button to save your finished creation as a PDF.
+   - Click the "Download Comic" button to save your finished creation as a PDF (you'll be prompted for a filename).
    - All pages are combined into a single PDF document.
 
 ## Panel Layouts
@@ -115,10 +124,10 @@ The Comic Book Maker offers a wide variety of panel layouts (over 35 options), i
 - Dramatic Manga Layout
 
 ### Advanced & Creative Layouts
-- **Emphasis & Focus**: L-Shape, Diagonal Focus, Inset Panel, Asymmetrical Three, Diamond Focus, Triangular Focus, Spiral Focus, Cross Layout, Pyramid, Windmill, Radial Burst, Golden Ratio
+- **Emphasis & Focus**: L-Shape, Diagonal Focus, Inset Panel, Asymmetrical Three, Diamond Focus, Triangular Focus, Spiral Focus, Cross Layout, Pyramid, Windmill, Radial Burst, Golden Ratio, Pillarbox
 - **Story Flow**: Five Panel Dynamic, Zigzag Flow, Panoramic Focus, Storyboard, Circular Narrative, Split Screen, Cascade, Mosaic, Double Spread, Cinematic Widescreen, Dynamic Diagonal, Three-Tiered, Staggered Panels, Widescreen Trio
 
-All layouts fit perfectly within a 694 x 694 pixel square to maintain compatibility with the PDF export format. Each layout includes proper gutters between panels and margins around the edges.
+All layouts fit perfectly within a 700 x 700 pixel square canvas. Each layout includes proper gutters between panels and margins around the edges.
 
 ## Text Features
 
@@ -128,10 +137,11 @@ All layouts fit perfectly within a 694 x 694 pixel square to maintain compatibil
   - Handwriting styles (Comic Neue, Permanent Marker, Gloria Hallelujah, etc.)
   - Title/Header fonts (Luckiest Guy, Boogaloo, Acme, Press Start 2P)
 
-- **Text Styling**: Control size and color.
-- **Advanced Effects**: Apply shadows, smooth outlines (with thickness control), and 50% opacity.
-- **Bubble Styles**: Choose from standard, whisper (dotted outline), and jagged (no outline) speech bubble styles.
-- **Positioning & Rotation**: Drag text elements freely and rotate them.
+- **Text Styling**: Control size, color, line height, bold, italic, underline, alignment.
+- **Advanced Effects**: Apply shadows, smooth outlines (with thickness/color control), and 50% opacity.
+- **Bubble Styles**: Choose from standard speech, thought, caption, shout, whisper, jagged, or no bubble.
+- **Positioning & Rotation**: Drag text elements freely and rotate them using a slider or direct input.
+- **Precise Control**: Use sliders or type exact values for font size, line height, and rotation.
 
 ## Technical Details
 
@@ -157,7 +167,7 @@ Comic-Book-Maker/
 
 - **Frontend Framework**: Vanilla JavaScript (no framework dependencies)
 - **Bundler**: Vite for fast development and optimized builds
-- **PDF Generation**: jsPDF for creating downloadable comics
+- **PDF Generation**: jsPDF & html2canvas for creating downloadable comics
 - **UI Components**: Font Awesome for icons
 - **Styling**: Custom CSS with CSS variables for theming
 
@@ -214,5 +224,5 @@ MIT License - feel free to use and modify for your own projects!
 
 - Font Awesome for the icon library
 - Google Fonts for the text font options
-- jsPDF for the PDF export functionality
+- jsPDF & html2canvas for the PDF export functionality
 - The comic book community for inspiration 
