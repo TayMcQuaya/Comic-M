@@ -1137,13 +1137,21 @@ class ComicCreator {
         pageNavigation.className = 'page-navigation';
         pageNavigation.innerHTML = `
             <div class="page-controls">
-                <button class="tool-btn" id="prevPage">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <span class="page-indicator">Page 1 of 1</span>
-                <button class="tool-btn" id="nextPage">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+                <div class="nav-group" style="display: flex; flex-direction: column; align-items: center;">
+                    <span class="page-indicator">Page 1 of 1</span>
+                    <div class="input-group" style="margin: 8px 0;">
+                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1">
+                        <button class="tool-btn" id="goToPage">GO</button>
+                    </div>
+                    <div class="arrow-group">
+                        <button class="tool-btn" id="prevPage">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="tool-btn" id="nextPage">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="page-actions">
                 <button class="primary-btn" id="addPage">
@@ -1160,21 +1168,120 @@ class ComicCreator {
         editorHeader.appendChild(pageNavigation);
 
         // Add event listeners for page navigation
-        this.setupPageNavigation();
-    }
-
-    setupPageNavigation() {
         const addPageBtn = document.getElementById('addPage');
         const prevPageBtn = document.getElementById('prevPage');
         const nextPageBtn = document.getElementById('nextPage');
         const deletePageBtn = document.getElementById('deletePage');
         const reorderPagesBtn = document.getElementById('reorderPagesBtn');
+        const pageNumberInput = document.getElementById('pageNumberInput');
+        const goToPageBtn = document.getElementById('goToPage');
 
+        // Add event listeners for existing buttons
         addPageBtn.addEventListener('click', () => this.showLayoutSelection());
         prevPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex - 1));
         nextPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex + 1));
         deletePageBtn.addEventListener('click', () => this.deleteCurrentPage());
         reorderPagesBtn.addEventListener('click', () => this.reorderPages());
+
+        // Add event listeners for direct page navigation
+        const handlePageNavigation = () => {
+            const pageNum = parseInt(pageNumberInput.value, 10);
+            if (pageNum && pageNum >= 1 && pageNum <= this.pages.length) {
+                this.navigateToPage(pageNum - 1);
+            } else {
+                // Reset to current page if invalid
+                pageNumberInput.value = this.currentPageIndex + 1;
+            }
+        };
+
+        goToPageBtn.addEventListener('click', handlePageNavigation);
+        pageNumberInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handlePageNavigation();
+            }
+        });
+
+        // Update input when navigating with prev/next buttons
+        this.updatePageIndicator = () => {
+            const indicator = document.querySelector('.page-indicator');
+            const input = document.getElementById('pageNumberInput');
+            if (indicator) {
+                indicator.textContent = `of ${this.pages.length}`;
+            }
+            if (input) {
+                input.value = this.currentPageIndex + 1;
+                input.max = this.pages.length;
+            }
+        };
+    }
+
+    setupPageNavigation() {
+        const pageNavigation = document.createElement('div');
+        pageNavigation.className = 'page-navigation';
+        pageNavigation.innerHTML = `
+            <div class="page-controls">
+                <div class="nav-group" style="display: flex; flex-direction: column; align-items: center;">
+                    <span class="page-indicator">Page 1 of 1</span>
+                    <div class="input-group" style="margin: 8px 0;">
+                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1" style="
+                            width: 25px;
+                            height: 32px;
+                            padding: 2px;
+                            text-align: center;
+                            background: #333;
+                            color: #fff;
+                            border: 2px solid #ffff00;
+                            border-radius: 4px;
+                        ">
+                        <button class="tool-btn" id="goToPage" style="
+                            height: 32px;
+                            padding: 0 8px;
+                            background: #ff4444;
+                            color: #fff;
+                            border: 2px solid #ffff00;
+                            border-radius: 4px;
+                        ">GO</button>
+                    </div>
+                    <div class="arrow-group">
+                        <button class="tool-btn" id="prevPage" style="
+                            width: 32px;
+                            height: 32px;
+                            background: #ff4444;
+                            color: #fff;
+                            border: 2px solid #ffff00;
+                            border-radius: 4px;
+                        ">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="tool-btn" id="nextPage" style="
+                            width: 32px;
+                            height: 32px;
+                            background: #ff4444;
+                            color: #fff;
+                            border: 2px solid #ffff00;
+                            border-radius: 4px;
+                        ">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="page-actions">
+                <button class="primary-btn" id="addPage">
+                    <i class="fas fa-plus"></i> Add New Page
+                </button>
+                <button class="danger-btn" id="deletePage">
+                    <i class="fas fa-trash"></i> Delete Page
+                </button>
+                <button class="tool-btn" id="reorderPagesBtn">
+                    <i class="fas fa-sort"></i> Reorder Pages
+                </button>
+            </div>
+        `;
+        const editorHeader = document.querySelector('.editor-header');
+        editorHeader.appendChild(pageNavigation);
+
+        // Rest of the event listener code stays the same...
     }
 
     showLayoutSelection() {
