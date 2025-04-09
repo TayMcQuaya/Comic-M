@@ -3963,6 +3963,10 @@ class ComicCreator {
         propertiesPanel.querySelectorAll('.properties-section:not(#background-properties)')
            .forEach(sec => sec.style.display = 'none');
 
+        // Check if current page has a custom background image
+        const currentPage = this.pages[this.currentPageIndex];
+        const hasCustomBackground = currentPage && currentPage.backgroundState && currentPage.backgroundState.imageId;
+
         // Show background controls
         bgProps.innerHTML = `
             <h4>Background Settings</h4>
@@ -4000,6 +4004,14 @@ class ComicCreator {
                         <label for="use-global-background" style="margin-left: 8px; font-size: 14px;">Apply to all pages</label>
                     </div>
                 </div>
+                ${hasCustomBackground ? `
+                <div class="control-group">
+                    <h4 style="text-align: center;">Background Image</h4>
+                    <button id="apply-custom-bg-all-btn" class="action-btn" style="width: 100%; margin-bottom: 1rem;">
+                        <i class="fas fa-copy"></i> Apply This Image to All Pages
+                    </button>
+                </div>
+                ` : ''}
                 ${backgroundElement ? `
                 <div class="control-group">
                     <h4 style="text-align: center;">Position</h4>
@@ -4053,6 +4065,14 @@ class ComicCreator {
                 
                 // Save current page state
                 this.saveCurrentPageState();
+            });
+        }
+
+        // Add apply custom background to all pages button listener
+        const applyCustomBgAllBtn = bgProps.querySelector('#apply-custom-bg-all-btn');
+        if (applyCustomBgAllBtn) {
+            applyCustomBgAllBtn.addEventListener('click', () => {
+                this.applyCustomBackgroundToAll();
             });
         }
 
@@ -4377,6 +4397,83 @@ class ComicCreator {
 
         // Save the overall page state
         this.saveCurrentPageState();
+    }
+
+    // --- Apply Custom Background to All Pages ---
+    applyCustomBackgroundToAll() {
+        // Get the current page's background image ID
+        const currentPage = this.pages[this.currentPageIndex];
+        const currentImageId = currentPage?.backgroundState?.imageId;
+        
+        if (!currentImageId) {
+            console.warn('No custom background image found on the current page.');
+            this.showNotification('No custom background image to apply', 'warning');
+            return;
+        }
+        
+        console.log(`Applying background image ID ${currentImageId} to all pages`);
+        
+        // Apply the background image to all pages
+        this.pages.forEach(page => {
+            // Set the background image state for this page
+            page.backgroundState = { imageId: currentImageId };
+            
+            // Remove any predefined style class (or set to default)
+            page.canvasBackgroundStyle = null;
+        });
+        
+        // Disable the global background style option to avoid conflicts
+        this.useGlobalBackgroundStyle = false;
+        
+        // Update the UI checkbox if it exists
+        const globalCheckbox = document.getElementById('use-global-background');
+        if (globalCheckbox) {
+            globalCheckbox.checked = false;
+        }
+        
+        // Refresh the current page to show the changes
+        this.loadPageState(this.currentPageIndex);
+        
+        // Save the current page state
+        this.saveCurrentPageState();
+        
+        // Show success notification
+        this.showNotification('Background image applied to all pages', 'success');
+        
+        console.log('Applied custom background image to all pages successfully.');
+    }
+    
+    // --- Show Notification ---
+    showNotification(message, type = 'info') {
+        // Create notification element if it doesn't exist
+        let notification = document.querySelector('.notification');
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.className = 'notification';
+            document.body.appendChild(notification);
+        }
+        
+        // Set type-specific styles
+        notification.className = 'notification'; // Reset
+        notification.classList.add(`notification-${type}`);
+        
+        // Set content
+        notification.textContent = message;
+        
+        // Show notification
+        notification.classList.add('show');
+        
+        // Hide after delay
+        setTimeout(() => {
+            notification.classList.remove('show');
+            
+            // Remove element after animation completes
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 500); // Match transition duration
+        }, 3000);
     }
 
     // --- Add Sticker --- 

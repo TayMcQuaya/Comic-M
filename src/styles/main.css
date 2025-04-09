@@ -3813,3 +3813,119 @@ input[type="color"] {
     padding: 0;
     border: none;
 }
+
+/* Button styles */
+.primary-btn {
+    background-color: var(--primary-color);
+    color: var(--accent-text-color);
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.primary-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.primary-btn i {
+    margin-right: 8px;
+}
+
+.action-btn {
+    background-color: var(--primary-color);
+    color: var(--accent-text-color);
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.action-btn:active {
+    transform: translateY(0px);
+}
+
+.action-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.secondary-btn {
+    background-color: #6c757d; /* Example secondary color */
+    color: white;
+    padding: 0.7rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
+}
+
+.secondary-btn:hover {
+    background-color: #5a6268;
+}
+
+.modal-buttons button {
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    background-color: #333;
+    color: #fff;
+    font-size: 14px;
+    max-width: 300px;
+    z-index: 9999;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.notification-success {
+    background-color: #28a745;
+    border-left: 4px solid #1e7e34;
+}
+
+.notification-info {
+    background-color: #17a2b8;
+    border-left: 4px solid #117a8b;
+}
+
+.notification-warning {
+    background-color: #ffc107;
+    border-left: 4px solid #d39e00;
+    color: #333;
+}
+
+.notification-error {
+    background-color: #dc3545;
+    border-left: 4px solid #bd2130;
+}
