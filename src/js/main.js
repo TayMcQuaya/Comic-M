@@ -575,6 +575,17 @@ class ComicCreator {
                 </div>
             </div>
             <div class="control-group">
+                <h4 style="text-align: center;">Rotation</h4>
+                <div class="rotation-group">
+                    <label>Angle</label>
+                    <input type="range" class="rotation-control" min="-180" max="180" value="0" step="1">
+                    <span class="rotation-value">0°</span>
+                    <button class="reset-rotation-btn">
+                        <i class="fas fa-undo"></i> Reset Rotation
+                    </button>
+                </div>
+            </div>
+            <div class="control-group">
                 <h4 style="text-align: center;">Position</h4>
                 <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
                     <label style="font-size: 16px;">Step Size: </label>
@@ -629,10 +640,104 @@ class ComicCreator {
             });
         }
 
+        // Add rotation control listeners
+        const rotationControl = controls.querySelector('.rotation-control');
+        const rotationValue = controls.querySelector('.rotation-value');
+        
+        if (rotationControl) {
+            // Get current rotation angle from image or panel dataset
+            const img = panel.querySelector('img');
+            if (img) {
+                const currentRotation = parseInt(panel.dataset.rotation || '0');
+                rotationControl.value = currentRotation;
+                rotationValue.textContent = `${currentRotation}°`;
+                
+                rotationControl.addEventListener('input', (e) => {
+                    const angle = parseInt(e.target.value);
+                    panel.dataset.rotation = angle;
+                    
+                    // Update transform with new rotation
+                    const currentTransform = img.style.transform || '';
+                    if (currentTransform.includes('rotate')) {
+                        img.style.transform = currentTransform.replace(/rotate\([^)]+\)/, `rotate(${angle}deg)`);
+                    } else {
+                        img.style.transform = currentTransform + ` rotate(${angle}deg)`;
+                    }
+                    
+                    rotationValue.textContent = `${angle}°`;
+                    this.saveCurrentPageState();
+                });
+                
+                // Make rotation value editable
+                this.makeSliderValueEditable(rotationControl, rotationValue, '°', 0);
+            }
+        }
+        
+        // Add reset rotation button listener
+        const resetRotationBtn = controls.querySelector('.reset-rotation-btn');
+        if (resetRotationBtn) {
+            resetRotationBtn.addEventListener('click', () => {
+                const img = panel.querySelector('img');
+                if (!img) return;
+                
+                // Reset rotation to 0 degrees
+                panel.dataset.rotation = '0';
+                
+                // Remove rotation from transform
+                const currentTransform = img.style.transform || '';
+                img.style.transform = currentTransform.replace(/\s*rotate\([^)]+\)/g, '');
+                
+                // Update rotation control and value display
+                if (rotationControl) {
+                    rotationControl.value = 0;
+                    rotationValue.textContent = '0°';
+                }
+                
+                // Save the current page state
+                this.saveCurrentPageState();
+            });
+        }
+
         // Add position control listeners
         controls.querySelectorAll('.position-btn').forEach(btn => {
             btn.addEventListener('click', () => this.handlePositionChange(btn, panel));
         });
+    }
+    
+    // Helper method to update a specific transform function in a transform string
+    updateTransform(transform, type, newValue) {
+        if (!transform) {
+            // If no transform exists, create one with the new value
+            if (type === 'scale') return `translate(-50%, -50%) ${newValue}`;
+            if (type === 'rotate') return `translate(-50%, -50%) ${newValue}`;
+            return transform;
+        }
+        
+        // Convert the transform string to an array of transform functions
+        const regex = /(translate|scale|rotate)\([^)]+\)/g;
+        const transformFunctions = transform.match(regex) || [];
+        
+        // Create a map of transform functions
+        const transformMap = {};
+        transformFunctions.forEach(func => {
+            const funcType = func.substring(0, func.indexOf('('));
+            transformMap[funcType] = func;
+        });
+        
+        // Update or add the specified transform function
+        if (newValue) {
+            transformMap[type] = newValue;
+        } else {
+            delete transformMap[type]; // Remove the transform if newValue is empty
+        }
+        
+        // Rebuild the transform string with the correct order: translate -> rotate -> scale
+        let newTransform = '';
+        if (transformMap.translate) newTransform += transformMap.translate + ' ';
+        if (transformMap.rotate) newTransform += transformMap.rotate + ' ';
+        if (transformMap.scale) newTransform += transformMap.scale + ' ';
+        
+        return newTransform.trim();
     }
 
     clearPanelImage(panel) {
@@ -793,6 +898,7 @@ class ComicCreator {
                 panelState.top = img.style.top || '50%';
                 panelState.initialScale = panel.dataset.initialScale || '1';
                 panelState.currentScale = panel.dataset.currentScale || '1';
+                panelState.rotation = panel.dataset.rotation || '0';
             }
             
             // Save text elements
@@ -816,8 +922,8 @@ class ComicCreator {
                     tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
                     content: textElement.innerHTML,
                     style: {
-                        // Save pixel values for left/top
-                        left: textBubble.style.left, 
+                        // Store positions in pixels (not percentages) to ensure consistency
+                        left: textBubble.style.left,
                         top: textBubble.style.top,
                         // Only save width/height if they are explicitly set
                         ...(textBubble.style.width && { width: textBubble.style.width }),
@@ -857,6 +963,7 @@ class ComicCreator {
             width: sticker.style.width,
             height: sticker.style.height,
             transform: sticker.style.transform,
+            rotation: sticker.dataset.rotation || '0',
             zIndex: sticker.style.zIndex // Save zIndex too
         }));
 
@@ -1565,6 +1672,7 @@ class ComicCreator {
                         
                         if (state.initialScale) panel.dataset.initialScale = state.initialScale;
                         if (state.currentScale) panel.dataset.currentScale = state.currentScale;
+                        if (state.rotation) panel.dataset.rotation = state.rotation;
                         
                         this.setupImageDragging(img);
                     }
@@ -1596,8 +1704,40 @@ class ComicCreator {
                             textBubble.classList.add(tailClass);
                         }
                         
-                        // Apply styles directly (left/top are now pixels)
-                        Object.assign(textBubble.style, textState.style); 
+                        // Ensure position values are in pixels (convert from % if needed)
+                        let leftValue = textState.style.left || '10px';
+                        let topValue = textState.style.top || '10px';
+                        
+                        // Convert percentage to pixels if needed
+                        if (leftValue.endsWith('%')) {
+                            const panel = document.querySelectorAll('.comic-panel')[index];
+                            if (panel) {
+                                const panelWidth = panel.offsetWidth;
+                                const percentValue = parseFloat(leftValue);
+                                leftValue = `${(percentValue / 100) * panelWidth}px`;
+                            }
+                        }
+                        
+                        if (topValue.endsWith('%')) {
+                            const panel = document.querySelectorAll('.comic-panel')[index];
+                            if (panel) {
+                                const panelHeight = panel.offsetHeight;
+                                const percentValue = parseFloat(topValue);
+                                topValue = `${(percentValue / 100) * panelHeight}px`;
+                            }
+                        }
+                        
+                        // Apply styles directly with pixel positions
+                        Object.assign(textBubble.style, {
+                            position: 'absolute',
+                            left: leftValue,
+                            top: topValue,
+                            width: textState.style.width || 'auto',
+                            height: textState.style.height || 'auto',
+                            transform: textState.style.transform || 'none'
+                        });
+                        
+                        // Apply text content styles
                         Object.assign(textContent.style, {
                             fontFamily: textState.style.fontFamily,
                             fontSize: textState.style.fontSize,
@@ -1728,6 +1868,7 @@ class ComicCreator {
                     stickerImg.className = 'canvas-sticker-image';
                     stickerImg.dataset.imageId = state.imageId;
                     stickerImg.dataset.size = state.size || '100';
+                    if (state.rotation) stickerImg.dataset.rotation = state.rotation;
                     
                     Object.assign(stickerImg.style, {
                         position: 'absolute',
@@ -1779,10 +1920,29 @@ class ComicCreator {
                 // Apply styles directly (important: uses pixel values for left/top)
                 // Use a temporary object to handle potential missing style properties gracefully
                 const bubbleStyle = textState.style || {};
+                
+                // Ensure position values are in pixels (convert from % if needed)
+                let leftValue = bubbleStyle.left || '10px';
+                let topValue = bubbleStyle.top || '10px';
+                
+                // Convert percentage to pixels if needed
+                if (leftValue.endsWith('%')) {
+                    const canvasWidth = comicCanvas.offsetWidth;
+                    const percentValue = parseFloat(leftValue);
+                    leftValue = `${(percentValue / 100) * canvasWidth}px`;
+                }
+                
+                if (topValue.endsWith('%')) {
+                    const canvasHeight = comicCanvas.offsetHeight;
+                    const percentValue = parseFloat(topValue);
+                    topValue = `${(percentValue / 100) * canvasHeight}px`;
+                }
+                
+                // Apply styles with pixel positions
                 Object.assign(textBubble.style, {
                     position: 'absolute', // Canvas text is always absolute
-                    left: bubbleStyle.left || '10px',
-                    top: bubbleStyle.top || '10px',
+                    left: leftValue,
+                    top: topValue,
                     width: bubbleStyle.width || 'auto',
                     height: bubbleStyle.height || 'auto',
                     transform: bubbleStyle.transform || 'none',
@@ -1852,9 +2012,9 @@ class ComicCreator {
                 comicCanvas.appendChild(textBubble);
 
                 // Add event listeners (same as panel text)
-                this.makeTextDraggable(textBubble, dragHandle);
+                this.makeCanvasTextDraggable(textBubble, dragHandle);
                 // Note: Resizing for canvas text might need review based on implementation
-                this.makeTextResizable(textBubble, resizeHandle); 
+                this.makeTextResizable(textBubble, resizeHandle);
 
                 deleteButton.addEventListener('click', () => {
                     textBubble.remove();
@@ -2367,7 +2527,7 @@ class ComicCreator {
         let isDragging = false;
         let startX, startY;
         let startLeft, startTop;
-        let panelRect;
+        let containerRect;
         
         const onMouseDown = (e) => {
             // Only drag when using the handle or the bubble border (not controls or content)
@@ -2382,14 +2542,14 @@ class ComicCreator {
             startX = e.clientX;
             startY = e.clientY;
             
-            // Get the panel rectangle to calculate boundaries
-            const panel = element.parentElement;
-            panelRect = panel.getBoundingClientRect();
+            // Get the container rectangle to calculate boundaries
+            const container = element.parentElement;
+            containerRect = container.getBoundingClientRect();
             
-            // Calculate position relative to panel
+            // Calculate position in pixels
             const rect = element.getBoundingClientRect();
-            startLeft = ((rect.left - panelRect.left) / panelRect.width) * 100;
-            startTop = ((rect.top - panelRect.top) / panelRect.height) * 100;
+            startLeft = rect.left - containerRect.left;
+            startTop = rect.top - containerRect.top;
             
             // Add dragging class for visual feedback
             element.classList.add('dragging-text');
@@ -2404,32 +2564,28 @@ class ComicCreator {
             const deltaX = e.clientX - startX;
             const deltaY = e.clientY - startY;
             
-            const panel = element.parentElement;
-            const percentX = (deltaX / panel.offsetWidth) * 100;
-            const percentY = (deltaY / panel.offsetHeight) * 100;
-            
-            // Calculate new position
-            let newLeft = startLeft + percentX;
-            let newTop = startTop + percentY;
+            // Calculate new position in pixels
+            let newLeft = startLeft + deltaX;
+            let newTop = startTop + deltaY;
             
             // Get element dimensions
             const elementRect = element.getBoundingClientRect();
             const elementWidth = elementRect.width;
             const elementHeight = elementRect.height;
             
-            // Calculate boundaries (keeping at least 10% of the element inside the panel)
-            const minLeft = -elementWidth * 0.9 / panelRect.width * 100;
-            const maxLeft = 100 - elementWidth * 0.1 / panelRect.width * 100;
-            const minTop = -elementHeight * 0.9 / panelRect.height * 100;
-            const maxTop = 100 - elementHeight * 0.1 / panelRect.height * 100;
+            // Calculate boundaries (keeping at least 10% of the element inside the container)
+            const minLeft = -elementWidth * 0.9;
+            const maxLeft = containerRect.width - elementWidth * 0.1;
+            const minTop = -elementHeight * 0.9;
+            const maxTop = containerRect.height - elementHeight * 0.1;
             
             // Apply boundaries
             newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
             newTop = Math.max(minTop, Math.min(newTop, maxTop));
             
-            // Set position
-            element.style.left = `${newLeft}%`;
-            element.style.top = `${newTop}%`;
+            // Set position using pixels instead of percentages
+            element.style.left = `${newLeft}px`;
+            element.style.top = `${newTop}px`;
         };
         
         const onMouseUp = () => {
@@ -2438,6 +2594,9 @@ class ComicCreator {
             isDragging = false;
             element.classList.remove('dragging-text');
             handle.style.cursor = 'grab';
+            
+            // Save state after a position change
+            this.saveCurrentPageState();
         };
         
         handle.style.cursor = 'grab';
@@ -4174,48 +4333,60 @@ class ComicCreator {
         const propertiesPanel = document.querySelector('.properties-panel');
         if (!propertiesPanel) return;
 
-        // Hide all potential sections first
-        const panelProps = propertiesPanel.querySelector('#panel-properties');
-        const textProps = propertiesPanel.querySelector('#text-properties');
-        const backgroundProps = propertiesPanel.querySelector('#background-properties'); // Assuming we add this ID later
-        const stickerProps = propertiesPanel.querySelector('#sticker-properties'); // Get sticker props section
-
-        if (panelProps) panelProps.style.display = 'none';
-        if (textProps) textProps.style.display = 'none';
-        if (backgroundProps) backgroundProps.style.display = 'none';
-        if (stickerProps) stickerProps.style.display = 'none'; // Hide sticker props too
+        // Clear previous content
+        propertiesPanel.innerHTML = '';
 
         // Show the relevant section based on mode AND current selection
         switch (this.currentSidebarMode) {
             case 'panels':
                 console.log("Right sidebar: Panels tab active.");
+                // Create panel properties container if it doesn't exist
+                let panelProps = propertiesPanel.querySelector('#panel-properties');
+                if (!panelProps) {
+                    panelProps = document.createElement('div');
+                    panelProps.id = 'panel-properties';
+                    panelProps.className = 'properties-section';
+                    propertiesPanel.appendChild(panelProps);
+                }
+                
                 // Show panel controls ONLY if a panel is selected
                 if (this.currentPanel) {
                     this.updatePanelControls(this.currentPanel);
-                } else if (panelProps) {
+                } else {
                     // Optional: Show a default message if no panel is selected
                     panelProps.innerHTML = '<h4>Panel Settings</h4><div class="panel-controls"><p>Select a panel to see its properties.</p></div>';
                     panelProps.style.display = 'block';
                 }
                 break;
+                
             case 'backgrounds':
-                 console.log("Right sidebar: Backgrounds tab active.");
+                console.log("Right sidebar: Backgrounds tab active.");
                 // Always show background controls when this tab is active
                 this.updateBackgroundControls(this.currentBackground); // Pass current background if it exists
                 break;
+                
             case 'stickers':
-                 console.log("Right sidebar: Stickers tab active.");
-                 // Show sticker controls ONLY if a sticker is selected
-                 if (this.currentSticker) {
-                     this.updateStickerControls(this.currentSticker);
-                 } else if (stickerProps) {
+                console.log("Right sidebar: Stickers tab active.");
+                // Create sticker properties container if it doesn't exist
+                let stickerProps = propertiesPanel.querySelector('#sticker-properties');
+                if (!stickerProps) {
+                    stickerProps = document.createElement('div');
+                    stickerProps.id = 'sticker-properties';
+                    stickerProps.className = 'properties-section';
+                    propertiesPanel.appendChild(stickerProps);
+                }
+                
+                // Show sticker controls ONLY if a sticker is selected
+                if (this.currentSticker) {
+                    this.updateStickerControls(this.currentSticker);
+                } else if (stickerProps) {
                     // Optional: Show a default message if no sticker is selected
                     stickerProps.innerHTML = '<h4>Sticker Settings</h4><div class="panel-controls"><p>Select a sticker to see its properties.</p></div>';
                     stickerProps.style.display = 'block';
-                 } else {
+                } else {
                     // Ensure sticker props div exists for the message
                     this.updateStickerControls(null); 
-                 }
+                }
                 break;
             default:
                  console.warn("Unknown sidebar mode:", this.currentSidebarMode);
@@ -4493,10 +4664,21 @@ class ComicCreator {
                         </button>
                         <div class="zoom-group">
                             <label>Size</label>
-                            <input type="range" class="size-control" min="10" max="500" value="200">
+                            <input type="range" class="size-control" min="10" max="1000" value="200">
                             <span class="size-value">200%</span>
                             <button class="reset-size-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
                                 <i class="fas fa-undo"></i> Reset Size
+                            </button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <h4 style="text-align: center;">Rotation</h4>
+                        <div class="rotation-group">
+                            <label>Angle</label>
+                            <input type="range" class="rotation-control" min="-180" max="180" value="0" step="1">
+                            <span class="rotation-value">0°</span>
+                            <button class="reset-rotation-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
+                                <i class="fas fa-undo"></i> Reset Rotation
                             </button>
                         </div>
                     </div>
@@ -4579,6 +4761,58 @@ class ComicCreator {
                             sizeValue.textContent = '200%';
                         }
                     }
+                    this.saveCurrentPageState();
+                });
+            }
+
+            // Rotation control listeners
+            const rotationControl = stickerProps.querySelector('.rotation-control');
+            const rotationValue = stickerProps.querySelector('.rotation-value');
+            
+            if (rotationControl) {
+                // Get current rotation angle from sticker dataset
+                const currentRotation = parseInt(stickerElement.dataset.rotation || '0');
+                rotationControl.value = currentRotation;
+                rotationValue.textContent = `${currentRotation}°`;
+                
+                rotationControl.addEventListener('input', (e) => {
+                    const angle = parseInt(e.target.value);
+                    stickerElement.dataset.rotation = angle;
+                    
+                    // Update transform with new rotation
+                    const currentTransform = stickerElement.style.transform || '';
+                    if (currentTransform.includes('rotate')) {
+                        stickerElement.style.transform = currentTransform.replace(/rotate\([^)]+\)/, `rotate(${angle}deg)`);
+                    } else {
+                        stickerElement.style.transform = currentTransform + ` rotate(${angle}deg)`;
+                    }
+                    
+                    rotationValue.textContent = `${angle}°`;
+                    this.saveCurrentPageState();
+                });
+                
+                // Make rotation value editable
+                this.makeSliderValueEditable(rotationControl, rotationValue, '°', 0);
+            }
+            
+            // Reset rotation button listener
+            const resetRotationBtn = stickerProps.querySelector('.reset-rotation-btn');
+            if (resetRotationBtn) {
+                resetRotationBtn.addEventListener('click', () => {
+                    // Reset rotation to 0 degrees
+                    stickerElement.dataset.rotation = '0';
+                    
+                    // Remove rotation from transform
+                    const currentTransform = stickerElement.style.transform || '';
+                    stickerElement.style.transform = currentTransform.replace(/\s*rotate\([^)]+\)/g, '');
+                    
+                    // Update rotation control and value display
+                    if (rotationControl) {
+                        rotationControl.value = 0;
+                        rotationValue.textContent = '0°';
+                    }
+                    
+                    // Save the current page state
                     this.saveCurrentPageState();
                 });
             }
@@ -4824,8 +5058,8 @@ class ComicCreator {
                 width: stickerImg.style.width,
                 height: stickerImg.style.height,
                 transform: stickerImg.style.transform || 'scale(1)',
-                zIndex: stickerImg.style.zIndex,
-                size: stickerImg.dataset.size
+                rotation: stickerImg.dataset.rotation || '0',
+                zIndex: stickerImg.style.zIndex // Save zIndex too
             });
 
             this.saveCurrentPageState();
@@ -4860,8 +5094,8 @@ class ComicCreator {
 
             startX = e.clientX;
             startY = e.clientY;
-            originalX = parseFloat(element.style.left);
-            originalY = parseFloat(element.style.top);
+            originalX = parseFloat(element.style.left) || 0;
+            originalY = parseFloat(element.style.top) || 0;
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp, { once: true });
@@ -4874,7 +5108,13 @@ class ComicCreator {
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
             
-            const canvasRect = document.querySelector('#comic-canvas').getBoundingClientRect();
+            const canvas = document.querySelector('#comic-canvas');
+            if (!canvas) {
+                console.error("Cannot drag: canvas not found");
+                return;
+            }
+            
+            const canvasRect = canvas.getBoundingClientRect();
             const stickerRect = element.getBoundingClientRect();
             
             let newX = originalX + dx;
@@ -4908,6 +5148,7 @@ class ComicCreator {
                         width: element.style.width,
                         height: element.style.height,
                         transform: element.style.transform,
+                        rotation: element.dataset.rotation || '0',
                         zIndex: element.style.zIndex,
                         size: element.dataset.size
                     });
@@ -5238,6 +5479,12 @@ class ComicCreator {
         let canvasPaddingBoxWidth, canvasPaddingBoxHeight; // Store canvas client dimensions
 
         const onMouseDown = (e) => {
+            // Check if canvas exists
+            if (!canvas) {
+                console.error("Cannot drag: canvas not found");
+                return;
+            }
+            
             // Check if drag should start
             if (e.button !== 0) return;
             const isHandle = e.target === handle || e.target.closest('.drag-handle');
