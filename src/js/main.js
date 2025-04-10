@@ -931,6 +931,7 @@ class ComicCreator {
                         transform: textBubble.style.transform,
                         backgroundColor: textBubble.style.backgroundColor,
                         bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
+                        padding: textBubble.style.padding, // Save bubble padding
                         fontFamily: textElement.style.fontFamily,
                         fontSize: textElement.style.fontSize,
                         fontWeight: textElement.style.fontWeight,
@@ -945,7 +946,8 @@ class ComicCreator {
                         lineHeight: textElement.style.lineHeight || 'normal',
                         hasOutline: textElement.dataset.hasOutline === 'true',
                         outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
-                        outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000'
+                        outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
+                        textContentPadding: textElement.style.padding // Save text content padding
                     }
                 });
             });
@@ -994,6 +996,7 @@ class ComicCreator {
                     zIndex: textBubble.style.zIndex, // Save z-index
                     backgroundColor: textBubble.style.backgroundColor,
                     bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
+                    padding: textBubble.style.padding, // Save bubble padding
                     fontFamily: textElement.style.fontFamily,
                     fontSize: textElement.style.fontSize,
                     fontWeight: textElement.style.fontWeight,
@@ -1008,7 +1011,8 @@ class ComicCreator {
                     lineHeight: textElement.style.lineHeight || 'normal',
                     hasOutline: textElement.dataset.hasOutline === 'true',
                     outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
-                    outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000'
+                    outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
+                    textContentPadding: textElement.style.padding // Save text content padding
                 }
             };
         });
@@ -1694,6 +1698,8 @@ class ComicCreator {
                         textContent.innerHTML = textState.content;
                         textContent.style.outline = 'none';
                         textContent.style.wordWrap = 'break-word';
+                        textContent.style.color = '#000000'; // Set default text color to black
+                        textContent.style.padding = '5px 2px 5px 2px'; // Explicitly set text content padding
                         
                         // Apply bubble styling
                         textBubble.classList.add(textState.bubbleType || 'speech-bubble');
@@ -1734,7 +1740,8 @@ class ComicCreator {
                             top: topValue,
                             width: textState.style.width || 'auto',
                             height: textState.style.height || 'auto',
-                            transform: textState.style.transform || 'none'
+                            transform: textState.style.transform || 'none',
+                            padding: textState.style.padding || '10px' // Restore padding
                         });
                         
                         // Apply text content styles
@@ -1749,7 +1756,8 @@ class ComicCreator {
                             color: textState.style.color,
                             opacity: textState.style.opacity,
                             textShadow: textState.style.textShadow,
-                            lineHeight: textState.style.lineHeight || 'normal'
+                            lineHeight: textState.style.lineHeight || 'normal',
+                            padding: textState.style.textContentPadding || '5px 2px 5px 2px' // Restore text content padding with default
                         });
                         
                         // Set bubble background color from saved state (fallback to white if not set)
@@ -1946,7 +1954,8 @@ class ComicCreator {
                     width: bubbleStyle.width || 'auto',
                     height: bubbleStyle.height || 'auto',
                     transform: bubbleStyle.transform || 'none',
-                    zIndex: bubbleStyle.zIndex || '10' // Default z-index above panels/stickers
+                    zIndex: bubbleStyle.zIndex || '10', // Default z-index above panels/stickers
+                    padding: bubbleStyle.padding || '10px' // Restore padding
                 });
 
                 // Apply text content styles
@@ -1961,7 +1970,8 @@ class ComicCreator {
                     color: bubbleStyle.color,
                     opacity: bubbleStyle.opacity,
                     textShadow: bubbleStyle.textShadow,
-                    lineHeight: bubbleStyle.lineHeight || 'normal'
+                    lineHeight: bubbleStyle.lineHeight || 'normal',
+                    padding: bubbleStyle.textContentPadding || '5px 2px 5px 2px' // Restore text content padding with default
                 });
 
                 // Restore bubble background and opacity
@@ -2432,6 +2442,7 @@ class ComicCreator {
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
         textElement.style.color = '#000000'; // Set default text color to black
+        textElement.style.padding = '5px 2px 5px 2px'; // Explicitly set text content padding
         
         // Add drag handle for better usability
         const dragHandle = document.createElement('div');
@@ -5390,6 +5401,7 @@ class ComicCreator {
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
         textElement.style.color = '#000000';
+        textElement.style.padding = '5px 2px 5px 2px'; // Explicitly set text content padding
 
         // Add control handles (same as addTextToPanel)
         const dragHandle = document.createElement('div');
