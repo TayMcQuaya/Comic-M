@@ -1336,17 +1336,15 @@ class ComicCreator {
             <div class="page-controls">
                 <div class="nav-group" style="display: flex; flex-direction: column; align-items: center;">
                     <span class="page-indicator">Page 1 of 1</span>
-                    <div class="input-group" style="margin: 8px 0;">
-                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1">
-                        <button class="tool-btn" id="goToPage">GO</button>
-                    </div>
-                    <div class="arrow-group">
+                    <div class="input-group" style="margin: 8px 0; display: flex; flex-direction: row; align-items: center;">
                         <button class="tool-btn" id="prevPage">
                             <i class="fas fa-chevron-left"></i>
                         </button>
+                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1">
                         <button class="tool-btn" id="nextPage">
                             <i class="fas fa-chevron-right"></i>
                         </button>
+                        <button class="tool-btn" id="goToPage">GO</button>
                     </div>
                 </div>
             </div>
@@ -1419,27 +1417,7 @@ class ComicCreator {
             <div class="page-controls">
                 <div class="nav-group" style="display: flex; flex-direction: column; align-items: center;">
                     <span class="page-indicator">Page 1 of 1</span>
-                    <div class="input-group" style="margin: 8px 0;">
-                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1" style="
-                            width: 25px;
-                            height: 32px;
-                            padding: 2px;
-                            text-align: center;
-                            background: #333;
-                            color: #fff;
-                            border: 2px solid #ffff00;
-                            border-radius: 4px;
-                        ">
-                        <button class="tool-btn" id="goToPage" style="
-                            height: 32px;
-                            padding: 0 8px;
-                            background: #ff4444;
-                            color: #fff;
-                            border: 2px solid #ffff00;
-                            border-radius: 4px;
-                        ">GO</button>
-                    </div>
-                    <div class="arrow-group">
+                    <div class="input-group" style="margin: 8px 0; display: flex; flex-direction: row; align-items: center; gap: 5px;">
                         <button class="tool-btn" id="prevPage" style="
                             width: 32px;
                             height: 32px;
@@ -1450,6 +1428,16 @@ class ComicCreator {
                         ">
                             <i class="fas fa-chevron-left"></i>
                         </button>
+                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1" style="
+                            width: 25px;
+                            height: 32px;
+                            padding: 2px;
+                            text-align: center;
+                            background: #333;
+                            color: #fff;
+                            border: 2px solid #ffff00;
+                            border-radius: 4px;
+                        ">
                         <button class="tool-btn" id="nextPage" style="
                             width: 32px;
                             height: 32px;
@@ -1460,6 +1448,14 @@ class ComicCreator {
                         ">
                             <i class="fas fa-chevron-right"></i>
                         </button>
+                        <button class="tool-btn" id="goToPage" style="
+                            height: 32px;
+                            padding: 0 8px;
+                            background: #ff4444;
+                            color: #fff;
+                            border: 2px solid #ffff00;
+                            border-radius: 4px;
+                        ">GO</button>
                     </div>
                 </div>
             </div>

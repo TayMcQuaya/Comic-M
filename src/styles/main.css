@@ -164,6 +164,7 @@ body {
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-gutter: stable;
+    padding-bottom: 20px; /* Add extra padding at bottom */
 }
 
 .thumbnail-container {
@@ -488,9 +489,12 @@ body {
     flex-direction: column;
     gap: 0.75rem;
     height: calc(100vh - 100px);
+    max-height: calc(100vh - 100px);
     overflow-y: auto;
     position: sticky;
     top: 0;
+    padding-bottom: 40px; /* Increased bottom padding to ensure scrollbar arrow visibility */
+    margin-bottom: 20px; /* Added margin to ensure space for scrollbar at bottom */
 }
 
 .editor-sidebar h3 {
@@ -671,6 +675,8 @@ img[draggable="false"] {
     padding-right: 12px;
     margin-right: -6px;
     font-weight: bold;
+    padding-bottom: 40px; /* Added bottom padding to ensure scrollbar arrow visibility */
+    margin-bottom: 20px; /* Added bottom margin for extra space */
 }
 
 .control-group {
@@ -758,9 +764,10 @@ img[draggable="false"] {
     background: var(--background-color);
     border-radius: 8px;
     overflow-y: auto;
-    max-height: calc(100vh - 180px);
+    max-height: calc(100vh - 220px); /* Increased from 180px to 220px to account for sidebar padding and headers */
     padding-right: 12px;
     margin-right: -6px;
+    padding-bottom: 40px; /* Increased padding to ensure scrollbar arrow visibility */
 }
 
 .editor-sidebar .thumbnail-container {
@@ -3726,7 +3733,8 @@ select.font-family option {
 
 .sidebar-content .thumbnails-grid {
     /* Inherits most styles, ensure max-height is appropriate */
-    max-height: calc(100vh - 250px); /* Adjust based on header/tabs height */
+    max-height: calc(100vh - 280px); /* Adjust based on header/tabs height */
+    padding-bottom: 40px; /* Increased padding to ensure scrollbar arrow visibility */
 }
 
 /* Sticker Image Styles */
@@ -4064,4 +4072,51 @@ input[type="color"] {
 .exporting .text-bubble.no-bubble::after {
     display: none !important;
     content: none !important;
+}
+
+/* Mobile and small screen adjustments */
+@media (max-height: 800px) {
+    .editor-container {
+        min-height: 700px; /* Reduce min-height on smaller screens */
+        height: calc(100vh - 100px);
+        padding-bottom: 20px; /* Ensure there's bottom padding */
+    }
+    
+    .editor-sidebar {
+        height: calc(100vh - 80px);
+        max-height: calc(100vh - 80px);
+        padding-bottom: 40px; /* Preserve bottom padding on small screens */
+    }
+    
+    .editor-sidebar .thumbnails-grid {
+        max-height: calc(100vh - 180px);
+        padding-bottom: 40px; /* Preserve bottom padding on small screens */
+    }
+    
+    .sidebar-content .thumbnails-grid {
+        max-height: calc(100vh - 220px);
+        padding-bottom: 40px; /* Preserve bottom padding on small screens */
+    }
+    
+    .panel-controls {
+        padding-bottom: 40px; /* Preserve bottom padding on small screens */
+    }
+}
+
+/* Page navigation improvements */
+.input-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+.page-number-input {
+    width: 40px;
+    text-align: center;
+    margin: 0 3px;
+}
+
+#goToPage {
+    margin-left: 3px;
 }
