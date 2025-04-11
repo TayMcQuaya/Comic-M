@@ -29,6 +29,16 @@ class ComicCreator {
         this.useGlobalBackgroundStyle = false; // Global background toggle
         this.globalBackgroundStyle = 'classic-white'; // Default global background style
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
+        // Add folder system properties
+        this.folderStructure = {
+            root: {
+                type: 'folder',
+                name: 'root',
+                items: [], // Will store image IDs and folder IDs
+                parent: null
+            }
+        };
+        this.currentFolderId = 'root';
         this.init();
     }
 
@@ -77,7 +87,7 @@ class ComicCreator {
                         const img = new Image();
                         img.onload = () => {
                             const imageData = {
-                                id: Date.now() + Math.random(),
+                                id: `img_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                                 name: file.name,
                                 src: e.target.result,
                                 width: img.width,
@@ -95,6 +105,12 @@ class ComicCreator {
         const newImages = await Promise.all(imagePromises);
         console.log('[handleImageUpload] All images processed:', newImages.length, 'images');
         this.uploadedImages.push(...newImages);
+        
+        // Add new images to current folder
+        newImages.forEach(image => {
+            this.folderStructure[this.currentFolderId].items.push(image.id.toString());
+        });
+        
         console.log('[handleImageUpload] Current uploadedImages array:', this.uploadedImages.length, 'total images');
         this.updateImageLibrary();
         this.enableNextButton();
@@ -114,61 +130,178 @@ class ComicCreator {
             // Clear existing content
             grid.innerHTML = '';
 
-            // Add images
-            this.uploadedImages.forEach(image => {
-                const container = document.createElement('div');
-                container.className = 'thumbnail-container';
-                if (usedImageIds.includes(String(image.id))) {
-                    container.classList.add('in-use');
-                }
-                container.draggable = true;
-                container.dataset.imageId = image.id;
-
-                container.innerHTML = `
-                    <img src="${image.src}" alt="${image.name}">
-                    <div class="image-name">${image.name}</div>
-                    ${grid.closest('.editor-sidebar') ? '' : `<button class="delete-btn" data-image-id="${image.id}">×</button>`}
+            // Add back button if not in root folder
+            if (this.currentFolderId !== 'root') {
+                const backButton = document.createElement('div');
+                backButton.className = 'back-to-parent-folder';
+                backButton.innerHTML = `
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back</span>
                 `;
+                backButton.addEventListener('click', () => this.navigateBack());
+                grid.appendChild(backButton);
+            }
 
-                // Setup drag functionality for both image dragging and reordering
-                this.setupDragAndDrop(container, image);
-                
-                // Setup delete button if it exists
-                const deleteBtn = container.querySelector('.delete-btn');
-                if (deleteBtn) {
-                    deleteBtn.addEventListener('click', () => this.deleteImage(image.id));
+            // Add create folder button in editor sidebar
+            if (grid.closest('.editor-sidebar')) {
+                const createFolderBtn = document.createElement('div');
+                createFolderBtn.className = 'create-folder-btn';
+                createFolderBtn.innerHTML = `
+                    <i class="fas fa-folder-plus"></i>
+                    <span>Create Folder</span>
+                `;
+                createFolderBtn.addEventListener('click', () => this.createFolder());
+                grid.appendChild(createFolderBtn);
+            }
+
+            // Get current folder's items
+            const currentFolder = this.folderStructure[this.currentFolderId];
+            let lastContainer = null;  // Track the last created container
+            
+            // Add folders first
+            currentFolder.items.forEach(itemId => {
+                const itemIdStr = itemId.toString();
+                if (itemIdStr.startsWith('folder_')) {
+                    const folder = this.folderStructure[itemIdStr];
+                    const container = document.createElement('div');
+                    lastContainer = container;  // Update last container
+                    container.className = 'folder-container';
+                    container.draggable = true;
+                    container.dataset.folderId = itemIdStr;
+
+                    container.innerHTML = `
+                        <i class="fas fa-folder"></i>
+                        <div class="folder-name" contenteditable="true">${folder.name}</div>
+                    `;
+
+                    // Setup folder name editing
+                    const nameElement = container.querySelector('.folder-name');
+                    nameElement.addEventListener('blur', () => {
+                        this.renameFolder(itemIdStr, nameElement.textContent);
+                    });
+                    nameElement.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            nameElement.blur();
+                        }
+                    });
+
+                    // Setup double click to open folder
+                    container.addEventListener('dblclick', () => {
+                        this.navigateToFolder(itemIdStr);
+                    });
+
+                    // Setup drag and drop for folders
+                    this.setupDragAndDrop(container);
+
+                    grid.appendChild(container);
                 }
-                
-                grid.appendChild(container);
-
-                // Add reordering drag events for both upload page and editor sidebar
-                this.setupReorderDrag(container);
             });
 
-            // Add drop zone functionality to the grid itself
+            // Then add images
+            currentFolder.items.forEach(itemId => {
+                const itemIdStr = itemId.toString();
+                if (!itemIdStr.startsWith('folder_')) {
+                    const image = this.uploadedImages.find(img => String(img.id) === itemIdStr);
+                    if (image) {
+                        const container = document.createElement('div');
+                        lastContainer = container;  // Update last container
+                        container.className = 'thumbnail-container';
+                        if (usedImageIds.includes(itemIdStr)) {
+                            container.classList.add('in-use');
+                        }
+                        container.draggable = true;
+                        container.dataset.imageId = itemIdStr;
+
+                        container.innerHTML = `
+                            <img src="${image.src}" alt="${image.name}">
+                            <div class="image-name">${image.name}</div>
+                            ${grid.closest('.editor-sidebar') ? '' : `<button class="delete-btn" data-image-id="${itemIdStr}">×</button>`}
+                        `;
+
+                        // Setup drag functionality for both image dragging and reordering
+                        this.setupDragAndDrop(container, image);
+                        
+                        // Setup delete button if it exists
+                        const deleteBtn = container.querySelector('.delete-btn');
+                        if (deleteBtn) {
+                            deleteBtn.addEventListener('click', () => this.deleteImage(itemIdStr));
+                        }
+                        
+                        grid.appendChild(container);
+                    }
+                }
+            });
+
+            // Setup grid drop zone
             this.setupGridDropZone(grid);
+
+            // Add reordering drag events for the last container if it exists
+            if (lastContainer) {
+                this.setupReorderDrag(lastContainer);
+            }
         });
     }
 
-    setupDragAndDrop(container, image) {
+    setupDragAndDrop(container, item) {
         container.addEventListener('dragstart', (e) => {
+            const itemId = container.dataset.imageId || container.dataset.folderId;
+            e.dataTransfer.setData('text/plain', itemId);
+            e.dataTransfer.setData('type', container.dataset.imageId ? 'image' : 'folder');
             container.classList.add('dragging');
-            // Set the data transfer in multiple formats to ensure compatibility
-            const imageIdStr = image.id.toString();
-            console.log('[Drag Start] Setting dataTransfer for image/id:', imageIdStr);
-            e.dataTransfer.setData('text/plain', imageIdStr);  // Add this format
-            e.dataTransfer.setData('image/id', imageIdStr);
-            e.dataTransfer.setData('reorder/id', imageIdStr);
-            e.dataTransfer.effectAllowed = 'copyMove';
         });
 
         container.addEventListener('dragend', () => {
             container.classList.remove('dragging');
         });
+
+        // Make folders droppable
+        if (container.classList.contains('folder-container')) {
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                container.classList.add('drag-over');
+            });
+
+            container.addEventListener('dragleave', () => {
+                container.classList.remove('drag-over');
+            });
+
+            container.addEventListener('drop', (e) => {
+                e.preventDefault();
+                container.classList.remove('drag-over');
+                
+                const itemId = e.dataTransfer.getData('text/plain');
+                const itemType = e.dataTransfer.getData('type');
+                const targetFolderId = container.dataset.folderId;
+
+                // Don't allow dropping a folder into itself or its descendants
+                if (itemType === 'folder') {
+                    if (itemId === targetFolderId) return;
+                    let parent = this.folderStructure[targetFolderId].parent;
+                    while (parent) {
+                        if (parent === itemId) return;
+                        parent = this.folderStructure[parent].parent;
+                    }
+                }
+
+                this.moveItemToFolder(itemId, targetFolderId);
+            });
+        }
     }
 
     deleteImage(imageId) {
-        this.uploadedImages = this.uploadedImages.filter(img => img.id !== imageId);
+        // Remove from uploadedImages
+        this.uploadedImages = this.uploadedImages.filter(img => String(img.id) !== imageId);
+        
+        // Remove from folder structure
+        Object.values(this.folderStructure).forEach(folder => {
+            const index = folder.items.indexOf(imageId);
+            if (index !== -1) {
+                folder.items.splice(index, 1);
+            }
+        });
+        
         this.updateImageLibrary();
         this.enableNextButton();
     }
@@ -2446,56 +2579,49 @@ class ComicCreator {
     }
 
     setupReorderDrag(container) {
-        // Remove the dragstart listener since it's handled in setupDragAndDrop
+        if (!container) return;
+
+        container.addEventListener('dragstart', (e) => {
+            container.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
         container.addEventListener('dragend', () => {
             container.classList.remove('dragging');
-            document.querySelectorAll('.drag-over').forEach(el => {
-                el.classList.remove('drag-over');
-            });
-        });
-
-        container.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            if (!container.classList.contains('dragging')) {
-                container.classList.add('drag-over');
-            }
-        });
-
-        container.addEventListener('dragleave', () => {
-            container.classList.remove('drag-over');
-        });
-
-        container.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = e.target.closest('.comic-panel') ? 'copy' : 'move';
-        });
-
-        container.addEventListener('drop', (e) => {
-            e.preventDefault();
-            container.classList.remove('drag-over');
-            const draggedId = e.dataTransfer.getData('reorder/id');
-            if (draggedId && draggedId !== container.dataset.imageId) {
-                this.reorderImages(draggedId, container.dataset.imageId);
-            }
         });
     }
 
     setupGridDropZone(grid) {
+        if (!grid) return;
+
         grid.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
+            
             const draggingElement = document.querySelector('.dragging');
-            if (draggingElement) {
-                const siblings = [...grid.querySelectorAll('.thumbnail-container:not(.dragging)')];
-                const nextSibling = siblings.find(sibling => {
-                    const rect = sibling.getBoundingClientRect();
-                    return e.clientY < rect.top + rect.height / 2;
-                });
-                if (nextSibling) {
-                    grid.insertBefore(draggingElement, nextSibling);
-                } else {
-                    grid.appendChild(draggingElement);
-                }
+            if (!draggingElement) return;
+
+            const siblings = [...grid.querySelectorAll('.thumbnail-container:not(.dragging), .folder-container:not(.dragging)')];
+            const nextSibling = siblings.find(sibling => {
+                const rect = sibling.getBoundingClientRect();
+                return e.clientY < rect.top + rect.height / 2;
+            });
+
+            if (nextSibling) {
+                grid.insertBefore(draggingElement, nextSibling);
+            } else {
+                grid.appendChild(draggingElement);
+            }
+        });
+
+        grid.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const itemId = e.dataTransfer.getData('text/plain');
+            const itemType = e.dataTransfer.getData('type');
+            
+            if (itemType === 'image' || itemType === 'folder') {
+                // If dropped on the grid itself, move to current folder
+                this.moveItemToFolder(itemId, this.currentFolderId);
             }
         });
     }
@@ -5917,6 +6043,57 @@ class ComicCreator {
                 }
             });
         };
+    }
+
+    // Add folder system methods
+    createFolder(name = 'New Folder') {
+        const folderId = `folder_${Date.now()}`;
+        this.folderStructure[folderId] = {
+            type: 'folder',
+            name: name,
+            items: [],
+            parent: this.currentFolderId
+        };
+        this.folderStructure[this.currentFolderId].items.push(folderId);
+        this.updateImageLibrary();
+        return folderId;
+    }
+
+    navigateToFolder(folderId) {
+        if (this.folderStructure[folderId]) {
+            this.currentFolderId = folderId;
+            this.updateImageLibrary();
+        }
+    }
+
+    navigateBack() {
+        const currentFolder = this.folderStructure[this.currentFolderId];
+        if (currentFolder && currentFolder.parent) {
+            this.currentFolderId = currentFolder.parent;
+            this.updateImageLibrary();
+        }
+    }
+
+    renameFolder(folderId, newName) {
+        if (this.folderStructure[folderId]) {
+            this.folderStructure[folderId].name = newName;
+            this.updateImageLibrary();
+        }
+    }
+
+    moveItemToFolder(itemId, targetFolderId) {
+        // Remove from current folder
+        const currentFolder = this.folderStructure[this.currentFolderId];
+        const itemIndex = currentFolder.items.indexOf(itemId);
+        if (itemIndex !== -1) {
+            currentFolder.items.splice(itemIndex, 1);
+        }
+
+        // Add to target folder
+        if (this.folderStructure[targetFolderId]) {
+            this.folderStructure[targetFolderId].items.push(itemId);
+            this.updateImageLibrary();
+        }
     }
 }
 
