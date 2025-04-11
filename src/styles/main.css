@@ -4036,6 +4036,14 @@ input[type="color"] {
     opacity: 1 !important;
 }
 
+/* Special handling for no-bubble text elements during export */
+.exporting .text-bubble.no-bubble {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
 .exporting .resize-handle,
 .exporting .drag-handle,
 .exporting .format-buttons,
@@ -4049,4 +4057,11 @@ input[type="color"] {
 .exporting .text-bubble * {
     opacity: 1 !important;
     visibility: visible !important;
+}
+
+/* Ensure no-bubble text elements don't show speech/thought bubble tails or other decorative elements */
+.exporting .text-bubble.no-bubble::before,
+.exporting .text-bubble.no-bubble::after {
+    display: none !important;
+    content: none !important;
 }

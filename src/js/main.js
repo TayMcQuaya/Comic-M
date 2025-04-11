@@ -2225,7 +2225,7 @@ class ComicCreator {
                 console.log(`Capturing page ${index + 1}`);
                 
                 // Allow more time for the page to render completely
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 800));
                 
                 // Get the comic canvas
                 const canvas = document.getElementById('comic-canvas');
@@ -5827,33 +5827,50 @@ class ComicCreator {
                 backgroundColor: bubble.style.backgroundColor,
                 color: bubble.style.color,
                 fontFamily: bubble.style.fontFamily,
-                fontSize: bubble.style.fontSize
+                fontSize: bubble.style.fontSize,
+                border: bubble.style.border,
+                boxShadow: bubble.style.boxShadow
             });
             
             // Get computed styles
             const computedStyle = window.getComputedStyle(bubble);
             
-            // Apply computed background color directly
-            const bgColor = computedStyle.getPropertyValue('background-color');
-            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-                bubble.style.backgroundColor = bgColor;
+            // Check if this is a no-bubble text element
+            const isNoBubble = bubble.classList.contains('no-bubble');
+            
+            if (!isNoBubble) {
+                // Only apply background color to regular bubble types (not no-bubble)
+                const bgColor = computedStyle.getPropertyValue('background-color');
+                if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                    bubble.style.backgroundColor = bgColor;
+                } else {
+                    bubble.style.backgroundColor = '#ffffff'; // Default to white
+                }
+                
+                // Ensure regular bubbles have proper borders if not already set
+                if (!bubble.style.border || bubble.style.border === 'none') {
+                    bubble.style.border = '1px solid rgba(0, 0, 0, 0.7)';
+                }
             } else {
-                bubble.style.backgroundColor = '#ffffff'; // Default to white
+                // For no-bubble elements, explicitly ensure transparent background and no border
+                bubble.style.backgroundColor = 'transparent';
+                bubble.style.border = 'none';
+                bubble.style.boxShadow = 'none';
             }
             
-            // Apply computed text color directly
+            // Apply computed text color directly (for all bubble types)
             const textColor = computedStyle.getPropertyValue('color');
             if (textColor) {
                 bubble.style.color = textColor;
             }
             
-            // Apply computed font properties directly
+            // Apply computed font properties directly (for all bubble types)
             const fontFamily = computedStyle.getPropertyValue('font-family');
             const fontSize = computedStyle.getPropertyValue('font-size');
             if (fontFamily) bubble.style.fontFamily = fontFamily;
             if (fontSize) bubble.style.fontSize = fontSize;
             
-            // Ensure text content is visible
+            // Ensure text content is visible (for all bubble types)
             const textElement = bubble.querySelector('.text-content');
             if (textElement) {
                 textElement.style.opacity = '1';
@@ -5889,6 +5906,18 @@ class ComicCreator {
                     element.style.fontSize = item.fontSize;
                 } else {
                     element.style.removeProperty('font-size');
+                }
+                
+                if (item.border) {
+                    element.style.border = item.border;
+                } else {
+                    element.style.removeProperty('border');
+                }
+                
+                if (item.boxShadow) {
+                    element.style.boxShadow = item.boxShadow;
+                } else {
+                    element.style.removeProperty('box-shadow');
                 }
             });
         };
