@@ -235,11 +235,6 @@ class ComicCreator {
 
             // Setup grid drop zone
             this.setupGridDropZone(grid);
-
-            // Add reordering drag events for the last container if it exists
-            if (lastContainer) {
-                this.setupReorderDrag(lastContainer);
-            }
         });
     }
 
