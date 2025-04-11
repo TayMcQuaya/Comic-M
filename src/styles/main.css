@@ -1715,7 +1715,7 @@ label {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    padding: 5px 2px 5px 2px; /* Reduced padding - 25% less on top/sides, kept bottom */
+    padding: 2.5px 2px 5px 2px; /* Reduced padding - 25% less on top/sides, kept bottom */
 }
 
 /* Specific padding for thought bubbles */

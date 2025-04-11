@@ -1699,7 +1699,7 @@ class ComicCreator {
                         textContent.style.outline = 'none';
                         textContent.style.wordWrap = 'break-word';
                         textContent.style.color = '#000000'; // Set default text color to black
-                        textContent.style.padding = '5px 2px 5px 2px'; // Explicitly set text content padding
+                        textContent.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
                         
                         // Apply bubble styling
                         textBubble.classList.add(textState.bubbleType || 'speech-bubble');
@@ -1741,7 +1741,7 @@ class ComicCreator {
                             width: textState.style.width || 'auto',
                             height: textState.style.height || 'auto',
                             transform: textState.style.transform || 'none',
-                            padding: textState.style.padding || '10px' // Restore padding
+                            padding: textState.style.padding || '2.5px' // Restore padding
                         });
                         
                         // Apply text content styles
@@ -1757,7 +1757,7 @@ class ComicCreator {
                             opacity: textState.style.opacity,
                             textShadow: textState.style.textShadow,
                             lineHeight: textState.style.lineHeight || 'normal',
-                            padding: textState.style.textContentPadding || '5px 2px 5px 2px' // Restore text content padding with default
+                            padding: textState.style.textContentPadding || '2.5px 2px 5px 2px' // Restore text content padding with default
                         });
                         
                         // Set bubble background color from saved state (fallback to white if not set)
@@ -1971,7 +1971,7 @@ class ComicCreator {
                     opacity: bubbleStyle.opacity,
                     textShadow: bubbleStyle.textShadow,
                     lineHeight: bubbleStyle.lineHeight || 'normal',
-                    padding: bubbleStyle.textContentPadding || '5px 2px 5px 2px' // Restore text content padding with default
+                    padding: bubbleStyle.textContentPadding || '2.5px 2px 5px 2px' // Reduced top padding by 50%
                 });
 
                 // Restore bubble background and opacity
@@ -2547,7 +2547,7 @@ class ComicCreator {
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
         textElement.style.color = '#000000'; // Set default text color to black
-        textElement.style.padding = '5px 2px 5px 2px'; // Explicitly set text content padding
+        textElement.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
         
         // Add drag handle for better usability
         const dragHandle = document.createElement('div');
@@ -5506,7 +5506,7 @@ class ComicCreator {
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
         textElement.style.color = '#000000';
-        textElement.style.padding = '5px 2px 5px 2px'; // Explicitly set text content padding
+        textElement.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
 
         // Add control handles (same as addTextToPanel)
         const dragHandle = document.createElement('div');
