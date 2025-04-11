@@ -120,6 +120,9 @@ class ComicCreator {
         // Find all thumbnails-grid containers
         const grids = document.querySelectorAll('.thumbnails-grid');
         
+        console.log('updateImageLibrary called. Current uploadedImages count:', this.uploadedImages.length);
+        console.log('Current folder ID:', this.currentFolderId);
+        
         // Get all currently used image IDs from panels
         const usedImageIds = Array.from(document.querySelectorAll('.comic-panel'))
             .map(panel => panel.dataset.imageId)
@@ -156,13 +159,31 @@ class ComicCreator {
 
             // Get current folder's items
             const currentFolder = this.folderStructure[this.currentFolderId];
+            
+            // Debug log for current folder
+            console.log('Current folder structure:', currentFolder);
+            if (!currentFolder) {
+                console.error('ERROR: Current folder not found in folderStructure:', this.currentFolderId);
+                console.log('Available folders:', Object.keys(this.folderStructure));
+                return; // Exit to prevent errors
+            }
+            
+            console.log('Current folder items count:', currentFolder.items.length);
+            
             let lastContainer = null;  // Track the last created container
             
             // Add folders first
             currentFolder.items.forEach(itemId => {
                 const itemIdStr = itemId.toString();
+                console.log('Processing item ID:', itemIdStr, 'Is folder?', itemIdStr.startsWith('folder_'));
+                
                 if (itemIdStr.startsWith('folder_')) {
                     const folder = this.folderStructure[itemIdStr];
+                    if (!folder) {
+                        console.error('ERROR: Referenced folder not found in structure:', itemIdStr);
+                        return; // Skip this item
+                    }
+                    
                     const container = document.createElement('div');
                     lastContainer = container;  // Update last container
                     container.className = 'folder-container';
@@ -202,7 +223,12 @@ class ComicCreator {
             currentFolder.items.forEach(itemId => {
                 const itemIdStr = itemId.toString();
                 if (!itemIdStr.startsWith('folder_')) {
+                    console.log('updateImageLibrary: Looking for image ID in structure:', itemIdStr);
+                    
                     const image = this.uploadedImages.find(img => String(img.id) === itemIdStr);
+                    console.log('updateImageLibrary: Lookup result in this.uploadedImages:', 
+                        image ? `Found ID: ${image.id}` : 'Not Found');
+                    
                     if (image) {
                         const container = document.createElement('div');
                         lastContainer = container;  // Update last container
@@ -229,6 +255,8 @@ class ComicCreator {
                         }
                         
                         grid.appendChild(container);
+                    } else {
+                        console.warn('Image not found for ID:', itemIdStr);
                     }
                 }
             });
@@ -239,15 +267,115 @@ class ComicCreator {
     }
 
     setupDragAndDrop(container, item) {
+        // Add click handler for multi-selection
+        if (container.classList.contains('thumbnail-container')) {
+            container.addEventListener('click', (e) => {
+                const itemId = container.dataset.imageId;
+                // Handle multi-selection with Ctrl/Cmd key
+                if (e.ctrlKey || e.metaKey) {
+                    // Toggle selection
+                    const index = this.selectedAssets.indexOf(itemId);
+                    if (index !== -1) {
+                        // Deselect
+                        this.selectedAssets.splice(index, 1);
+                        container.classList.remove('selected');
+                    } else {
+                        // Select
+                        this.selectedAssets.push(itemId);
+                        container.classList.add('selected');
+                    }
+                    this.lastSelectedAsset = itemId;
+                }
+                // Handle range selection with Shift key
+                else if (e.shiftKey && this.lastSelectedAsset) {
+                    // Get all visible thumbnails
+                    const grid = container.closest('.thumbnails-grid');
+                    const visibleContainers = Array.from(grid.querySelectorAll('.thumbnail-container'));
+                    
+                    // Find indices of last selected and current item
+                    const lastIndex = visibleContainers.findIndex(c => c.dataset.imageId === this.lastSelectedAsset);
+                    const currentIndex = visibleContainers.findIndex(c => c.dataset.imageId === itemId);
+                    
+                    if (lastIndex !== -1 && currentIndex !== -1) {
+                        // Clear current selection
+                        this.selectedAssets = [];
+                        visibleContainers.forEach(c => c.classList.remove('selected'));
+                        
+                        // Select range
+                        const start = Math.min(lastIndex, currentIndex);
+                        const end = Math.max(lastIndex, currentIndex);
+                        
+                        for (let i = start; i <= end; i++) {
+                            const id = visibleContainers[i].dataset.imageId;
+                            this.selectedAssets.push(id);
+                            visibleContainers[i].classList.add('selected');
+                        }
+                    }
+                }
+                // Normal click - clear selection and select only this item
+                else {
+                    // Clear previous selection
+                    document.querySelectorAll('.thumbnail-container.selected').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    this.selectedAssets = [itemId];
+                    container.classList.add('selected');
+                    this.lastSelectedAsset = itemId;
+                }
+                
+                // Prevent event from reaching parent elements
+                e.stopPropagation();
+            });
+        }
+
+        // Dragstart event for all draggable items
         container.addEventListener('dragstart', (e) => {
             const itemId = container.dataset.imageId || container.dataset.folderId;
-            e.dataTransfer.setData('text/plain', itemId);
-            e.dataTransfer.setData('type', container.dataset.imageId ? 'image' : 'folder');
-            container.classList.add('dragging');
+            const itemType = container.dataset.imageId ? 'image' : 'folder';
+            
+            // If dragging a selected thumbnail and there are multiple items selected
+            if (itemType === 'image' && this.selectedAssets.includes(itemId) && this.selectedAssets.length > 1) {
+                // Set data for all selected items
+                e.dataTransfer.setData('text/plain', JSON.stringify(this.selectedAssets));
+                e.dataTransfer.setData('type', 'multi-image');
+                
+                // Create a custom drag image showing the number of items
+                const dragFeedback = document.createElement('div');
+                dragFeedback.style.position = 'absolute';
+                dragFeedback.style.top = '-1000px';
+                dragFeedback.style.background = 'rgba(0, 0, 0, 0.7)';
+                dragFeedback.style.color = 'white';
+                dragFeedback.style.padding = '10px';
+                dragFeedback.style.borderRadius = '5px';
+                dragFeedback.style.pointerEvents = 'none';
+                dragFeedback.textContent = `${this.selectedAssets.length} items`;
+                
+                document.body.appendChild(dragFeedback);
+                e.dataTransfer.setDragImage(dragFeedback, 25, 25);
+                
+                // Remove the element after drag starts
+                setTimeout(() => {
+                    document.body.removeChild(dragFeedback);
+                }, 0);
+                
+                // Add dragging class to all selected items
+                this.selectedAssets.forEach(id => {
+                    const element = document.querySelector(`.thumbnail-container[data-image-id="${id}"]`);
+                    if (element) element.classList.add('dragging');
+                });
+            } else {
+                // Single item drag
+                e.dataTransfer.setData('text/plain', itemId);
+                e.dataTransfer.setData('type', itemType);
+                container.classList.add('dragging');
+            }
         });
 
         container.addEventListener('dragend', () => {
-            container.classList.remove('dragging');
+            // Remove dragging class from all items
+            document.querySelectorAll('.dragging').forEach(el => {
+                el.classList.remove('dragging');
+            });
         });
 
         // Make folders droppable
@@ -266,21 +394,41 @@ class ComicCreator {
                 e.preventDefault();
                 container.classList.remove('drag-over');
                 
-                const itemId = e.dataTransfer.getData('text/plain');
-                const itemType = e.dataTransfer.getData('type');
+                const type = e.dataTransfer.getData('type');
                 const targetFolderId = container.dataset.folderId;
-
-                // Don't allow dropping a folder into itself or its descendants
-                if (itemType === 'folder') {
-                    if (itemId === targetFolderId) return;
-                    let parent = this.folderStructure[targetFolderId].parent;
-                    while (parent) {
-                        if (parent === itemId) return;
-                        parent = this.folderStructure[parent].parent;
+                
+                // Handle multiple items
+                if (type === 'multi-image') {
+                    try {
+                        const itemIds = JSON.parse(e.dataTransfer.getData('text/plain'));
+                        
+                        // Process each selected item
+                        itemIds.forEach(itemId => {
+                            // Check if this is a valid item to move
+                            if (typeof itemId === 'string') {
+                                this.moveItemToFolder(itemId, targetFolderId);
+                            }
+                        });
+                    } catch (error) {
+                        console.error('Error processing multiple items:', error);
                     }
-                }
+                } else {
+                    // Handle single item
+                    const itemId = e.dataTransfer.getData('text/plain');
+                    const itemType = e.dataTransfer.getData('type');
 
-                this.moveItemToFolder(itemId, targetFolderId);
+                    // Don't allow dropping a folder into itself or its descendants
+                    if (itemType === 'folder') {
+                        if (itemId === targetFolderId) return;
+                        let parent = this.folderStructure[targetFolderId].parent;
+                        while (parent) {
+                            if (parent === itemId) return;
+                            parent = this.folderStructure[parent].parent;
+                        }
+                    }
+
+                    this.moveItemToFolder(itemId, targetFolderId);
+                }
             });
         }
     }
@@ -4242,10 +4390,25 @@ class ComicCreator {
                 throw new Error('Invalid project file format');
             }
             
+            // Save the previous uploadedImages and folderStructure for potential recovery
+            const previousUploadedImages = [...this.uploadedImages];
+            const previousFolderStructure = JSON.parse(JSON.stringify(this.folderStructure));
+            
             // Clear current state
             this.uploadedImages = [];
             this.pages = [];
             this.currentPageIndex = 0;
+            
+            // Reset folder structure to default
+            this.folderStructure = {
+                root: {
+                    type: 'folder',
+                    name: 'root',
+                    items: [],
+                    parent: null
+                }
+            };
+            this.currentFolderId = 'root';
             
             // Load global background settings if present
             if (projectState.hasOwnProperty('useGlobalBackgroundStyle')) {
@@ -4265,8 +4428,20 @@ class ComicCreator {
                             id: img.id,
                             name: img.name,
                             src: img.src,
-                            width: img.width,
-                            height: img.height
+                            width: img.width || image.width,
+                            height: img.height || image.height
+                        });
+                    };
+                    image.onerror = () => {
+                        console.error(`Failed to load image: ${img.name} (${img.id})`);
+                        // Resolve with the image data anyway, but it won't display properly
+                        resolve({
+                            id: img.id,
+                            name: img.name,
+                            src: img.src,
+                            width: img.width || 100,
+                            height: img.height || 100,
+                            loadError: true
                         });
                     };
                     image.src = img.src;
@@ -4275,11 +4450,75 @@ class ComicCreator {
             
             this.uploadedImages = loadedImages;
             
+            // Log the loaded images data
+            console.log('Images loaded into this.uploadedImages:', this.uploadedImages.map(img => ({
+                id: img.id, 
+                name: img.name, 
+                srcStart: img.src.substring(0, 60)
+            })));
+            
+            // Handle folder structure based on project version
+            if (projectState.folderStructure) {
+                // New format with folder structure
+                console.log('Loading project with folder structure (v1.1+)');
+                this.folderStructure = projectState.folderStructure;
+                if (projectState.currentFolderId) {
+                    this.currentFolderId = projectState.currentFolderId;
+                } else {
+                    this.currentFolderId = 'root'; // Default to root if not specified
+                }
+                console.log('Folder structure loaded:', {
+                    folderCount: Object.keys(this.folderStructure).length,
+                    rootItemCount: this.folderStructure.root.items.length,
+                    currentFolder: this.currentFolderId
+                });
+                console.log('Final folder structure before UI update:', JSON.stringify(this.folderStructure, null, 2));
+            } else {
+                // Old format without folder structure, place all images in root folder
+                console.log('Loading older project format without folder structure (v1.0)');
+                // Add all image IDs to root folder
+                this.uploadedImages.forEach(image => {
+                    // Avoid duplicate entries
+                    if (!this.folderStructure.root.items.includes(image.id)) {
+                        this.folderStructure.root.items.push(image.id.toString());
+                    }
+                });
+                console.log('Created root folder with all images:', {
+                    imageCount: this.uploadedImages.length,
+                    rootItemCount: this.folderStructure.root.items.length
+                });
+                console.log('Final folder structure before UI update:', JSON.stringify(this.folderStructure, null, 2));
+            }
+            
+            // Verify folder structure integrity
+            let integrityError = false;
+            if (!this.folderStructure.root) {
+                console.error('CRITICAL ERROR: Root folder missing in folder structure after load');
+                integrityError = true;
+            } else if (!Array.isArray(this.folderStructure.root.items)) {
+                console.error('CRITICAL ERROR: Root folder items is not an array after load');
+                integrityError = true;
+            }
+            
+            // If there's a critical integrity error, recover previous state
+            if (integrityError) {
+                console.warn('Recovering previous folder structure and images due to integrity error');
+                this.uploadedImages = previousUploadedImages;
+                this.folderStructure = previousFolderStructure;
+                throw new Error('Failed to load project due to folder structure integrity error');
+            }
+            
             // Load pages
             this.pages = projectState.pages;
             this.currentPageIndex = projectState.currentPageIndex;
             
-            // Update UI
+            // Ensure the currentFolderId actually exists in the structure
+            if (!this.folderStructure[this.currentFolderId]) {
+                console.warn(`Current folder ID ${this.currentFolderId} not found in structure, resetting to root`);
+                this.currentFolderId = 'root';
+            }
+            
+            // Update UI - after both images and folder structure are fully loaded
             this.updateImageLibrary();
             
             // Load the current page
@@ -6077,10 +6316,17 @@ class ComicCreator {
     }
 
     moveItemToFolder(itemId, targetFolderId) {
+        // Ensure we're working with string IDs
+        const itemIdStr = itemId.toString();
+        const targetFolderIdStr = targetFolderId.toString();
+        
         // Don't proceed if trying to move to the same folder
-        if (this.currentFolderId === targetFolderId) {
+        if (this.currentFolderId === targetFolderIdStr) {
+            console.log('Item already in target folder, skipping move');
             return;
         }
+        
+        console.log(`Moving item ${itemIdStr} to folder ${targetFolderIdStr}`);
         
         // First find which folder currently contains the item
         let sourceFolder = null;
@@ -6088,22 +6334,47 @@ class ComicCreator {
         
         // Search through all folders to find where this item currently exists
         Object.entries(this.folderStructure).forEach(([folderId, folder]) => {
-            const index = folder.items.indexOf(itemId);
-            if (index !== -1) {
+            if (!folder.items) {
+                console.error(`Folder ${folderId} has no items array`);
+                return;
+            }
+            
+            // Convert all folder item IDs to strings for consistent comparison
+            const folderItems = folder.items.map(id => id.toString());
+            const itemIndex = folderItems.indexOf(itemIdStr);
+            
+            if (itemIndex !== -1) {
                 sourceFolder = folder;
-                sourceIndex = index;
+                sourceIndex = itemIndex;
             }
         });
         
         // If found in a folder, remove it
         if (sourceFolder && sourceIndex !== -1) {
             sourceFolder.items.splice(sourceIndex, 1);
+            console.log(`Removed item from source folder`);
+        } else {
+            console.warn(`Item ${itemIdStr} not found in any folder`);
         }
 
         // Add to target folder
-        if (this.folderStructure[targetFolderId]) {
-            this.folderStructure[targetFolderId].items.push(itemId);
+        if (this.folderStructure[targetFolderIdStr]) {
+            // Ensure target folder has an items array
+            if (!this.folderStructure[targetFolderIdStr].items) {
+                this.folderStructure[targetFolderIdStr].items = [];
+            }
+            
+            // Only add if not already present (avoid duplicates)
+            if (!this.folderStructure[targetFolderIdStr].items.includes(itemIdStr)) {
+                this.folderStructure[targetFolderIdStr].items.push(itemIdStr);
+                console.log(`Added item to target folder ${targetFolderIdStr}`);
+            } else {
+                console.warn(`Item already exists in target folder ${targetFolderIdStr}`);
+            }
+            
             this.updateImageLibrary();
+        } else {
+            console.error(`Target folder ${targetFolderIdStr} not found`);
         }
     }
 }
