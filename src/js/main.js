@@ -6077,11 +6077,27 @@ class ComicCreator {
     }
 
     moveItemToFolder(itemId, targetFolderId) {
-        // Remove from current folder
-        const currentFolder = this.folderStructure[this.currentFolderId];
-        const itemIndex = currentFolder.items.indexOf(itemId);
-        if (itemIndex !== -1) {
-            currentFolder.items.splice(itemIndex, 1);
+        // Don't proceed if trying to move to the same folder
+        if (this.currentFolderId === targetFolderId) {
+            return;
+        }
+        
+        // First find which folder currently contains the item
+        let sourceFolder = null;
+        let sourceIndex = -1;
+        
+        // Search through all folders to find where this item currently exists
+        Object.entries(this.folderStructure).forEach(([folderId, folder]) => {
+            const index = folder.items.indexOf(itemId);
+            if (index !== -1) {
+                sourceFolder = folder;
+                sourceIndex = index;
+            }
+        });
+        
+        // If found in a folder, remove it
+        if (sourceFolder && sourceIndex !== -1) {
+            sourceFolder.items.splice(sourceIndex, 1);
         }
 
         // Add to target folder
