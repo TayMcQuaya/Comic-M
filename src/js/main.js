@@ -2105,6 +2105,52 @@ class ComicCreator {
         }
     }
 
+    // Helper function to preload fonts for PDF export
+    preloadFontsForExport() {
+        return new Promise(async (resolve) => {
+            // List of fonts to ensure are loaded
+            const fontsToLoad = [
+                'Arial',
+                'Comic Sans MS', 
+                'Times New Roman',
+                'Impact',
+                'Bangers',
+                'Permanent Marker',
+                'Luckiest Guy',
+                'Boogaloo',
+                'Acme'
+            ];
+            
+            // Create the Font Face Observer promises
+            if (typeof FontFaceObserver === 'undefined') {
+                console.log('FontFaceObserver not available, skipping font preloading');
+                resolve(); // Resolve immediately if FontFaceObserver is not available
+                return;
+            }
+            
+            try {
+                const fontPromises = fontsToLoad.map(font => {
+                    return new FontFaceObserver(font).load('BESbswy', 5000); // 5 second timeout
+                });
+                
+                // Wait for all fonts with a timeout
+                const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Race between all fonts loading and the timeout
+                await Promise.race([
+                    Promise.all(fontPromises),
+                    timeoutPromise
+                ]);
+                
+                console.log('Fonts preloaded for PDF export');
+            } catch (error) {
+                console.warn('Error preloading fonts, continuing anyway:', error);
+            }
+            
+            resolve();
+        });
+    }
+    
     async downloadComic() {
         // Show custom modal and wait for user input
         const filename = await this.promptForFilename("My Comic", ".pdf"); // Pass default and extension
@@ -2143,6 +2189,28 @@ class ComicCreator {
         });
 
         try {
+            // Try to preload fonts for better PDF export
+            await this.preloadFontsForExport();
+            
+            // Check if html2canvas is available
+            if (typeof html2canvas === 'undefined') {
+                // Attempt to dynamically load html2canvas if not available
+                console.log('html2canvas not found, attempting to load it dynamically');
+                
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('Failed to load html2canvas'));
+                    document.head.appendChild(script);
+                });
+                
+                // Double check after loading
+                if (typeof html2canvas === 'undefined') {
+                    throw new Error('Could not load html2canvas library');
+                }
+            }
+            
             // Create a new array to store page images
             const pageImages = [];
             
@@ -2156,11 +2224,15 @@ class ComicCreator {
                 
                 console.log(`Capturing page ${index + 1}`);
                 
-                // Allow time for the page to render completely
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Allow more time for the page to render completely
+                await new Promise(resolve => setTimeout(resolve, 500));
                 
                 // Get the comic canvas
                 const canvas = document.getElementById('comic-canvas');
+                if (!canvas) {
+                    console.error(`Comic canvas element not found for page ${index + 1}`);
+                    continue; // Skip this page but try the others
+                }
                 
                 // Add export class to hide UI elements during capture
                 canvas.classList.add('exporting');
@@ -2174,26 +2246,59 @@ class ComicCreator {
                     textBox.classList.remove('selected-text');
                 });
                 
-                // Use html2canvas to convert to canvas
+                // Process elements for export and get restoration function
+                const restoreStyles = this.processElementsForExport(canvas);
+                
+                // Use html2canvas with a more robust approach including retries
                 try {
-                    const h2c = await html2canvas(canvas, {
-                        allowTaint: true,
-                        useCORS: true,
-                        scale: 2, // Higher quality
-                        backgroundColor: null,
-                        logging: false
-                    });
+                    let h2c = null;
+                    const maxRetries = 2;
                     
-                    // Store the page image with its index
-                    pageImages.push({
-                        canvas: h2c,
-                        index: index
-                    });
+                    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+                        try {
+                            h2c = await html2canvas(canvas, {
+                                allowTaint: true,
+                                useCORS: true,
+                                scale: 2, // Higher quality
+                                backgroundColor: null,
+                                logging: attempt > 0, // Enable logging on retry attempts
+                                foreignObjectRendering: false, // Try disabling for better compatibility
+                                removeContainer: true,
+                                onclone: (clonedDoc, clonedElement) => {
+                                    // Additional processing on the cloned document if needed
+                                    console.log(`Cloned document for page ${index + 1}`);
+                                }
+                            });
+                            break; // Success, exit retry loop
+                        } catch (retryError) {
+                            console.warn(`Attempt ${attempt + 1}/${maxRetries + 1} failed for page ${index + 1}:`, retryError);
+                            
+                            if (attempt === maxRetries) {
+                                throw retryError; // Re-throw on final attempt
+                            }
+                            
+                            // Wait before retrying
+                            await new Promise(resolve => setTimeout(resolve, 300));
+                        }
+                    }
                     
+                    if (h2c) {
+                        // Store the page image with its index
+                        pageImages.push({
+                            canvas: h2c,
+                            index: index
+                        });
+                    }
+                } catch (captureError) {
+                    console.error(`Error capturing page ${index + 1}:`, captureError);
+                } finally {
                     // Remove the export class
                     canvas.classList.remove('exporting');
-                } catch (error) {
-                    console.error(`Error capturing page ${index + 1}:`, error);
+                    
+                    // Restore original styles
+                    if (restoreStyles) {
+                        restoreStyles();
+                    }
                 }
             }
             
@@ -5705,6 +5810,88 @@ class ComicCreator {
         handle.addEventListener('mousedown', onMouseDown);
         element.addEventListener('mousedown', onMouseDown);
         element.addEventListener('dragstart', (e) => e.preventDefault());
+    }
+
+    // Helper method to process CSS variables for export
+    processElementsForExport(rootElement) {
+        if (!rootElement) return;
+        
+        // Process text bubbles to ensure CSS variables are properly applied
+        const textBubbles = rootElement.querySelectorAll('.text-bubble');
+        const originalStyles = [];
+        
+        textBubbles.forEach(bubble => {
+            // Store original style for restoration
+            originalStyles.push({
+                element: bubble,
+                backgroundColor: bubble.style.backgroundColor,
+                color: bubble.style.color,
+                fontFamily: bubble.style.fontFamily,
+                fontSize: bubble.style.fontSize
+            });
+            
+            // Get computed styles
+            const computedStyle = window.getComputedStyle(bubble);
+            
+            // Apply computed background color directly
+            const bgColor = computedStyle.getPropertyValue('background-color');
+            if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                bubble.style.backgroundColor = bgColor;
+            } else {
+                bubble.style.backgroundColor = '#ffffff'; // Default to white
+            }
+            
+            // Apply computed text color directly
+            const textColor = computedStyle.getPropertyValue('color');
+            if (textColor) {
+                bubble.style.color = textColor;
+            }
+            
+            // Apply computed font properties directly
+            const fontFamily = computedStyle.getPropertyValue('font-family');
+            const fontSize = computedStyle.getPropertyValue('font-size');
+            if (fontFamily) bubble.style.fontFamily = fontFamily;
+            if (fontSize) bubble.style.fontSize = fontSize;
+            
+            // Ensure text content is visible
+            const textElement = bubble.querySelector('.text-content');
+            if (textElement) {
+                textElement.style.opacity = '1';
+                textElement.style.visibility = 'visible';
+            }
+        });
+        
+        // Return function to restore original styles
+        return function restoreOriginalStyles() {
+            originalStyles.forEach(item => {
+                const element = item.element;
+                
+                // Only restore properties that were originally set
+                if (item.backgroundColor) {
+                    element.style.backgroundColor = item.backgroundColor;
+                } else {
+                    element.style.removeProperty('background-color');
+                }
+                
+                if (item.color) {
+                    element.style.color = item.color;
+                } else {
+                    element.style.removeProperty('color');
+                }
+                
+                if (item.fontFamily) {
+                    element.style.fontFamily = item.fontFamily;
+                } else {
+                    element.style.removeProperty('font-family');
+                }
+                
+                if (item.fontSize) {
+                    element.style.fontSize = item.fontSize;
+                } else {
+                    element.style.removeProperty('font-size');
+                }
+            });
+        };
     }
 }
 

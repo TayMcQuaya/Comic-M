@@ -4011,3 +4011,42 @@ input[type="color"] {
     background: var(--hover-color);
     color: var(--text-bright);
 }
+
+/* Export-specific styles */
+.exporting {
+    /* Remove any styling that might interfere with clean export */
+    outline: none !important;
+}
+
+.exporting .comic-panel {
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+}
+
+.exporting .comic-panel.selected {
+    border: 1px solid #000 !important;
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.exporting .text-bubble {
+    /* Ensure text bubbles render correctly in exported PDF */
+    border: 1px solid rgba(0, 0, 0, 0.7) !important;
+    /* Set minimum opacity to ensure visibility */
+    opacity: 1 !important;
+}
+
+.exporting .resize-handle,
+.exporting .drag-handle,
+.exporting .format-buttons,
+.exporting .delete-text-btn,
+.exporting .text-bubble-controls {
+    /* Hide editor controls during export */
+    display: none !important;
+}
+
+/* Force font visibility during export */
+.exporting .text-bubble * {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
