@@ -1284,6 +1284,7 @@ class ComicCreator {
                         color: textElement.style.color,
                         opacity: textElement.style.opacity,
                         bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
+                        bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
                         textShadow: textElement.style.textShadow,
                         lineHeight: textElement.style.lineHeight || 'normal',
                         hasOutline: textElement.dataset.hasOutline === 'true',
@@ -1335,6 +1336,63 @@ class ComicCreator {
             } else {
                 // Only update current page's background style
                 currentPage.canvasBackgroundStyle = currentStyle;
+            }
+            
+            // Save canvas text elements (text bubbles directly on the canvas, not inside panels)
+            const canvasTextBubbles = Array.from(canvas.querySelectorAll(':scope > .text-bubble'));
+            if (canvasTextBubbles.length > 0) {
+                console.log(`Saving ${canvasTextBubbles.length} canvas text elements`);
+                
+                currentPage.canvasTextElements = canvasTextBubbles.map(textBubble => {
+                    const textElement = textBubble.querySelector('.text-content');
+                    
+                    // Extract the class names for bubble type
+                    const bubbleClasses = Array.from(textBubble.classList)
+                        .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
+                                      'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
+                                      'no-bubble'].includes(cls));
+                    
+                    // Extract tail position class
+                    const tailPositionClass = Array.from(textBubble.classList)
+                        .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
+                    
+                    return {
+                        id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
+                        previousBubbleType: textBubble.dataset.previousBubbleType || '',
+                        tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                        content: textElement.innerHTML,
+                        style: {
+                            left: textBubble.style.left,
+                            top: textBubble.style.top,
+                            // Only save width/height if they are explicitly set
+                            ...(textBubble.style.width && { width: textBubble.style.width }),
+                            ...(textBubble.style.height && { height: textBubble.style.height }),
+                            transform: textBubble.style.transform,
+                            zIndex: textBubble.style.zIndex,
+                            fontSize: textElement.style.fontSize,
+                            fontFamily: textElement.style.fontFamily,
+                            fontWeight: textElement.style.fontWeight,
+                            fontStyle: textElement.style.fontStyle,
+                            textDecoration: textElement.style.textDecoration,
+                            textAlign: textElement.style.textAlign,
+                            textTransform: textElement.style.textTransform,
+                            color: textElement.style.color,
+                            opacity: textElement.style.opacity,
+                            bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
+                            bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
+                            textShadow: textElement.style.textShadow,
+                            lineHeight: textElement.style.lineHeight || 'normal',
+                            hasOutline: textElement.dataset.hasOutline === 'true',
+                            outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
+                            outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
+                            textContentPadding: textElement.style.padding || '2.5px 2px 5px 2px' // Save text content padding
+                        }
+                    };
+                });
+            } else {
+                // Ensure canvasTextElements is at least an empty array when no canvas text
+                currentPage.canvasTextElements = [];
             }
         }
         
