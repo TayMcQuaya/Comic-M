@@ -183,6 +183,15 @@ body {
     border: 2px solid var(--border-color);
 }
 
+.thumbnail-container.selected {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-color);
+    background-color: rgba(74, 144, 226, 0.1);
+    position: relative;
+    z-index: 1;
+    transform: scale(1.02);
+}
+
 .thumbnail-container.dragging {
     opacity: 1;
     cursor: grabbing;
@@ -496,8 +505,7 @@ body {
     overflow-y: auto;
     position: sticky;
     top: 0;
-    padding-bottom: 40px; /* Increased bottom padding to ensure scrollbar arrow visibility */
-    margin-bottom: 20px; /* Added margin to ensure space for scrollbar at bottom */
+    padding-bottom: 20px; /* Add extra padding at bottom to ensure visibility of last items */
 }
 
 .editor-sidebar h3 {
@@ -678,8 +686,6 @@ img[draggable="false"] {
     padding-right: 12px;
     margin-right: -6px;
     font-weight: bold;
-    padding-bottom: 40px; /* Added bottom padding to ensure scrollbar arrow visibility */
-    margin-bottom: 20px; /* Added bottom margin for extra space */
 }
 
 .control-group {
@@ -770,7 +776,7 @@ img[draggable="false"] {
     max-height: calc(100vh - 220px); /* Increased from 180px to 220px to account for sidebar padding and headers */
     padding-right: 12px;
     margin-right: -6px;
-    padding-bottom: 40px; /* Increased padding to ensure scrollbar arrow visibility */
+    padding-bottom: 20px; /* Add extra padding at bottom */
 }
 
 .editor-sidebar .thumbnail-container {
@@ -3737,7 +3743,7 @@ select.font-family option {
 .sidebar-content .thumbnails-grid {
     /* Inherits most styles, ensure max-height is appropriate */
     max-height: calc(100vh - 280px); /* Adjust based on header/tabs height */
-    padding-bottom: 40px; /* Increased padding to ensure scrollbar arrow visibility */
+    padding-bottom: 20px; /* Add extra padding at bottom */
 }
 
 /* Sticker Image Styles */
@@ -4082,27 +4088,19 @@ input[type="color"] {
     .editor-container {
         min-height: 700px; /* Reduce min-height on smaller screens */
         height: calc(100vh - 100px);
-        padding-bottom: 20px; /* Ensure there's bottom padding */
     }
     
     .editor-sidebar {
         height: calc(100vh - 80px);
         max-height: calc(100vh - 80px);
-        padding-bottom: 40px; /* Preserve bottom padding on small screens */
     }
     
     .editor-sidebar .thumbnails-grid {
         max-height: calc(100vh - 180px);
-        padding-bottom: 40px; /* Preserve bottom padding on small screens */
     }
     
     .sidebar-content .thumbnails-grid {
         max-height: calc(100vh - 220px);
-        padding-bottom: 40px; /* Preserve bottom padding on small screens */
-    }
-    
-    .panel-controls {
-        padding-bottom: 40px; /* Preserve bottom padding on small screens */
     }
 }
 
@@ -4223,21 +4221,4 @@ input[type="color"] {
 .folder-container.drag-over {
     border-style: dashed;
     background-color: var(--hover-color);
-}
-
-/* Update existing thumbnail container styles */
-.thumbnail-container {
-    position: relative;
-    width: 100%;
-    background: var(--card-bg);
-    border-radius: 6px;
-    padding: 0.25rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    cursor: grab;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
-    border: 2px solid var(--border-color);
 }
