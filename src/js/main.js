@@ -893,6 +893,11 @@ class ComicCreator {
                         <i class="fas fa-undo"></i> Reset Zoom
                     </button>
                 </div>
+                <div class="flip-group" style="margin-top: 1rem;">
+                    <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                        <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
+                    </button>
+                </div>
             </div>
             <div class="control-group">
                 <h4 style="text-align: center;">Rotation</h4>
@@ -960,6 +965,37 @@ class ComicCreator {
             });
         }
 
+        // Add flip horizontal button listener
+        const flipHorizontalBtn = controls.querySelector('.flip-horizontal-btn');
+        if (flipHorizontalBtn) {
+            const img = panel.querySelector('img');
+            if (img) {
+                // Set initial state based on current transform
+                const isFlipped = img.style.transform.includes('scaleX(-1)');
+                flipHorizontalBtn.classList.toggle('active', isFlipped);
+                
+                flipHorizontalBtn.addEventListener('click', () => {
+                    const currentTransform = img.style.transform || '';
+                    const isCurrentlyFlipped = currentTransform.includes('scaleX(-1)');
+                    
+                    // Toggle the flip state
+                    if (isCurrentlyFlipped) {
+                        img.style.transform = currentTransform.replace(/\s*scaleX\(-1\)/, '');
+                        panel.dataset.isFlippedHorizontally = 'false';
+                    } else {
+                        img.style.transform = `${currentTransform} scaleX(-1)`;
+                        panel.dataset.isFlippedHorizontally = 'true';
+                    }
+                    
+                    // Toggle button active state
+                    flipHorizontalBtn.classList.toggle('active');
+                    
+                    // Save the current page state
+                    this.saveCurrentPageState();
+                });
+            }
+        }
+
         // Add rotation control listeners
         const rotationControl = controls.querySelector('.rotation-control');
         const rotationValue = controls.querySelector('.rotation-value');
@@ -976,7 +1012,7 @@ class ComicCreator {
                     const angle = parseInt(e.target.value);
                     panel.dataset.rotation = angle;
                     
-                    // Update transform with new rotation
+                    // Update transform with new rotation while preserving other transforms
                     const currentTransform = img.style.transform || '';
                     if (currentTransform.includes('rotate')) {
                         img.style.transform = currentTransform.replace(/rotate\([^)]+\)/, `rotate(${angle}deg)`);
@@ -1003,7 +1039,7 @@ class ComicCreator {
                 // Reset rotation to 0 degrees
                 panel.dataset.rotation = '0';
                 
-                // Remove rotation from transform
+                // Remove rotation from transform while preserving other transforms
                 const currentTransform = img.style.transform || '';
                 img.style.transform = currentTransform.replace(/\s*rotate\([^)]+\)/g, '');
                 
@@ -1157,18 +1193,6 @@ class ComicCreator {
 
     saveCurrentPageState() {
         console.log(`Saving current page state for page ${this.currentPageIndex}`);
-        
-        // Check if canvas exists before querying DOM elements
-        const canvas = document.querySelector('#comic-canvas');
-        if (!canvas) {
-            console.warn("saveCurrentPageState called when canvas not found. Skipping visual state saving.");
-            // If canvas doesn't exist, we can't save visual state from it.
-            // We might still want to save non-DOM state if there was any, but currently
-            // all saved state relies on reading the DOM elements within the canvas.
-            // So, returning here prevents errors when saving state during navigation away from editor.
-            return; 
-        }
-
         const currentPage = this.pages[this.currentPageIndex];
         if (!currentPage) {
             console.error("Cannot save state - current page not found");
@@ -1219,6 +1243,7 @@ class ComicCreator {
                 panelState.initialScale = panel.dataset.initialScale || '1';
                 panelState.currentScale = panel.dataset.currentScale || '1';
                 panelState.rotation = panel.dataset.rotation || '0';
+                panelState.isFlippedHorizontally = panel.dataset.isFlippedHorizontally === 'true';
             }
             
             // Save text elements
@@ -1242,18 +1267,15 @@ class ComicCreator {
                     tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
                     content: textElement.innerHTML,
                     style: {
-                        // Store positions in pixels (not percentages) to ensure consistency
                         left: textBubble.style.left,
                         top: textBubble.style.top,
                         // Only save width/height if they are explicitly set
                         ...(textBubble.style.width && { width: textBubble.style.width }),
                         ...(textBubble.style.height && { height: textBubble.style.height }),
                         transform: textBubble.style.transform,
-                        backgroundColor: textBubble.style.backgroundColor,
-                        bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
-                        padding: textBubble.style.padding, // Save bubble padding
-                        fontFamily: textElement.style.fontFamily,
+                        zIndex: textBubble.style.zIndex,
                         fontSize: textElement.style.fontSize,
+                        fontFamily: textElement.style.fontFamily,
                         fontWeight: textElement.style.fontWeight,
                         fontStyle: textElement.style.fontStyle,
                         textDecoration: textElement.style.textDecoration,
@@ -1286,59 +1308,13 @@ class ComicCreator {
             height: sticker.style.height,
             transform: sticker.style.transform,
             rotation: sticker.dataset.rotation || '0',
-            zIndex: sticker.style.zIndex // Save zIndex too
+            zIndex: sticker.style.zIndex,
+            size: sticker.dataset.size,
+            isFlippedHorizontally: sticker.dataset.isFlippedHorizontally === 'true'
         }));
 
-        // ---> NEW: Save canvas text elements
-        const canvasTextBubbles = Array.from(canvas.querySelectorAll(':scope > .text-bubble')); // Select only direct children
-        currentPage.canvasTextElements = canvasTextBubbles.map(textBubble => {
-            const textElement = textBubble.querySelector('.text-content');
-            const bubbleClasses = Array.from(textBubble.classList)
-                .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
-                                'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
-                                'no-bubble'].includes(cls));
-            const tailPositionClass = Array.from(textBubble.classList)
-                .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
-                
-            return {
-                id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, // Ensure unique ID
-                bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
-                previousBubbleType: textBubble.dataset.previousBubbleType || '',
-                tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
-                content: textElement.innerHTML,
-                style: { // Save styles relevant for canvas positioning (pixels)
-                    left: textBubble.style.left,
-                    top: textBubble.style.top,
-                    // Only save width/height if they are explicitly set
-                    ...(textBubble.style.width && { width: textBubble.style.width }),
-                    ...(textBubble.style.height && { height: textBubble.style.height }),
-                    transform: textBubble.style.transform,
-                    zIndex: textBubble.style.zIndex, // Save z-index
-                    backgroundColor: textBubble.style.backgroundColor,
-                    bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
-                    padding: textBubble.style.padding, // Save bubble padding
-                    fontFamily: textElement.style.fontFamily,
-                    fontSize: textElement.style.fontSize,
-                    fontWeight: textElement.style.fontWeight,
-                    fontStyle: textElement.style.fontStyle,
-                    textDecoration: textElement.style.textDecoration,
-                    textAlign: textElement.style.textAlign,
-                    textTransform: textElement.style.textTransform,
-                    color: textElement.style.color,
-                    opacity: textElement.style.opacity,
-                    bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
-                    textShadow: textElement.style.textShadow,
-                    lineHeight: textElement.style.lineHeight || 'normal',
-                    hasOutline: textElement.dataset.hasOutline === 'true',
-                    outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
-                    outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
-                    textContentPadding: textElement.style.padding // Save text content padding
-                }
-            };
-        });
-        // <--- END NEW
-
         // Save canvas background style
+        const canvas = document.querySelector('#comic-canvas');
         if (canvas) {
             const backgroundClasses = [
                 'classic-white', 'vintage-paper', 'dotted-pattern',
@@ -1970,7 +1946,8 @@ class ComicCreator {
                 if (state.backgroundStyle) {
                     panel.dataset.backgroundStyle = state.backgroundStyle;
                 }
-
+                
+                // Restore image if present
                 if (state.imageId) {
                     const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
                     if (image) {
@@ -1993,6 +1970,13 @@ class ComicCreator {
                         if (state.initialScale) panel.dataset.initialScale = state.initialScale;
                         if (state.currentScale) panel.dataset.currentScale = state.currentScale;
                         if (state.rotation) panel.dataset.rotation = state.rotation;
+                        if (typeof state.isFlippedHorizontally === 'boolean') {
+                            panel.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
+                            // If flipped, ensure scaleX(-1) is in the transform
+                            if (state.isFlippedHorizontally && !img.style.transform.includes('scaleX(-1)')) {
+                                img.style.transform = `${img.style.transform} scaleX(-1)`;
+                            }
+                        }
                         
                         this.setupImageDragging(img);
                     }
@@ -2179,34 +2163,41 @@ class ComicCreator {
             }
         }
 
-        // Restore stickers last
+        // Restore stickers
         if (stickerStates.length > 0) {
-            console.log(`Restoring ${stickerStates.length} stickers`);
             stickerStates.forEach(state => {
                 const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
                 if (image) {
                     const stickerImg = document.createElement('img');
-                    stickerImg.id = state.id;
-                    stickerImg.src = image.dataUrl || image.src;
-                    stickerImg.alt = "Sticker";
+                    stickerImg.src = image.src;
+                    stickerImg.alt = image.name || 'Sticker';
                     stickerImg.className = 'canvas-sticker-image';
+                    stickerImg.id = state.id;
                     stickerImg.dataset.imageId = state.imageId;
-                    stickerImg.dataset.size = state.size || '100';
-                    if (state.rotation) stickerImg.dataset.rotation = state.rotation;
                     
                     Object.assign(stickerImg.style, {
                         position: 'absolute',
-                        left: state.left,
-                        top: state.top,
-                        width: state.width || '200px',
+                        left: state.left || '0px',
+                        top: state.top || '0px',
+                        width: state.width || '100px',
                         height: state.height || 'auto',
                         transform: state.transform || 'scale(1)',
-                        zIndex: state.zIndex || '100',
-                        cursor: 'grab'
+                        zIndex: state.zIndex || '1'
                     });
-
+                    
+                    if (state.size) stickerImg.dataset.size = state.size;
+                    if (state.rotation) stickerImg.dataset.rotation = state.rotation;
+                    if (typeof state.isFlippedHorizontally === 'boolean') {
+                        stickerImg.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
+                        // If flipped, ensure scaleX(-1) is in the transform
+                        if (state.isFlippedHorizontally && !stickerImg.style.transform.includes('scaleX(-1)')) {
+                            stickerImg.style.transform = `${stickerImg.style.transform} scaleX(-1)`;
+                        }
+                    }
+                    
                     comicCanvas.appendChild(stickerImg);
                     this.makeStickerDraggable(stickerImg);
+                    
                     stickerImg.addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.selectSticker(stickerImg);
@@ -5200,46 +5191,19 @@ class ComicCreator {
                         </button>
                         <div class="zoom-group">
                             <label>Size</label>
-                            <input type="range" class="size-control" min="10" max="1000" value="200">
+                            <input type="range" class="size-control" min="10" max="500" value="200">
                             <span class="size-value">200%</span>
                             <button class="reset-size-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
                                 <i class="fas fa-undo"></i> Reset Size
                             </button>
                         </div>
-                    </div>
-                    <div class="control-group">
-                        <h4 style="text-align: center;">Rotation</h4>
-                        <div class="rotation-group">
-                            <label>Angle</label>
-                            <input type="range" class="rotation-control" min="-180" max="180" value="0" step="1">
-                            <span class="rotation-value">0°</span>
-                            <button class="reset-rotation-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
-                                <i class="fas fa-undo"></i> Reset Rotation
+                        <div class="flip-group" style="margin-top: 1rem;">
+                            <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                                <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
                             </button>
                         </div>
                     </div>
-                    <div class="control-group">
-                        <h4 style="text-align: center;">Position</h4>
-                        <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
-                            <label style="font-size: 16px;">Step Size: </label>
-                            <input type="number" 
-                                   class="step-size-input" 
-                                   value="1" 
-                                   min="0.1" 
-                                   max="20" 
-                                   step="0.1" 
-                                   style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
-                        </div>
-                        <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
-                            <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
-                            <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
-                            <div style="grid-area: center;"></div>
-                            <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
-                            <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
-                        </div>
-                    </div>
                 </div>`;
-            stickerProps.style.display = 'block';
 
             // Add delete listener
             const deleteBtn = stickerProps.querySelector('.delete-sticker-btn');
@@ -5257,6 +5221,34 @@ class ComicCreator {
                     this.deselectAll();
                     this.saveCurrentPageState();
                 };
+            }
+
+            // Add flip horizontal button listener
+            const flipHorizontalBtn = stickerProps.querySelector('.flip-horizontal-btn');
+            if (flipHorizontalBtn) {
+                // Set initial state based on current transform
+                const isFlipped = stickerElement.style.transform.includes('scaleX(-1)');
+                flipHorizontalBtn.classList.toggle('active', isFlipped);
+                
+                flipHorizontalBtn.addEventListener('click', () => {
+                    const currentTransform = stickerElement.style.transform || '';
+                    const isCurrentlyFlipped = currentTransform.includes('scaleX(-1)');
+                    
+                    // Toggle the flip state
+                    if (isCurrentlyFlipped) {
+                        stickerElement.style.transform = currentTransform.replace(/\s*scaleX\(-1\)/, '');
+                        stickerElement.dataset.isFlippedHorizontally = 'false';
+                    } else {
+                        stickerElement.style.transform = `${currentTransform} scaleX(-1)`;
+                        stickerElement.dataset.isFlippedHorizontally = 'true';
+                    }
+                    
+                    // Toggle button active state
+                    flipHorizontalBtn.classList.toggle('active');
+                    
+                    // Save the current page state
+                    this.saveCurrentPageState();
+                });
             }
 
             // Size control listener
@@ -5282,114 +5274,6 @@ class ComicCreator {
                 // Make size value editable
                 this.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
             }
-
-            // Reset size button listener
-            const resetSizeBtn = stickerProps.querySelector('.reset-size-btn');
-            if (resetSizeBtn) {
-                resetSizeBtn.addEventListener('click', () => {
-                    stickerElement.style.width = '200px';
-                    stickerElement.style.height = 'auto';
-                    stickerElement.dataset.size = '200';
-                    if (sizeControl) {
-                        sizeControl.value = 200;
-                        const sizeValue = sizeControl.parentElement.querySelector('.size-value');
-                        if (sizeValue) {
-                            sizeValue.textContent = '200%';
-                        }
-                    }
-                    this.saveCurrentPageState();
-                });
-            }
-
-            // Rotation control listeners
-            const rotationControl = stickerProps.querySelector('.rotation-control');
-            const rotationValue = stickerProps.querySelector('.rotation-value');
-            
-            if (rotationControl) {
-                // Get current rotation angle from sticker dataset
-                const currentRotation = parseInt(stickerElement.dataset.rotation || '0');
-                rotationControl.value = currentRotation;
-                rotationValue.textContent = `${currentRotation}°`;
-                
-                rotationControl.addEventListener('input', (e) => {
-                    const angle = parseInt(e.target.value);
-                    stickerElement.dataset.rotation = angle;
-                    
-                    // Update transform with new rotation
-                    const currentTransform = stickerElement.style.transform || '';
-                    if (currentTransform.includes('rotate')) {
-                        stickerElement.style.transform = currentTransform.replace(/rotate\([^)]+\)/, `rotate(${angle}deg)`);
-                    } else {
-                        stickerElement.style.transform = currentTransform + ` rotate(${angle}deg)`;
-                    }
-                    
-                    rotationValue.textContent = `${angle}°`;
-                    this.saveCurrentPageState();
-                });
-                
-                // Make rotation value editable
-                this.makeSliderValueEditable(rotationControl, rotationValue, '°', 0);
-            }
-            
-            // Reset rotation button listener
-            const resetRotationBtn = stickerProps.querySelector('.reset-rotation-btn');
-            if (resetRotationBtn) {
-                resetRotationBtn.addEventListener('click', () => {
-                    // Reset rotation to 0 degrees
-                    stickerElement.dataset.rotation = '0';
-                    
-                    // Remove rotation from transform
-                    const currentTransform = stickerElement.style.transform || '';
-                    stickerElement.style.transform = currentTransform.replace(/\s*rotate\([^)]+\)/g, '');
-                    
-                    // Update rotation control and value display
-                    if (rotationControl) {
-                        rotationControl.value = 0;
-                        rotationValue.textContent = '0°';
-                    }
-                    
-                    // Save the current page state
-                    this.saveCurrentPageState();
-                });
-            }
-
-            // Position controls
-            const positionBtns = stickerProps.querySelectorAll('.position-btn');
-            positionBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const stepSizeInput = stickerProps.querySelector('.step-size-input');
-                    let step = parseFloat(stepSizeInput?.value || '1');
-                    if (isNaN(step) || step < 0.1 || step > 20) step = 1;
-
-                    const currentLeft = parseFloat(stickerElement.style.left);
-                    const currentTop = parseFloat(stickerElement.style.top);
-
-                    if (btn.classList.contains('up')) {
-                        stickerElement.style.top = `${(currentTop - step)}px`;
-                    } else if (btn.classList.contains('down')) {
-                        stickerElement.style.top = `${(currentTop + step)}px`;
-                    } else if (btn.classList.contains('left')) {
-                        stickerElement.style.left = `${(currentLeft - step)}px`;
-                    } else if (btn.classList.contains('right')) {
-                        stickerElement.style.left = `${(currentLeft + step)}px`;
-                    }
-
-                    // Ensure sticker stays within canvas bounds
-                    const canvas = document.querySelector('#comic-canvas');
-                    if (canvas) {
-                        const canvasRect = canvas.getBoundingClientRect();
-                        const stickerRect = stickerElement.getBoundingClientRect();
-                        
-                        const newLeft = Math.max(0, Math.min(parseFloat(stickerElement.style.left), canvasRect.width - stickerRect.width));
-                        const newTop = Math.max(0, Math.min(parseFloat(stickerElement.style.top), canvasRect.height - stickerRect.height));
-                        
-                        stickerElement.style.left = `${newLeft}px`;
-                        stickerElement.style.top = `${newTop}px`;
-                    }
-
-                    this.saveCurrentPageState();
-                });
-            });
         }
     }
 

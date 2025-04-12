@@ -1793,7 +1793,7 @@ label {
 .speech-bubble::after {
     content: '';
     position: absolute;
-    bottom: -17px;
+    bottom: -15px;
     left: 30px;
     border: 15px solid transparent;
     border-top-color: black;
@@ -2098,7 +2098,7 @@ label {
 /* Bottom positions */
 .speech-tail-bottom-left:after {
     left: 20px;
-    bottom: -17px;
+    bottom: -15px;
     right: auto;
     top: auto;
     border: 15px solid transparent;
@@ -2122,7 +2122,7 @@ label {
 .speech-tail-bottom-right:after {
     left: auto;
     right: 20px;
-    bottom: -17px;
+    bottom: -15px;
     top: auto;
     border: 15px solid transparent;
     border-top-color: black;
@@ -2159,7 +2159,7 @@ label {
 /* Top positions */
 .speech-tail-top-left:after {
     left: 20px;
-    top: -17px;
+    top: -15px;
     right: auto;
     bottom: auto;
     transform: rotate(-90deg);
@@ -2183,7 +2183,7 @@ label {
 
 .speech-tail-top-right:after {
     right: 20px;
-    top: -17px;
+    top: -15px;
     left: auto;
     bottom: auto;
     transform: rotate(-180deg);
@@ -4222,3 +4222,36 @@ input[type="color"] {
     border-style: dashed;
     background-color: var(--hover-color);
 }
+
+/* Control Group Styles */
+.control-group {
+    background: var(--input-bg);
+    padding: 0.3rem;
+    border-radius: 6px;
+    margin-bottom: 0.2rem;
+    border: 2px solid var(--border-color);
+}
+
+.control-group h4 {
+    margin-bottom: 0.2rem;
+    color: var(--text-color);
+    font-size: 0.85rem;
+}
+
+/* Flip Button Styles */
+.flip-horizontal-btn {
+    transition: all 0.2s ease;
+}
+
+.flip-horizontal-btn.active {
+    background: var(--accent-color) !important;
+    color: var(--text-color-light) !important;
+    border-color: var(--accent-color) !important;
+}
+
+.flip-horizontal-btn:hover {
+    background: var(--hover-color);
+    border-color: var(--hover-color);
+}
+
+/* Position Controls */
