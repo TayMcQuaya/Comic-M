@@ -4036,21 +4036,50 @@ input[type="color"] {
 }
 
 .exporting .comic-panel {
-    border: 1px solid #000 !important;
+    border: 3px solid #000 !important; /* Match the 3px border used in editor view */
     box-shadow: none !important;
 }
 
 .exporting .comic-panel.selected {
-    border: 1px solid #000 !important;
+    border: 3px solid #000 !important; /* Match the 3px border used in editor view */
     outline: none !important;
     box-shadow: none !important;
 }
 
 .exporting .text-bubble {
     /* Ensure text bubbles render correctly in exported PDF */
-    border: 1px solid rgba(0, 0, 0, 0.7) !important;
+    border: 2px solid rgba(0, 0, 0, 0.7) !important; /* Increase from 1px to 2px for better visibility */
     /* Set minimum opacity to ensure visibility */
     opacity: 1 !important;
+}
+
+/* Fix for speech bubble tails in export mode */
+.exporting .speech-bubble::after {
+    border-top-color: black !important;
+    border-width: 15px !important;
+}
+
+/* Fix for thought bubble tails in export mode */
+.exporting .thought-bubble::before,
+.exporting .thought-bubble::after,
+.exporting .thought-tail-bottom-left::before,
+.exporting .thought-tail-bottom-left::after,
+.exporting .thought-tail-bottom-center::before,
+.exporting .thought-tail-bottom-center::after,
+.exporting .thought-tail-bottom-right::before,
+.exporting .thought-tail-bottom-right::after,
+.exporting .thought-tail-left-center::before,
+.exporting .thought-tail-left-center::after,
+.exporting .thought-tail-right-center::before,
+.exporting .thought-tail-right-center::after,
+.exporting .thought-tail-top-left::before,
+.exporting .thought-tail-top-left::after,
+.exporting .thought-tail-top-center::before,
+.exporting .thought-tail-top-center::after,
+.exporting .thought-tail-top-right::before,
+.exporting .thought-tail-top-right::after {
+    border-width: 2px !important;
+    border-color: #000 !important;
 }
 
 /* Special handling for no-bubble text elements during export */

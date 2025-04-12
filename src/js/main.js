@@ -2571,9 +2571,34 @@ class ComicCreator {
                                 logging: attempt > 0, // Enable logging on retry attempts
                                 foreignObjectRendering: false, // Try disabling for better compatibility
                                 removeContainer: true,
+                                // Add options to improve border rendering quality
+                                width: canvas.offsetWidth, 
+                                height: canvas.offsetHeight,
+                                x: 0,
+                                y: 0,
+                                imageTimeout: 0,
+                                ignoreElements: (element) => {
+                                    // Ignore any helper elements that shouldn't be in the export
+                                    return element.classList && 
+                                           (element.classList.contains('resize-handle') || 
+                                            element.classList.contains('drag-handle') ||
+                                            element.classList.contains('format-text-btn') ||
+                                            element.classList.contains('delete-text-btn'));
+                                },
                                 onclone: (clonedDoc, clonedElement) => {
                                     // Additional processing on the cloned document if needed
                                     console.log(`Cloned document for page ${index + 1}`);
+                                    
+                                    // Look specifically for elements with thin borders and fix them
+                                    Array.from(clonedElement.querySelectorAll('.comic-panel, .text-bubble')).forEach(el => {
+                                        // Ensure element has computed border
+                                        const computedStyle = window.getComputedStyle(el);
+                                        if (el.classList.contains('comic-panel')) {
+                                            el.style.border = '3px solid #000';
+                                        } else if (el.classList.contains('text-bubble')) {
+                                            el.style.border = '2px solid #000';
+                                        }
+                                    });
                                 }
                             });
                             break; // Success, exit retry loop
