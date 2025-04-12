@@ -5216,7 +5216,7 @@ class ComicCreator {
                         </button>
                         <div class="zoom-group">
                             <label>Size</label>
-                            <input type="range" class="size-control" min="10" max="500" value="200">
+                            <input type="range" class="size-control" min="10" max="1000" value="200">
                             <span class="size-value">200%</span>
                             <button class="reset-size-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
                                 <i class="fas fa-undo"></i> Reset Size

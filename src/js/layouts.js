@@ -649,6 +649,24 @@ export const layouts = {
             { x: 10, y: 45, width: 80, height: 20 },
             { x: 10, y: 70, width: 80, height: 20 }
         ]
+    },
+    'landscape-top-inset': {
+        name: "Landscape with Top-Centre Inset",
+        description: "Wide landscape panel with a smaller panel inset at the top center",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 100 }, // Main background panel
+            { x: 30, y: 10, width: 40, height: 30 }  // Top-center inset panel
+        ]
+    },
+    'landscape-large-bottom-inset': {
+        name: "Landscape with Large Bottom-Left Inset",
+        description: "Wide landscape panel positioned higher with a larger inset at the bottom left",
+        panels: [
+            // Main landscape panel moved up
+            { x: 1, y: 15, width: 98, height: 45 },
+            // Larger inset in bottom-left
+            { x: 5, y: 62, width: 40, height: 35 }
+        ]
     }
 };
 
