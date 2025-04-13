@@ -7,6 +7,11 @@ export const layouts = {
             { x: 0, y: 0, width: 100, height: 100 }
         ]
     },
+    'empty': {
+        name: 'Empty Canvas',
+        description: 'Blank canvas with no panels',
+        panels: []
+    },
     'two-vertical': {
         name: 'Two Vertical Panels',
         description: 'Classic manga-style vertical split',
