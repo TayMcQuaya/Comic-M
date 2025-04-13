@@ -3696,8 +3696,8 @@ class ComicCreator {
                         <div class="color-control">
                             <label for="bubble-color">Bubble Color</label>
                             <div class="color-picker-container">
-                                <input type="color" id="bubble-color" class="bubble-color" value="${this.rgbToHex(window.getComputedStyle(textBox).backgroundColor)}">
-                                <div class="hex-display bubble-color-hex">${this.rgbToHex(window.getComputedStyle(textBox).backgroundColor).toUpperCase()}</div>
+                                <input type="color" id="bubble-color" class="bubble-color" value="${this.getBubbleBackgroundColor(textBox)}">
+                                <div class="hex-display bubble-color-hex">${this.getBubbleBackgroundColor(textBox).toUpperCase()}</div>
                             </div>
                         </div>
                     </div>
@@ -6226,12 +6226,21 @@ class ComicCreator {
             const isNoBubble = bubble.classList.contains('no-bubble');
             
             if (!isNoBubble) {
-                // Only apply background color to regular bubble types (not no-bubble)
-                const bgColor = computedStyle.getPropertyValue('background-color');
-                if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
-                    bubble.style.backgroundColor = bgColor;
+                // Check for custom bubble background color from CSS variable
+                const bubbleBgColor = bubble.style.getPropertyValue('--bubble-background-color') || 
+                                      computedStyle.getPropertyValue('--bubble-background-color');
+                
+                if (bubbleBgColor && bubbleBgColor !== 'transparent') {
+                    // Apply the custom bubble background color directly
+                    bubble.style.backgroundColor = bubbleBgColor;
                 } else {
-                    bubble.style.backgroundColor = '#ffffff'; // Default to white
+                    // Fallback to computed background color
+                    const bgColor = computedStyle.getPropertyValue('background-color');
+                    if (bgColor && bgColor !== 'rgba(0, 0, 0, 0)' && bgColor !== 'transparent') {
+                        bubble.style.backgroundColor = bgColor;
+                    } else {
+                        bubble.style.backgroundColor = '#ffffff'; // Default to white
+                    }
                 }
                 
                 // Ensure regular bubbles have proper borders if not already set
@@ -6416,6 +6425,24 @@ class ComicCreator {
         document.querySelectorAll('.thumbnail-container.selected').forEach(el => {
             el.classList.remove('selected');
         });
+    }
+
+    getBubbleBackgroundColor(textBox) {
+        // First try to get the bubble color from the CSS variable
+        const bubbleColorVariable = textBox.style.getPropertyValue('--bubble-background-color');
+        
+        if (bubbleColorVariable && bubbleColorVariable.trim() !== '') {
+            // If it's already a hex value, return it
+            if (bubbleColorVariable.startsWith('#')) {
+                return bubbleColorVariable;
+            }
+            // Otherwise convert from rgb/rgba to hex
+            return this.rgbToHex(bubbleColorVariable);
+        }
+        
+        // Fall back to computed background color
+        const computedBackgroundColor = window.getComputedStyle(textBox).backgroundColor;
+        return this.rgbToHex(computedBackgroundColor);
     }
 }
 
