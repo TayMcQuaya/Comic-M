@@ -1,6 +1,7 @@
 import { layouts } from './layouts.js';
 import { ExportManager } from './modules/ExportManager.js'; // Import the new manager
 import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // Import Utils
+import { FolderSystem } from './modules/FolderSystem.js'; // Import FolderSystem
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -29,6 +30,7 @@ class ComicCreator {
         
         // Instantiate the ExportManager
         this.exportManager = new ExportManager(this); 
+        this.folderSystem = new FolderSystem(this); // Instantiate FolderSystem
         
         this.init();
     }
@@ -148,7 +150,7 @@ class ComicCreator {
                     <i class="fas fa-arrow-left"></i>
                     <span>Back</span>
                 `;
-                backButton.addEventListener('click', () => this.navigateBack());
+                backButton.addEventListener('click', () => this.folderSystem.navigateBack());
                 grid.appendChild(backButton);
             }
 
@@ -160,7 +162,7 @@ class ComicCreator {
                     <i class="fas fa-folder-plus"></i>
                     <span>Create Folder</span>
                 `;
-                createFolderBtn.addEventListener('click', () => this.createFolder());
+                createFolderBtn.addEventListener('click', () => this.folderSystem.createFolder());
                 grid.appendChild(createFolderBtn);
             }
 
@@ -200,7 +202,7 @@ class ComicCreator {
                     // Setup folder name editing
                     const nameElement = container.querySelector('.folder-name');
                     nameElement.addEventListener('blur', () => {
-                        this.renameFolder(itemIdStr, nameElement.textContent);
+                        this.folderSystem.renameFolder(itemIdStr, nameElement.textContent);
                     });
                     nameElement.addEventListener('keydown', (e) => {
                         if (e.key === 'Enter') {
@@ -211,7 +213,7 @@ class ComicCreator {
 
                     // Setup double click to open folder
                     container.addEventListener('dblclick', () => {
-                        this.navigateToFolder(itemIdStr);
+                        this.folderSystem.navigateToFolder(itemIdStr);
                     });
 
                     // Setup drag and drop for folders
@@ -435,7 +437,8 @@ class ComicCreator {
                     itemIds.forEach(itemId => {
                         if (typeof itemId === 'string') {
                             console.log('Moving item to folder:', itemId, targetFolderId);
-                            this.moveItemToFolder(itemId, targetFolderId);
+                            // Use FolderSystem method
+                            this.folderSystem.moveItemToFolder(itemId, targetFolderId);
                         }
                     });
                 } catch (error) {
@@ -463,7 +466,8 @@ class ComicCreator {
                 }
                 
                 console.log('Moving single item to folder:', itemId, targetFolderId);
-                this.moveItemToFolder(itemId, targetFolderId);
+                // Use FolderSystem method
+                this.folderSystem.moveItemToFolder(itemId, targetFolderId);
             }
         });
     }
@@ -2608,7 +2612,8 @@ class ComicCreator {
                     
                     itemIds.forEach(itemId => {
                         if (typeof itemId === 'string') {
-                            this.moveItemToFolder(itemId, this.currentFolderId);
+                            // Use FolderSystem method
+                            this.folderSystem.moveItemToFolder(itemId, this.currentFolderId);
                         }
                     });
                 } catch (error) {
@@ -2617,7 +2622,8 @@ class ComicCreator {
             } else if (type === 'image' || type === 'folder') {
                 // Handle single item
                 console.log('Moving single item to current folder:', data);
-                this.moveItemToFolder(data, this.currentFolderId);
+                // Use FolderSystem method
+                this.folderSystem.moveItemToFolder(data, this.currentFolderId);
             }
         });
     }
@@ -5930,104 +5936,6 @@ class ComicCreator {
     }
 
     
-    // Add folder system methods
-    createFolder(name = 'New Folder') {
-        const folderId = `folder_${Date.now()}`;
-        this.folderStructure[folderId] = {
-            type: 'folder',
-            name: name,
-            items: [],
-            parent: this.currentFolderId
-        };
-        this.folderStructure[this.currentFolderId].items.push(folderId);
-        this.updateImageLibrary();
-        return folderId;
-    }
-
-    navigateToFolder(folderId) {
-        if (this.folderStructure[folderId]) {
-            this.currentFolderId = folderId;
-            this.updateImageLibrary();
-        }
-    }
-
-    navigateBack() {
-        const currentFolder = this.folderStructure[this.currentFolderId];
-        if (currentFolder && currentFolder.parent) {
-            this.currentFolderId = currentFolder.parent;
-            this.updateImageLibrary();
-        }
-    }
-
-    renameFolder(folderId, newName) {
-        if (this.folderStructure[folderId]) {
-            this.folderStructure[folderId].name = newName;
-            this.updateImageLibrary();
-        }
-    }
-
-    moveItemToFolder(itemId, targetFolderId) {
-        // Ensure we're working with string IDs
-        const itemIdStr = itemId.toString();
-        const targetFolderIdStr = targetFolderId.toString();
-        
-        // Don't proceed if trying to move to the same folder
-        if (this.currentFolderId === targetFolderIdStr) {
-            console.log('Item already in target folder, skipping move');
-            return;
-        }
-        
-        console.log(`Moving item ${itemIdStr} to folder ${targetFolderIdStr}`);
-        
-        // First find which folder currently contains the item
-        let sourceFolder = null;
-        let sourceIndex = -1;
-        
-        // Search through all folders to find where this item currently exists
-        Object.entries(this.folderStructure).forEach(([folderId, folder]) => {
-            if (!folder.items) {
-                console.error(`Folder ${folderId} has no items array`);
-                return;
-            }
-            
-            // Convert all folder item IDs to strings for consistent comparison
-            const folderItems = folder.items.map(id => id.toString());
-            const itemIndex = folderItems.indexOf(itemIdStr);
-            
-            if (itemIndex !== -1) {
-                sourceFolder = folder;
-                sourceIndex = itemIndex;
-            }
-        });
-        
-        // If found in a folder, remove it
-        if (sourceFolder && sourceIndex !== -1) {
-            sourceFolder.items.splice(sourceIndex, 1);
-            console.log(`Removed item from source folder`);
-            } else {
-            console.warn(`Item ${itemIdStr} not found in any folder`);
-        }
-
-        // Add to target folder
-        if (this.folderStructure[targetFolderIdStr]) {
-            // Ensure target folder has an items array
-            if (!this.folderStructure[targetFolderIdStr].items) {
-                this.folderStructure[targetFolderIdStr].items = [];
-            }
-            
-            // Only add if not already present (avoid duplicates)
-            if (!this.folderStructure[targetFolderIdStr].items.includes(itemIdStr)) {
-                this.folderStructure[targetFolderIdStr].items.push(itemIdStr);
-                console.log(`Added item to target folder ${targetFolderIdStr}`);
-            } else {
-                console.warn(`Item already exists in target folder ${targetFolderIdStr}`);
-            }
-            
-            this.updateImageLibrary();
-        } else {
-            console.error(`Target folder ${targetFolderIdStr} not found`);
-        }
-    }
 
     // Helper methods for selection management
     clearSelection() {

@@ -21,20 +21,21 @@ We are refactoring the code incrementally, module by module:
 
 ## Progress So Far
 
-*   **Module Extracted:** `ExportManager`
-*   **File Created:** `src/js/modules/ExportManager.js`
-*   **Methods Moved:** `preloadFontsForExport`, `downloadComic`, `processElementsForExport` were moved from `ComicCreator` to `ExportManager`.
-*   **Integration:** `main.js` now imports and instantiates `ExportManager`. The download button listener correctly calls `this.exportManager.downloadComic()`.
-*   **Cleanup:** The original export-related methods have been removed from `main.js`.
-*   **Status:** Export functionality confirmed to be working as expected.
+*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`
+*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`
+*   **Methods/Functions Moved:** 
+    *   `ExportManager`: `preloadFontsForExport`, `downloadComic`, `processElementsForExport`
+    *   `Utils`: `globalRgbToHex`, `getTextWithLineBreaks`
+    *   `FolderSystem`: `createFolder`, `navigateToFolder`, `navigateBack`, `renameFolder`, `moveItemToFolder`
+*   **Integration:** Modules imported and instantiated in `main.js`. Calls updated.
+*   **Cleanup:** Original methods/functions removed from `main.js`.
+*   **Status:** Functionality confirmed working for extracted modules.
 
 ## Remaining Modules (Based on `refactoring-documentation.md`)
 
 The following modules still need to be extracted from `main.js`:
 
-*   `Utils.js` (utility functions like `globalRgbToHex`, etc.)
 *   `DragAndDrop.js` (drag and drop functionality for images, folders, text, stickers)
-*   `FolderSystem.js` (folder creation, navigation, renaming, moving items)
 *   `ImageLibrary.js` (image upload, display (`updateImageLibrary`), selection, deletion)
 *   `PanelManager.js` (panel creation based on layout, image placement (`addImageToPanel`), panel selection, image controls within panels (`updatePanelControls`, `handleZoom`, `handlePositionChange` etc.))
 *   `TextManager.js` (text bubble creation (`addTextToPanel`, `addTextToCanvas`), editing, styling (`updateTextProperties`, `showTextFormatPopup`), positioning, effects)
