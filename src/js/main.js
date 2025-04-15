@@ -1,22 +1,8 @@
 import { layouts } from './layouts.js';
 import { ExportManager } from './modules/ExportManager.js'; // Import the new manager
+import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // Import Utils
 
-// Global helper function to convert RGB to Hex
-function globalRgbToHex(rgb) {
-    // Convert rgb(r, g, b) to #rrggbb
-    if (!rgb) return '#000000';
-    
-    if (rgb.startsWith('#')) return rgb;
-    
-    const match = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
-    if (!match) return '#000000';
-    
-    const r = parseInt(match[1]).toString(16).padStart(2, '0');
-    const g = parseInt(match[2]).toString(16).padStart(2, '0');
-    const b = parseInt(match[3]).toString(16).padStart(2, '0');
-    
-    return `#${r}${g}${b}`;
-}
+// Global helper function globalRgbToHex removed (now in Utils.js)
 
 class ComicCreator {
     constructor() {
@@ -3047,13 +3033,15 @@ class ComicCreator {
         
         const fontColor = textProperties.querySelector('.font-color');
         const fontColorHex = textProperties.querySelector('.font-color-hex');
-        const fontColorValue = this.rgbToHex(computedStyle.color) || '#000000';
+        // Use imported function directly
+        const fontColorValue = globalRgbToHex(computedStyle.color) || '#000000'; 
         fontColor.value = fontColorValue;
         fontColorHex.textContent = fontColorValue;
         
         const bubbleColor = textProperties.querySelector('.bubble-color');
         const bubbleColorHex = textProperties.querySelector('.bubble-color-hex');
-        const bubbleColorValue = this.rgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff';
+        // Use imported function directly
+        const bubbleColorValue = globalRgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff'; 
         bubbleColor.value = bubbleColorValue;
         bubbleColorHex.textContent = bubbleColorValue;
         
@@ -3248,10 +3236,6 @@ class ComicCreator {
         if (textElement.style.textTransform === 'uppercase') allCapsBtn.classList.add('active');
     }
     
-    // Helper function for the text properties
-    rgbToHex(rgb) {
-        return globalRgbToHex(rgb);
-    }
 
     showTextFormatPopup(textBox, event) {
         // Remove any existing popup
@@ -3444,15 +3428,17 @@ class ComicCreator {
                         <div class="color-control">
                             <label for="text-color">Text Color</label>
                             <div class="color-picker-container">
-                                <input type="color" id="text-color" class="text-color" value="${this.rgbToHex(window.getComputedStyle(textElement).color)}">
-                                <div class="hex-display text-color-hex">${this.rgbToHex(window.getComputedStyle(textElement).color).toUpperCase()}</div>
+                                <!-- Use imported function directly -->
+                                <input type="color" id="text-color" class="text-color" value="${globalRgbToHex(window.getComputedStyle(textElement).color)}">
+                                <div class="hex-display text-color-hex">${globalRgbToHex(window.getComputedStyle(textElement).color).toUpperCase()}</div>
                             </div>
                         </div>
                         <div class="color-control">
                             <label for="bubble-color">Bubble Color</label>
                             <div class="color-picker-container">
-                                <input type="color" id="bubble-color" class="bubble-color" value="${this.getBubbleBackgroundColor(textBox)}">
-                                <div class="hex-display bubble-color-hex">${this.getBubbleBackgroundColor(textBox).toUpperCase()}</div>
+                                <!-- Use imported function directly -->
+                                <input type="color" id="bubble-color" class="bubble-color" value="${globalRgbToHex(this.getBubbleBackgroundColor(textBox))}">
+                                <div class="hex-display bubble-color-hex">${globalRgbToHex(this.getBubbleBackgroundColor(textBox)).toUpperCase()}</div>
                             </div>
                         </div>
                     </div>
@@ -3467,15 +3453,17 @@ class ComicCreator {
                                 <input type="checkbox" id="text-outline" ${textElement.style.webkitTextStroke ? 'checked' : ''}>
                                 <input type="number" id="outline-thickness" class="outline-thickness" value="${this.getOutlineThickness(textElement)}" min="1" max="5" step="0.5" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
                                 <div class="color-picker-container">
-                                    <input type="color" id="outline-color" value="${this.getOutlineColor(textElement)}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
-                                    <div class="hex-display outline-color-hex" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>${this.getOutlineColor(textElement).toUpperCase()}</div>
+                                    <!-- Use imported function directly -->
+                                    <input type="color" id="outline-color" value="${globalRgbToHex(this.getOutlineColor(textElement))}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                    <div class="hex-display outline-color-hex" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>${globalRgbToHex(this.getOutlineColor(textElement)).toUpperCase()}</div>
                                 </div>
                             </div>
                             <div class="shadow-control">
                                 <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
                                 <div class="color-picker-container">
-                                    <input type="color" id="shadow-color" value="${this.getShadowColor(textElement)}" ${!textElement.style.textShadow ? 'disabled' : ''}>
-                                    <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${this.getShadowColor(textElement).toUpperCase()}</div>
+                                    <!-- Use imported function directly -->
+                                    <input type="color" id="shadow-color" value="${globalRgbToHex(this.getShadowColor(textElement))}" ${!textElement.style.textShadow ? 'disabled' : ''}>
+                                    <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${globalRgbToHex(this.getShadowColor(textElement)).toUpperCase()}</div>
                                 </div>
                             </div>
                             <div class="opacity-control">
@@ -4002,8 +3990,8 @@ class ComicCreator {
     }
     
     applyTextOutline(textElement, color, thickness = 2) {
-        // Use the helper function to get text with preserved line breaks
-        const text = this.getTextWithLineBreaks(textElement);
+        // Use imported function directly
+        const text = getTextWithLineBreaks(textElement); 
         const computedStyle = window.getComputedStyle(textElement);
         
         // Set the data attributes for the outline effect
@@ -4192,44 +4180,21 @@ class ComicCreator {
     getOutlineColor(textElement) {
         const stroke = textElement.style.webkitTextStroke || '';
         const color = stroke.match(/[#][a-fA-F0-9]{6}/) || stroke.match(/rgba?\([^)]+\)/);
-        return color ? this.rgbToHex(color[0]) : '#000000';
+        return color ? globalRgbToHex(color[0]) : '#000000';
     }
 
     getShadowColor(textElement) {
         const shadow = textElement.style.textShadow || '';
         const color = shadow.match(/[#][a-fA-F0-9]{6}/) || shadow.match(/rgba?\([^)]+\)/);
-        return color ? this.rgbToHex(color[0]) : '#666666';
+        return color ? globalRgbToHex(color[0]) : '#666666';
     }
 
-    // Helper function to get text content while preserving line breaks from <br> and block elements
-    getTextWithLineBreaks(element) {
-        if (!element) return '';
+    // Method getTextWithLineBreaks removed (now imported from Utils.js)
 
-        // Get innerHTML
-        let processedHtml = element.innerHTML;
-
-        // 1. Replace <br> tags with newline characters
-        processedHtml = processedHtml.replace(/<br\s*\/?>/gi, '\n');
-
-        // 2. Replace closing block tags (div, p) with newline characters
-        processedHtml = processedHtml.replace(/<\/(div|p)>/gi, '\n');
-
-        // 3. Create a temporary div to strip *all* remaining HTML tags
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = processedHtml;
-
-        // 4. Extract clean text. textContent or innerText should preserve the newlines.
-        let text = tempDiv.textContent || tempDiv.innerText || '';
-
-        // 5. Trim potential leading/trailing newlines/whitespace
-        return text.trim();
-    }
-
-    // Update the outline text content when text changes
     updateOutlineText(textElement) {
         if (textElement.dataset.hasOutline === 'true') { // Check the dataset property
-            // Use the helper function to get text with preserved line breaks
-            const text = this.getTextWithLineBreaks(textElement);
+            // Use imported function directly
+            const text = getTextWithLineBreaks(textElement); 
             textElement.setAttribute('data-text', text);
         }
     }
@@ -6083,12 +6048,12 @@ class ComicCreator {
                 return bubbleColorVariable;
             }
             // Otherwise convert from rgb/rgba to hex
-            return this.rgbToHex(bubbleColorVariable);
+            return globalRgbToHex(bubbleColorVariable);
         }
         
         // Fall back to computed background color
         const computedBackgroundColor = window.getComputedStyle(textBox).backgroundColor;
-        return this.rgbToHex(computedBackgroundColor);
+        return globalRgbToHex(computedBackgroundColor);
     }
 }
 
