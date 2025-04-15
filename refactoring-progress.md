@@ -21,12 +21,13 @@ We are refactoring the code incrementally, module by module:
 
 ## Progress So Far
 
-*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`
-*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`
+*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`
+*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`
 *   **Methods/Functions Moved:** 
     *   `ExportManager`: `preloadFontsForExport`, `downloadComic`, `processElementsForExport`
     *   `Utils`: `globalRgbToHex`, `getTextWithLineBreaks`
     *   `FolderSystem`: `createFolder`, `navigateToFolder`, `navigateBack`, `renameFolder`, `moveItemToFolder`
+    *   `DragAndDropManager`: `setupImageDragAndDrop`, `setupFolderDragAndDrop`, `setupGridDropZone`, `setupImageDragging`, `makeTextDraggable`, `makeTextResizable`, `makeStickerDraggable`, `makeCanvasTextDraggable`
 *   **Integration:** Modules imported and instantiated in `main.js`. Calls updated.
 *   **Cleanup:** Original methods/functions removed from `main.js`.
 *   **Status:** Functionality confirmed working for extracted modules.
@@ -35,7 +36,7 @@ We are refactoring the code incrementally, module by module:
 
 The following modules still need to be extracted from `main.js`:
 
-*   `DragAndDrop.js` (drag and drop functionality for images, folders, text, stickers)
+*   ~~`DragAndDrop.js` (drag and drop functionality for images, folders, text, stickers)~~ **(Completed)**
 *   `ImageLibrary.js` (image upload, display (`updateImageLibrary`), selection, deletion)
 *   `PanelManager.js` (panel creation based on layout, image placement (`addImageToPanel`), panel selection, image controls within panels (`updatePanelControls`, `handleZoom`, `handlePositionChange` etc.))
 *   `TextManager.js` (text bubble creation (`addTextToPanel`, `addTextToCanvas`), editing, styling (`updateTextProperties`, `showTextFormatPopup`), positioning, effects)

@@ -2,6 +2,7 @@ import { layouts } from './layouts.js';
 import { ExportManager } from './modules/ExportManager.js'; // Import the new manager
 import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // Import Utils
 import { FolderSystem } from './modules/FolderSystem.js'; // Import FolderSystem
+import { DragAndDropManager } from './modules/DragAndDropManager.js'; // Import DragAndDropManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -31,6 +32,7 @@ class ComicCreator {
         // Instantiate the ExportManager
         this.exportManager = new ExportManager(this); 
         this.folderSystem = new FolderSystem(this); // Instantiate FolderSystem
+        this.dragAndDropManager = new DragAndDropManager(this); // Instantiate DragAndDropManager
         
         this.init();
     }
@@ -217,7 +219,7 @@ class ComicCreator {
                     });
 
                     // Setup drag and drop for folders
-                    this.setupFolderDragAndDrop(container);
+                    this.dragAndDropManager.setupFolderDragAndDrop(container);
 
                     grid.appendChild(container);
                 }
@@ -263,10 +265,10 @@ class ComicCreator {
                 grid.appendChild(container);
 
                         // Add selection click handler
-                        this.setupImageSelection(container);
+                        this.setupImageSelection(container); // Revert: Call the method on 'this' (ComicCreator) directly
                         
                         // Setup drag and drop
-                        this.setupImageDragAndDrop(container);
+                        this.dragAndDropManager.setupImageDragAndDrop(container);
                     } else {
                         console.warn('Image not found for ID:', itemIdStr);
                     }
@@ -274,7 +276,7 @@ class ComicCreator {
             });
 
             // Setup grid drop zone
-            this.setupGridDropZone(grid);
+            this.dragAndDropManager.setupGridDropZone(grid);
         });
     }
 
@@ -338,139 +340,7 @@ class ComicCreator {
         });
     }
     
-    setupImageDragAndDrop(container) {
-        container.addEventListener('dragstart', (e) => {
-            const itemId = container.dataset.imageId;
-            
-            // If this is a selected item and we have multiple items selected
-            if (this.selectedAssets.includes(itemId) && this.selectedAssets.length > 1) {
-                console.log('Starting multi-item drag with', this.selectedAssets.length, 'items');
-                
-                // Set data for multi-drag
-                e.dataTransfer.setData('text/plain', JSON.stringify(this.selectedAssets));
-                e.dataTransfer.setData('type', 'multi-image');
-                
-                // Create a custom drag image
-                const dragFeedback = document.createElement('div');
-                dragFeedback.style.position = 'absolute';
-                dragFeedback.style.top = '-1000px';
-                dragFeedback.style.background = 'rgba(0, 0, 0, 0.7)';
-                dragFeedback.style.color = 'white';
-                dragFeedback.style.padding = '10px';
-                dragFeedback.style.borderRadius = '5px';
-                dragFeedback.style.pointerEvents = 'none';
-                dragFeedback.textContent = `${this.selectedAssets.length} items`;
-                
-                document.body.appendChild(dragFeedback);
-                e.dataTransfer.setDragImage(dragFeedback, 25, 25);
-                
-                // Remove the element after drag starts
-                setTimeout(() => {
-                    document.body.removeChild(dragFeedback);
-                }, 0);
-                
-                // Add dragging class to all selected items
-                this.selectedAssets.forEach(id => {
-                    const element = document.querySelector(`.thumbnail-container[data-image-id="${id}"]`);
-                    if (element) element.classList.add('dragging');
-                });
-            } else {
-                // Single item drag
-                console.log('Starting single item drag:', itemId);
-                e.dataTransfer.setData('text/plain', itemId);
-                e.dataTransfer.setData('type', 'image');
-            container.classList.add('dragging');
-            }
-        });
-        
-        container.addEventListener('dragend', () => {
-            // Remove dragging class from all items
-            document.querySelectorAll('.dragging').forEach(el => {
-                el.classList.remove('dragging');
-            });
-        });
-    }
     
-    setupFolderDragAndDrop(container) {
-        // Make folder draggable
-        container.addEventListener('dragstart', (e) => {
-            const folderId = container.dataset.folderId;
-            console.log('Starting folder drag:', folderId);
-            e.dataTransfer.setData('text/plain', folderId);
-            e.dataTransfer.setData('type', 'folder');
-            container.classList.add('dragging');
-        });
-
-        container.addEventListener('dragend', () => {
-            container.classList.remove('dragging');
-        });
-        
-        // Make folder droppable
-        container.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            container.classList.add('drag-over');
-        });
-        
-        container.addEventListener('dragleave', () => {
-            container.classList.remove('drag-over');
-        });
-        
-        container.addEventListener('drop', (e) => {
-            e.preventDefault();
-            container.classList.remove('drag-over');
-            
-            const type = e.dataTransfer.getData('type');
-            const targetFolderId = container.dataset.folderId;
-            
-            console.log('Drop on folder:', targetFolderId, 'Type:', type);
-            
-            // Handle multiple items
-            if (type === 'multi-image') {
-                try {
-                    const rawData = e.dataTransfer.getData('text/plain');
-                    console.log('Multi-image raw data:', rawData);
-                    const itemIds = JSON.parse(rawData);
-                    console.log('Parsed items:', itemIds);
-                    
-                    // Move each selected item
-                    itemIds.forEach(itemId => {
-                        if (typeof itemId === 'string') {
-                            console.log('Moving item to folder:', itemId, targetFolderId);
-                            // Use FolderSystem method
-                            this.folderSystem.moveItemToFolder(itemId, targetFolderId);
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error processing multi-item drop:', error);
-                }
-            } else {
-                // Handle single item
-                const itemId = e.dataTransfer.getData('text/plain');
-                const itemType = e.dataTransfer.getData('type');
-                
-                // Don't allow dropping a folder into itself or its descendants
-                if (itemType === 'folder') {
-                    if (itemId === targetFolderId) {
-                        console.log('Prevented folder self-drop');
-                        return;
-                    }
-                    let parent = this.folderStructure[targetFolderId].parent;
-                    while (parent) {
-                        if (parent === itemId) {
-                            console.log('Prevented folder ancestor drop');
-                            return;
-                        }
-                        parent = this.folderStructure[parent].parent;
-                    }
-                }
-                
-                console.log('Moving single item to folder:', itemId, targetFolderId);
-                // Use FolderSystem method
-                this.folderSystem.moveItemToFolder(itemId, targetFolderId);
-            }
-        });
-    }
 
     deleteImage(imageId) {
         // Remove from uploadedImages
@@ -688,11 +558,7 @@ class ComicCreator {
         });
     }
 
-    handleDragStart(e, image) {
-        e.dataTransfer.setData('image/id', image.id.toString());
-        e.target.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'copy';
-    }
+    
 
     addImageToPanel(panel, image) {
         if (!panel || !image) {
@@ -752,89 +618,13 @@ class ComicCreator {
             panel.dataset.imageId = image.id.toString();
             this.updateImageLibrary(); // Update thumbnail states
             
-            this.setupImageDragging(img);
+            this.dragAndDropManager.setupImageDragging(img);
             this.selectPanel(panel);
         } catch (error) {
             console.error('Error adding image to panel:', error);
         }
     }
 
-    setupImageDragging(img) {
-        if (!img) {
-            console.error("setupImageDragging called with undefined image");
-            return;
-        }
-        
-        let isDragging = false;
-        let startX, startY;
-        let startLeft, startTop;
-
-        const onMouseDown = (e) => {
-            // Initialize dragging state
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            // Get the current position values (defaulting to 50% if not set)
-            startLeft = parseFloat(img.style.left) || 50;
-            startTop = parseFloat(img.style.top) || 50;
-            
-            // Set cursor and visual feedback
-            img.style.cursor = 'grabbing';
-            
-            e.preventDefault();
-            e.stopPropagation();
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-
-            // Ensure opacity stays at 1 during drag
-            img.style.opacity = '1';
-
-            // Calculate the distance moved
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-
-            // Convert pixel movement to percentage based on panel size
-            const panel = img.parentElement;
-            if (!panel) return;
-            
-            const percentX = (deltaX / panel.offsetWidth) * 100;
-            const percentY = (deltaY / panel.offsetHeight) * 100;
-
-            // Update image position
-            img.style.left = `${startLeft + percentX}%`;
-            img.style.top = `${startTop + percentY}%`;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            
-            isDragging = false;
-            img.style.cursor = 'grab';
-            img.style.opacity = '1';
-            
-            // Save the current page state when we finish dragging
-            this.saveCurrentPageState();
-        };
-
-        // Add mouse event listeners
-        img.style.cursor = 'grab';
-        img.style.pointerEvents = 'auto'; // Enable pointer events for dragging
-        img.style.opacity = '1'; // Ensure initial opacity is 1
-        img.draggable = false; // Disable native dragging
-        
-        img.addEventListener('mousedown', onMouseDown);
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-        
-        // Prevent default drag behavior
-        img.addEventListener('dragstart', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-    }
 
     selectPanel(panel) {
         if (this.currentPanel) {
@@ -2052,7 +1842,7 @@ class ComicCreator {
                             }
                         }
                         
-                        this.setupImageDragging(img);
+                        this.dragAndDropManager.setupImageDragging(img);
                     }
                 }
 
@@ -2182,10 +1972,10 @@ class ComicCreator {
                         panel.appendChild(textBubble);
                         
                         // Make draggable
-                        this.makeTextDraggable(textBubble, dragHandle);
+                        this.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
                         
                         // Make resizable
-                        this.makeTextResizable(textBubble, resizeHandle);
+                        this.dragAndDropManager.makeTextResizable(textBubble, resizeHandle);
                         
                         // Setup delete functionality
                         deleteButton.addEventListener('click', () => {
@@ -2270,7 +2060,7 @@ class ComicCreator {
                     }
                     
                     comicCanvas.appendChild(stickerImg);
-                    this.makeStickerDraggable(stickerImg);
+                    this.dragAndDropManager.makeStickerDraggable(stickerImg);
                     
                     stickerImg.addEventListener('click', (e) => {
                         e.stopPropagation();
@@ -2403,9 +2193,9 @@ class ComicCreator {
                 comicCanvas.appendChild(textBubble);
 
                 // Add event listeners (same as panel text)
-                this.makeCanvasTextDraggable(textBubble, dragHandle);
+                this.dragAndDropManager.makeCanvasTextDraggable(textBubble, dragHandle);
                 // Note: Resizing for canvas text might need review based on implementation
-                this.makeTextResizable(textBubble, resizeHandle); 
+                this.dragAndDropManager.makeTextResizable(textBubble, resizeHandle); 
 
                 deleteButton.addEventListener('click', () => {
                     textBubble.remove();
@@ -2561,72 +2351,6 @@ class ComicCreator {
         this.updateNavigationButtons();
     }
 
-    setupReorderDrag(container) {
-        if (!container) return;
-
-        container.addEventListener('dragstart', (e) => {
-            container.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-        });
-
-        container.addEventListener('dragend', () => {
-            container.classList.remove('dragging');
-        });
-    }
-
-    setupGridDropZone(grid) {
-        if (!grid) return;
-
-        grid.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-            
-            const draggingElement = document.querySelector('.dragging');
-            if (!draggingElement) return;
-
-            const siblings = [...grid.querySelectorAll('.thumbnail-container:not(.dragging), .folder-container:not(.dragging)')];
-                const nextSibling = siblings.find(sibling => {
-                    const rect = sibling.getBoundingClientRect();
-                    return e.clientY < rect.top + rect.height / 2;
-                });
-
-                if (nextSibling) {
-                    grid.insertBefore(draggingElement, nextSibling);
-                } else {
-                    grid.appendChild(draggingElement);
-                }
-        });
-
-        grid.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const type = e.dataTransfer.getData('type');
-            const data = e.dataTransfer.getData('text/plain');
-            
-            console.log('Drop on grid detected. Type:', type, 'Data:', data);
-            
-            if (type === 'multi-image') {
-                try {
-                    // Parse and handle multiple images
-                    const itemIds = JSON.parse(data);
-                    console.log('Moving multiple items to current folder:', itemIds.length, 'items');
-                    
-                    itemIds.forEach(itemId => {
-                        if (typeof itemId === 'string') {
-                            // Use FolderSystem method
-                            this.folderSystem.moveItemToFolder(itemId, this.currentFolderId);
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error processing multi-item drop on grid:', error);
-                }
-            } else if (type === 'image' || type === 'folder') {
-                // Handle single item
-                console.log('Moving single item to current folder:', data);
-                // Use FolderSystem method
-                this.folderSystem.moveItemToFolder(data, this.currentFolderId);
-            }
-        });
-    }
 
     reorderImages(fromId, toId) {
         const fromIndex = this.uploadedImages.findIndex(img => String(img.id) === fromId);
@@ -2706,10 +2430,10 @@ class ComicCreator {
         panel.appendChild(textContainer);
         
         // Make draggable
-        this.makeTextDraggable(textContainer, dragHandle);
+        this.dragAndDropManager.makeTextDraggable(textContainer, dragHandle);
         
         // Make resizable
-        this.makeTextResizable(textContainer, resizeHandle);
+        this.dragAndDropManager.makeTextResizable(textContainer, resizeHandle);
         
         // Setup delete functionality
         deleteButton.addEventListener('click', () => {
@@ -2763,125 +2487,12 @@ class ComicCreator {
         return textContainer;
     }
     
-    makeTextDraggable(element, handle) {
-        let isDragging = false;
-        let startX, startY;
-        let startLeft, startTop;
-        let containerRect;
-        
-        const onMouseDown = (e) => {
-            // Only drag when using the handle or the bubble border (not controls or content)
-            const isHandle = e.target === handle || e.target.closest('.drag-handle');
-            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
-            
-            if (!isHandle && !isBubbleBorder) {
-                return;
-            }
-            
-            isDragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            // Get the container rectangle to calculate boundaries
-            const container = element.parentElement;
-            containerRect = container.getBoundingClientRect();
-            
-            // Calculate position in pixels
-            const rect = element.getBoundingClientRect();
-            startLeft = rect.left - containerRect.left;
-            startTop = rect.top - containerRect.top;
-            
-            // Add dragging class for visual feedback
-            element.classList.add('dragging-text');
-            handle.style.cursor = 'grabbing';
-            
-            e.preventDefault();
-        };
-        
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            // Calculate new position in pixels
-            let newLeft = startLeft + deltaX;
-            let newTop = startTop + deltaY;
-            
-            // Get element dimensions
-            const elementRect = element.getBoundingClientRect();
-            const elementWidth = elementRect.width;
-            const elementHeight = elementRect.height;
-            
-            // Calculate boundaries (keeping at least 10% of the element inside the container)
-            const minLeft = -elementWidth * 0.9;
-            const maxLeft = containerRect.width - elementWidth * 0.1;
-            const minTop = -elementHeight * 0.9;
-            const maxTop = containerRect.height - elementHeight * 0.1;
-            
-            // Apply boundaries
-            newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
-            newTop = Math.max(minTop, Math.min(newTop, maxTop));
-            
-            // Set position using pixels instead of percentages
-            element.style.left = `${newLeft}px`;
-            element.style.top = `${newTop}px`;
-        };
-        
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            
-            isDragging = false;
-            element.classList.remove('dragging-text');
-            handle.style.cursor = 'grab';
-            
-            // Save state after a position change
-            this.saveCurrentPageState();
-        };
-        
-        handle.style.cursor = 'grab';
-        handle.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('mousedown', onMouseDown);
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-    }
+
     
-    makeTextResizable(element, handle) {
-        let isResizing = false;
-        let startX, startY;
-        let startWidth, startHeight;
-        
-        handle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startWidth = element.offsetWidth;
-            startHeight = element.offsetHeight;
-            
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            element.style.width = `${startWidth + deltaX}px`;
-            element.style.height = `${startHeight + deltaY}px`;
-        });
-        
-        document.addEventListener('mouseup', () => {
-            if (!isResizing) return; // Check if we were actually resizing
-            isResizing = false;
-            // Save state immediately after resizing finishes
-            this.saveCurrentPageState(); 
-        });
-    }
+    
     
     selectTextBox(textBox) {
-        // Deselect any previously selected text box
+        // Deselect any previously selected text box (visually)
         document.querySelectorAll('.text-bubble').forEach(box => {
             box.classList.remove('selected-text');
         });
@@ -2890,16 +2501,51 @@ class ComicCreator {
         textBox.classList.add('selected-text');
         this.currentTextBox = textBox;
         
-        // Show text properties panel
-        const textProperties = document.getElementById('text-properties');
+        // Ensure the correct properties panel is visible
+        const propertiesPanel = document.querySelector('.properties-panel');
+        if (!propertiesPanel) {
+            console.error('Error: Main properties panel (.properties-panel) not found.');
+            return;
+        }
+
+        // Hide all other property sections first
+        propertiesPanel.querySelectorAll('.properties-section').forEach(sec => {
+            sec.style.display = 'none';
+        });
+
+        // Find or create the text properties container
+        let textProperties = propertiesPanel.querySelector('#text-properties');
+        if (!textProperties) { 
+            console.log('#text-properties not found, creating it.');
+            textProperties = document.createElement('div');
+            textProperties.id = 'text-properties';
+            textProperties.className = 'properties-section'; // Add class for consistency
+            propertiesPanel.appendChild(textProperties);
+        }
+        
+        // Show the text properties panel
         textProperties.style.display = 'block';
         
-        // Update properties panel with the current text box's styles
-        this.updateTextProperties(textBox);
+        // Update properties panel content
+        this.updateTextProperties(textBox); // Pass the textBox, updateTextProperties finds the container by ID
     }
     
     updateTextProperties(textBox) {
         const textProperties = document.getElementById('text-properties');
+        if (!textProperties) { // Add check here too for safety
+             console.error('Error: Text properties panel (#text-properties) not found in updateTextProperties.');
+            return;
+        }
+        
+        // Define textElement and computedStyle BEFORE using them in the template literal
+        const textElement = textBox.querySelector('.text-content');
+        if (!textElement) {
+            console.error("Could not find '.text-content' inside the provided textBox element.", textBox);
+            textProperties.innerHTML = '<p>Error loading text properties.</p>'; 
+            return;
+        }
+        const computedStyle = window.getComputedStyle(textElement);
+        
         textProperties.innerHTML = `
             <h4>Text Settings</h4>
             <div class="text-controls">
@@ -3026,9 +2672,6 @@ class ComicCreator {
         const bubbleType = textProperties.querySelector('.bubble-type');
         bubbleType.value = textBox.dataset.bubbleType || 'speech-bubble';
         
-        const textElement = textBox.querySelector('.text-content');
-        const computedStyle = window.getComputedStyle(textElement);
-        
         const fontFamily = textProperties.querySelector('.font-family');
         fontFamily.value = computedStyle.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Arial';
         
@@ -3104,7 +2747,7 @@ class ComicCreator {
                     fontColor.value = hexValue;
                     textElement.style.color = hexValue;
                     this.saveCurrentPageState();
-                } else {
+        } else {
                     // Reset to current value if invalid
                     fontColorHex.textContent = fontColor.value.toUpperCase();
                 }
@@ -3233,7 +2876,12 @@ class ComicCreator {
         }
         
         // Make rotation value editable
-        this.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
+        // Check if elements exist before calling makeSliderValueEditable
+        if (rotationSlider && rotationValueDisplay) { 
+            this.makeSliderValueEditable(rotationSlider, rotationValueDisplay, '°', 0);
+        } else {
+            console.error("Could not find rotation slider or value display element in text properties panel.");
+        }
         
         // Set the active state for the text style buttons
         if (textElement.style.fontWeight === 'bold') boldBtn.classList.add('active');
@@ -3249,6 +2897,15 @@ class ComicCreator {
         if (popup) {
             popup.remove();
         }
+        
+        // --- NEW: Select this text box and deselect others ---
+        this.deselectAll(); // Deselect panels, stickers, etc.
+        document.querySelectorAll('.text-bubble').forEach(box => {
+             box.classList.remove('selected-text');
+        });
+        textBox.classList.add('selected-text');
+        this.currentTextBox = textBox; 
+        // --- END NEW ---
         
         // Create the popup
         popup = document.createElement('div');
@@ -3528,8 +3185,8 @@ class ComicCreator {
         // Set up event listeners for the popup
         this.setupPopupEventListeners(popup, textBox);
         
-        // Select the current text box
-        this.selectTextBox(textBox);
+        // REMOVE: Do not call selectTextBox here, as it manages the sidebar panel
+        // this.selectTextBox(textBox); 
     }
     
     setupPopupEventListeners(popup, textBox) {
@@ -5306,7 +4963,7 @@ class ComicCreator {
 
         stickerCanvas.appendChild(stickerImg);
         console.log('[addSticker] Appended img to canvas:', stickerCanvas); // <<< Debug log
-        this.makeStickerDraggable(stickerImg);
+        this.dragAndDropManager.makeStickerDraggable(stickerImg);
         
         stickerImg.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -5314,90 +4971,6 @@ class ComicCreator {
         });
 
         this.selectSticker(stickerImg);
-    }
-
-    // --- Make Sticker Draggable --- 
-    makeStickerDraggable(element) {
-        let isDragging = false;
-        let startX, startY;
-        let originalX, originalY;
-
-        const onMouseDown = (e) => {
-            if (e.button !== 0) return; // Only handle left mouse button
-            e.preventDefault();
-            e.stopPropagation();
-
-            isDragging = true;
-            element.style.cursor = 'grabbing';
-            element.style.zIndex = '1000'; // Bring to front while dragging
-
-            startX = e.clientX;
-            startY = e.clientY;
-            originalX = parseFloat(element.style.left) || 0;
-            originalY = parseFloat(element.style.top) || 0;
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            
-            const canvas = document.querySelector('#comic-canvas');
-            if (!canvas) {
-                console.error("Cannot drag: canvas not found");
-                return;
-            }
-            
-            const canvasRect = canvas.getBoundingClientRect();
-            const stickerRect = element.getBoundingClientRect();
-            
-            let newX = originalX + dx;
-            let newY = originalY + dy;
-            
-            // Boundary checks
-            newX = Math.max(0, Math.min(newX, canvasRect.width - stickerRect.width));
-            newY = Math.max(0, Math.min(newY, canvasRect.height - stickerRect.height));
-            
-            element.style.left = `${newX}px`;
-            element.style.top = `${newY}px`;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            
-            isDragging = false;
-            element.style.cursor = 'grab';
-            element.style.zIndex = '100';
-
-            document.removeEventListener('mousemove', onMouseMove);
-
-            // Update state
-            const pageState = this.pages[this.currentPageIndex];
-            if (pageState?.stickerStates) {
-                const stickerState = pageState.stickerStates.find(s => s.id === element.id);
-                if (stickerState) {
-                    Object.assign(stickerState, {
-                        left: element.style.left,
-                        top: element.style.top,
-                        width: element.style.width,
-                        height: element.style.height,
-                        transform: element.style.transform,
-                        rotation: element.dataset.rotation || '0',
-                        zIndex: element.style.zIndex,
-                        size: element.dataset.size
-                    });
-                    this.saveCurrentPageState();
-                }
-            }
-        };
-
-        element.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('dragstart', (e) => e.preventDefault());
     }
 
     // --- Select Sticker --- 
@@ -5466,7 +5039,7 @@ class ComicCreator {
     }
 
     loadPage(pageIndex) {
-        // ... existing code ...
+// ... existing code ...
         
         // Apply the page's background style
         if (this.useGlobalBackgroundStyle) {
@@ -5661,10 +5234,10 @@ class ComicCreator {
         canvas.appendChild(textContainer); // Append directly to canvas
 
         // Make draggable (needs adaptation for canvas)
-        this.makeCanvasTextDraggable(textContainer, dragHandle); // Use a new/adapted function
+        this.dragAndDropManager.makeCanvasTextDraggable(textContainer, dragHandle); // Use a new/adapted function
 
         // Make resizable (should work as is)
-        this.makeTextResizable(textContainer, resizeHandle);
+        this.dragAndDropManager.makeTextResizable(textContainer, resizeHandle);
 
         // Setup delete functionality (same as addTextToPanel)
         deleteButton.addEventListener('click', () => {
@@ -5709,233 +5282,6 @@ class ComicCreator {
 
         return textContainer;
     }
-
-    // NEW function for canvas text dragging (pixel-based)
-    makeCanvasTextDraggable(element, handle) {
-        let isDragging = false;
-        let startX, startY;
-        let originalX, originalY; // Store initial style.left/top in pixels
-        const canvas = document.querySelector('#comic-canvas');
-        let canvasPaddingBoxWidth, canvasPaddingBoxHeight; // Store canvas client dimensions
-
-        const onMouseDown = (e) => {
-            // Check if canvas exists
-            if (!canvas) {
-                console.error("Cannot drag: canvas not found");
-                return;
-            }
-            
-            // Check if drag should start
-            if (e.button !== 0) return;
-            const isHandle = e.target === handle || e.target.closest('.drag-handle');
-            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
-            if (!isHandle && !isBubbleBorder) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Start dragging state
-            isDragging = true;
-            element.style.cursor = 'grabbing';
-            element.dataset.originalZIndex = element.style.zIndex || '100';
-            element.style.zIndex = '1000';
-
-            // Record initial positions and dimensions
-            startX = e.clientX;
-            startY = e.clientY;
-            // Use currentStyle values for origin, fallback if not set
-            originalX = parseFloat(element.style.left) || 0;
-            originalY = parseFloat(element.style.top) || 0;
-            // Get canvas client dimensions (includes padding, excludes border)
-            canvasPaddingBoxWidth = canvas.clientWidth;
-            canvasPaddingBoxHeight = canvas.clientHeight;
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-
-            // Calculate mouse movement delta
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            // Get current element dimensions (use offsetWidth/Height for reliable size)
-            const elementWidth = element.offsetWidth;
-            const elementHeight = element.offsetHeight;
-
-            // Calculate the element's desired new position relative to the canvas padding box
-            let desiredCanvasX = originalX + dx;
-            let desiredCanvasY = originalY + dy;
-
-            // Clamp the desired position to stay within the canvas padding box boundaries
-            const clampedCanvasX = Math.max(
-                0, // Min X relative to padding box
-                Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth) // Max X relative to padding box
-            );
-            const clampedCanvasY = Math.max(
-                0, // Min Y relative to padding box
-                Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight) // Max Y relative to padding box
-            );
-
-            // Apply the clamped, canvas-relative position
-            element.style.left = `${clampedCanvasX}px`;
-            element.style.top = `${clampedCanvasY}px`;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            element.style.cursor = 'grab';
-            element.style.zIndex = element.dataset.originalZIndex || '100';
-            document.removeEventListener('mousemove', onMouseMove);
-            this.saveCurrentPageState();
-        };
-
-        // Initialize cursor and add mousedown listeners
-        handle.style.cursor = 'grab';
-        handle.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('dragstart', (e) => e.preventDefault());
-    }
-
-    makeTextResizable(element, handle) {
-        let isResizing = false;
-        let startX, startY;
-        let startWidth, startHeight;
-        
-        handle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            startWidth = element.offsetWidth;
-            startHeight = element.offsetHeight;
-            
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!isResizing) return;
-            
-            const deltaX = e.clientX - startX;
-            const deltaY = e.clientY - startY;
-            
-            element.style.width = `${startWidth + deltaX}px`;
-            element.style.height = `${startHeight + deltaY}px`;
-        });
-        
-        document.addEventListener('mouseup', () => {
-            if (!isResizing) return; // Check if we were actually resizing
-            isResizing = false;
-            // Save state immediately after resizing finishes
-            this.saveCurrentPageState(); 
-        });
-    }
-
-    // Rewritten for pixel-based dragging relative to canvas, applied relative to panel
-    makeTextDraggable(element, handle) {
-        let isDragging = false;
-        let startX, startY;
-        let originalElementX_panel, originalElementY_panel; // Element initial style.left/top relative to panel
-        let panelOffsetX, panelOffsetY; // Panel offset relative to canvas padding box
-        let canvasPaddingBoxWidth, canvasPaddingBoxHeight;
-        const canvas = document.querySelector('#comic-canvas');
-
-        const onMouseDown = (e) => {
-            const panel = element.parentElement;
-            if (!panel || !panel.classList.contains('comic-panel') || !canvas) return;
-
-            // Check if drag should start
-            if (e.button !== 0) return;
-            const isHandle = e.target === handle || e.target.closest('.drag-handle');
-            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
-            if (!isHandle && !isBubbleBorder) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Start dragging state
-            isDragging = true;
-            element.style.cursor = 'grabbing';
-            element.dataset.originalZIndex = element.style.zIndex || '10';
-            element.style.zIndex = '1000';
-
-            // Record initial positions and dimensions
-            startX = e.clientX;
-            startY = e.clientY;
-            originalElementX_panel = parseFloat(element.style.left) || 0;
-            originalElementY_panel = parseFloat(element.style.top) || 0;
-            
-            // Get panel offset relative to canvas padding box
-            // offsetLeft/Top are relative to offsetParent, which might not be the canvas
-            // Use getBoundingClientRect for robust calculation
-            const panelRect = panel.getBoundingClientRect();
-            const canvasRect = canvas.getBoundingClientRect();
-            const canvasBorder = parseFloat(window.getComputedStyle(canvas).borderLeftWidth) || 0;
-            panelOffsetX = panelRect.left - (canvasRect.left + canvasBorder);
-            panelOffsetY = panelRect.top - (canvasRect.top + canvasBorder);
-
-            // Get canvas client dimensions
-            canvasPaddingBoxWidth = canvas.clientWidth;
-            canvasPaddingBoxHeight = canvas.clientHeight;
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            const elementWidth = element.offsetWidth;
-            const elementHeight = element.offsetHeight;
-
-            // Calculate element's desired new position relative to the CANVAS padding box
-            let desiredCanvasX = panelOffsetX + originalElementX_panel + dx;
-            let desiredCanvasY = panelOffsetY + originalElementY_panel + dy;
-
-            // Clamp the desired CANVAS position to stay within the CANVAS padding box boundaries
-            const clampedCanvasX = Math.max(
-                0, 
-                Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth)
-            );
-            const clampedCanvasY = Math.max(
-                0, 
-                Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight)
-            );
-
-            // Convert the clamped CANVAS position back to a position relative to the PANEL padding box
-            const finalPanelX = clampedCanvasX - panelOffsetX;
-            const finalPanelY = clampedCanvasY - panelOffsetY;
-
-            // Apply the clamped, PANEL-relative position
-            element.style.left = `${finalPanelX}px`;
-            element.style.top = `${finalPanelY}px`;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            element.style.cursor = 'grab';
-            element.style.zIndex = element.dataset.originalZIndex || '10';
-            document.removeEventListener('mousemove', onMouseMove);
-            this.saveCurrentPageState();
-        };
-
-        // Initialize cursor and add listeners
-        handle.style.cursor = 'grab';
-        handle.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('dragstart', (e) => e.preventDefault());
-    }
-
-    
 
     // Helper methods for selection management
     clearSelection() {
