@@ -5,14 +5,16 @@ A powerful, browser-based comic creation tool that lets you design professional-
 ## Features
 
 - **Rich Panel Layout Library**: Over 35 different panel layouts including single-panel, standard grids (2x1, 1x2, 2x2, 3x1, 1x3, 3x2, 3x3), manga-inspired styles, and numerous creative and dynamic layouts like spirals, diagonals, insets, and cinematic arrangements.
-- **Image Management**: Upload and organize your own images with drag-and-drop functionality. Reorder images in the library.
+- **Image Management**: Upload and organize your own images with drag-and-drop functionality. Create folders to organize assets, and reorder images in the library.
+- **Multi-Selection Support**: Select multiple assets using Shift+Click or Ctrl/Cmd+Click for batch operations like moving to folders.
+- **Folder System**: Create nested folders to organize your assets, with drag-and-drop management and folder navigation.
 - **Advanced Image Controls**: Adjust images within panels with zoom and pan functionality. Fine-tune zoom using direct numerical input.
 - **Stickers**: Add sticker images to panels. Stickers stay within panel boundaries and automatically layer behind text.
 - **Backgrounds**: Add custom background images to the entire canvas or apply predefined style patterns (vintage paper, halftone, etc.). Apply custom images or styles to all pages.
 - **Text Customization**: Add speech bubbles (including standard, whisper, and jagged styles), thought bubbles, and captions with customizable fonts, sizes, colors, and effects.
 - **Advanced Text Effects**: Includes smooth text outlines positioned behind the text, shadow effects, adjustable line spacing, and 50% opacity control for text elements.
-- **Fine Control**: Sliders for zoom, size, rotation, and line height now support direct numerical input for precise adjustments.
-- **Save & Load Projects**: Save your entire comic project (pages, images, text, styles, backgrounds, stickers) to a JSON file and load it later to continue working.
+- **Precise Control**: Sliders for zoom, size, rotation, and line height now support direct numerical input for precise adjustments.
+- **Save & Load Projects**: Save your entire comic project (pages, images, text, styles, backgrounds, stickers, folders) to a JSON file and load it later to continue working.
 - **Multi-page Support**: Create multi-page comics with different layouts per page. Reorder pages easily via a drag-and-drop interface.
 - **PDF Export**: Download your finished comic as a high-quality PDF, prompting for a custom filename.
 - **Responsive Design**: Works on various screen sizes and devices.
@@ -63,7 +65,9 @@ The built files will be in the `dist` directory and can be served from any stati
    - Click the upload area or drag and drop images to import them.
    - Alternatively, click "Load Project" to load a previously saved `.json` file.
    - All uploaded images appear in your library for easy access.
-   - Drag images within the library to reorder them.
+   - Create folders to organize your assets by clicking the "Create Folder" button.
+   - Use multi-selection (Ctrl/Cmd+Click or Shift+Click) to select multiple assets at once.
+   - Drag and drop assets to move them between folders.
 
 2. **Choose a Layout**:
    - Browse through the extensive list of available panel layouts.
@@ -96,10 +100,19 @@ The built files will be in the `dist` directory and can be served from any stati
    - Navigate between pages using the page controls.
    - Click "Reorder Pages" to open a modal where you can drag-and-drop pages into a new sequence.
 
-7. **Save Your Project**:
-   - Click the "Save Project" button in the editor toolbar to download your current work as a `.json` file (you'll be prompted for a filename).
+7. **Folder Management**:
+   - Create folders by clicking the "Create Folder" button in the image library.
+   - Double-click folder names to rename them.
+   - Navigate into folders by clicking on them.
+   - Use the "Back" button to return to the parent folder.
+   - Drag images or other folders into folders to organize your assets.
+   - Folder structure is saved with your project.
 
-8. **Export Your Comic**:
+8. **Save Your Project**:
+   - Click the "Save Project" button in the editor toolbar to download your current work as a `.json` file (you'll be prompted for a filename).
+   - The save includes all your folder structure and organization.
+
+9. **Export Your Comic**:
    - Click the "Download Comic" button to save your finished creation as a PDF (you'll be prompted for a filename).
    - All pages are combined into a single PDF document.
 
@@ -143,6 +156,17 @@ All layouts fit perfectly within a 700 x 700 pixel square canvas. Each layout in
 - **Positioning & Rotation**: Drag text elements freely and rotate them using a slider or direct input.
 - **Precise Control**: Use sliders or type exact values for font size, line height, and rotation.
 
+## Asset Organization
+
+The Comic Book Maker now includes a robust folder system for organizing your assets:
+
+- **Create Folders**: Organize your images and stickers into nested folders.
+- **Rename Folders**: Double-click on a folder name to edit it.
+- **Navigate Folders**: Click on folders to open them, use the back button to return to parent folders.
+- **Drag & Drop**: Move assets between folders with simple drag and drop.
+- **Multi-Selection**: Select multiple assets at once using Ctrl/Cmd+Click or Shift+Click for batch operations.
+- **Persistence**: Folder structure is saved with your project for continuity between sessions.
+
 ## Technical Details
 
 ### Project Structure
@@ -155,6 +179,7 @@ Comic-Book-Maker/
 │   ├── js/
 │   │   ├── main.js       # Main application logic, event handling, UI updates
 │   │   ├── layouts.js    # Panel layout definitions
+│   │   ├── main.js.fixed # Backup version of main.js
 │   │   └── ComicCreator.js # Core class managing state and functionality (Deprecated/Refactored into main.js)
 │   └── styles/
 │       └── main.css      # Application styling
