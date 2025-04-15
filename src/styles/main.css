@@ -805,13 +805,13 @@ img[draggable="false"] {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(255, 59, 59, 0.7);
+    background: rgba(255, 59, 59, 0.2);
     pointer-events: none;
     border-radius: 6px;
 }
 
 .editor-sidebar .thumbnail-container.in-use::before {
-    content: '✓';
+    content: 'USED';
     position: absolute;
     top: 50%;
     left: 50%;

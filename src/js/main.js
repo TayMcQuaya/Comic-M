@@ -1878,6 +1878,27 @@ class ComicCreator {
         // Show editor page
         document.getElementById('layout-page').classList.remove('active');
         document.getElementById('editor-page').classList.add('active');
+        
+        // Set sidebar mode to 'panels' when a new page is created
+        this.currentSidebarMode = 'panels';
+        
+        // Update the UI to show the panels tab as active
+        const tabsContainer = document.querySelector('.sidebar-tabs');
+        if (tabsContainer) {
+            // Remove active class from all tabs
+            tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Add active class to the panels tab
+            const panelsTab = tabsContainer.querySelector('.tab-btn[data-tab="panels"]');
+            if (panelsTab) {
+                panelsTab.classList.add('active');
+            }
+        }
+        
+        // Update the sidebar content to show panel controls
+        this.updateRightSidebarView();
     }
 
     navigateToPage(pageIndex, saveCurrentState = true) {
