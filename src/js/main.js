@@ -3276,9 +3276,18 @@ class ComicCreator {
                 <div class="control-group">
                     <label>Text Style</label>
                     <div class="text-style-buttons">
-                        <button class="style-btn bold-btn" title="Bold"><i class="fas fa-bold"></i></button>
-                        <button class="style-btn italic-btn" title="Italic"><i class="fas fa-italic"></i></button>
-                        <button class="style-btn underline-btn" title="Underline"><i class="fas fa-underline"></i></button>
+                        <button class="style-btn bold-btn ${textElement.style.fontWeight === 'bold' ? 'active' : ''}" title="Bold">
+                            <i class="fas fa-bold"></i>
+                        </button>
+                        <button class="style-btn italic-btn ${textElement.style.fontStyle === 'italic' ? 'active' : ''}" title="Italic">
+                            <i class="fas fa-italic"></i>
+                        </button>
+                        <button class="style-btn underline-btn ${textElement.style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
+                            <i class="fas fa-underline"></i>
+                        </button>
+                        <button class="style-btn all-caps-btn ${textElement.style.textTransform === 'uppercase' ? 'active' : ''}" title="All Caps">
+                            <i class="fas fa-font"></i>
+                        </button>
                     </div>
                 </div>
                 <div class="control-group">
@@ -3462,6 +3471,16 @@ class ComicCreator {
             this.saveCurrentPageState();
         });
         
+        const allCapsBtn = textProperties.querySelector('.all-caps-btn');
+        allCapsBtn.addEventListener('click', () => {
+            const isAllCaps = textElement.style.textTransform === 'uppercase';
+            textElement.style.textTransform = isAllCaps ? 'none' : 'uppercase';
+            allCapsBtn.classList.toggle('active');
+            
+            // Save state after toggling all caps
+            this.saveCurrentPageState();
+        });
+        
         // Find the rotation slider and its value display within textProperties
         const rotationSlider = textProperties.querySelector('.rotation');
         const rotationValueDisplay = textProperties.querySelector('.rotation-value');
@@ -3494,6 +3513,7 @@ class ComicCreator {
         if (textElement.style.fontWeight === 'bold') boldBtn.classList.add('active');
         if (textElement.style.fontStyle === 'italic') italicBtn.classList.add('active');
         if (textElement.style.textDecoration === 'underline') underlineBtn.classList.add('active');
+        if (textElement.style.textTransform === 'uppercase') allCapsBtn.classList.add('active');
     }
     
     // Helper function for the text properties
@@ -3665,6 +3685,9 @@ class ComicCreator {
                                 </button>
                                 <button class="style-btn underline-btn ${textElement.style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
                                     <i class="fas fa-underline"></i>
+                                </button>
+                                <button class="style-btn all-caps-btn ${textElement.style.textTransform === 'uppercase' ? 'active' : ''}" title="All Caps">
+                                    <i class="fas fa-font"></i>
                                 </button>
                             </div>
                         </div>
@@ -3903,6 +3926,16 @@ class ComicCreator {
             const isUnderline = textElement.style.textDecoration === 'underline';
             textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
             popup.querySelector('.underline-btn').classList.toggle('active');
+        });
+        
+        // All Caps toggle
+        popup.querySelector('.all-caps-btn').addEventListener('click', () => {
+            const isAllCaps = textElement.style.textTransform === 'uppercase';
+            textElement.style.textTransform = isAllCaps ? 'none' : 'uppercase';
+            popup.querySelector('.all-caps-btn').classList.toggle('active');
+            
+            // Save state after toggling all caps
+            this.saveCurrentPageState();
         });
         
         // Text alignment
