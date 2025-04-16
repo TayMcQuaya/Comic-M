@@ -21,15 +21,16 @@ We are refactoring the code incrementally, module by module:
 
 ## Progress So Far
 
-*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`
-*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`
+*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`, `ImageLibrary`
+*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`, `src/js/modules/ImageLibrary.js`
 *   **Methods/Functions Moved:** 
     *   `ExportManager`: `preloadFontsForExport`, `downloadComic`, `processElementsForExport`
     *   `Utils`: `globalRgbToHex`, `getTextWithLineBreaks`
     *   `FolderSystem`: `createFolder`, `navigateToFolder`, `navigateBack`, `renameFolder`, `moveItemToFolder`
     *   `DragAndDropManager`: `setupImageDragAndDrop`, `setupFolderDragAndDrop`, `setupGridDropZone`, `setupImageDragging`, `makeTextDraggable`, `makeTextResizable`, `makeStickerDraggable`, `makeCanvasTextDraggable`
+    *   `ImageLibrary`: Properties (`uploadedImages`, `selectedAssets`, `lastSelectedAsset`), Methods (`handleImageUpload`, `updateThumbnails` (was `updateImageLibrary`), `deleteImage`, `clearSelection`, `enableNextButton`, `handleAssetSelection`, `selectSingleAsset`, plus property accessors)
 *   **Integration:** Modules imported and instantiated in `main.js`. Calls updated.
-*   **Cleanup:** Original methods/functions removed from `main.js`.
+*   **Cleanup:** Original methods/functions/properties removed from `main.js`.
 *   **Status:** Functionality confirmed working for extracted modules.
 
 ## Remaining Modules (Based on `refactoring-documentation.md`)
@@ -37,7 +38,7 @@ We are refactoring the code incrementally, module by module:
 The following modules still need to be extracted from `main.js`:
 
 *   ~~`DragAndDrop.js` (drag and drop functionality for images, folders, text, stickers)~~ **(Completed)**
-*   `ImageLibrary.js` (image upload, display (`updateImageLibrary`), selection, deletion)
+*   ~~`ImageLibrary.js` (image upload, display (`updateImageLibrary`), selection, deletion)~~ **(Completed)**
 *   `PanelManager.js` (panel creation based on layout, image placement (`addImageToPanel`), panel selection, image controls within panels (`updatePanelControls`, `handleZoom`, `handlePositionChange` etc.))
 *   `TextManager.js` (text bubble creation (`addTextToPanel`, `addTextToCanvas`), editing, styling (`updateTextProperties`, `showTextFormatPopup`), positioning, effects)
 *   `StickerManager.js` (sticker adding, selection, controls, dragging)

@@ -99,12 +99,15 @@ export class DragAndDropManager {
         container.addEventListener('dragstart', (e) => {
             const itemId = container.dataset.imageId;
             
+            // Use the imageLibrary instance to get selected assets
+            const selectedAssets = this.comicCreator.imageLibrary.getSelectedAssets();
+            
             // If this is a selected item and we have multiple items selected
-            if (this.comicCreator.selectedAssets.includes(itemId) && this.comicCreator.selectedAssets.length > 1) {
-                console.log('Starting multi-item drag with', this.comicCreator.selectedAssets.length, 'items');
+            if (selectedAssets.includes(itemId) && selectedAssets.length > 1) {
+                console.log('Starting multi-item drag with', selectedAssets.length, 'items');
                 
-                // Set data for multi-drag
-                e.dataTransfer.setData('text/plain', JSON.stringify(this.comicCreator.selectedAssets));
+                // Set data for multi-drag using the correct selected assets array
+                e.dataTransfer.setData('text/plain', JSON.stringify(selectedAssets));
                 e.dataTransfer.setData('type', 'multi-image');
                 
                 // Create a custom drag image
@@ -116,7 +119,7 @@ export class DragAndDropManager {
                 dragFeedback.style.padding = '10px';
                 dragFeedback.style.borderRadius = '5px';
                 dragFeedback.style.pointerEvents = 'none';
-                dragFeedback.textContent = `${this.comicCreator.selectedAssets.length} items`;
+                dragFeedback.textContent = `${selectedAssets.length} items`;
                 
                 document.body.appendChild(dragFeedback);
                 e.dataTransfer.setDragImage(dragFeedback, 25, 25);
@@ -127,7 +130,7 @@ export class DragAndDropManager {
                 }, 0);
                 
                 // Add dragging class to all selected items
-                this.comicCreator.selectedAssets.forEach(id => {
+                selectedAssets.forEach(id => {
                     const element = document.querySelector(`.thumbnail-container[data-image-id="${id}"]`);
                     if (element) element.classList.add('dragging');
                 });
@@ -183,20 +186,17 @@ export class DragAndDropManager {
             
             console.log('Drop on folder:', targetFolderId, 'Type:', type);
             
+            let itemsMoved = false; // Flag to check if any move occurred
             // Handle multiple items
             if (type === 'multi-image') {
                 try {
                     const rawData = e.dataTransfer.getData('text/plain');
-                    console.log('Multi-image raw data:', rawData);
                     const itemIds = JSON.parse(rawData);
-                    console.log('Parsed items:', itemIds);
                     
-                    // Move each selected item
                     itemIds.forEach(itemId => {
                         if (typeof itemId === 'string') {
-                            console.log('Moving item to folder:', itemId, targetFolderId);
-                            // Use FolderSystem method
                             this.comicCreator.folderSystem.moveItemToFolder(itemId, targetFolderId);
+                            itemsMoved = true; 
                         }
                     });
                 } catch (error) {
@@ -223,9 +223,13 @@ export class DragAndDropManager {
                     }
                 }
                 
-                console.log('Moving single item to folder:', itemId, targetFolderId);
-                // Use FolderSystem method
                 this.comicCreator.folderSystem.moveItemToFolder(itemId, targetFolderId);
+                itemsMoved = true;
+            }
+            
+            // Update the UI if items were potentially moved
+            if (itemsMoved) {
+                this.comicCreator.imageLibrary.updateThumbnails();
             }
         });
     }
@@ -305,6 +309,9 @@ export class DragAndDropManager {
             }
             // Note: Actual reordering within the folder happens via the moveItemToFolder call
             // which triggers an updateImageLibrary call.
+
+            // Update the UI to reflect the new order
+            this.comicCreator.imageLibrary.updateThumbnails();
         });
     }
 

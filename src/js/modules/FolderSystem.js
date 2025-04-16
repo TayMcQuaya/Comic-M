@@ -15,7 +15,8 @@ export class FolderSystem {
             parent: this.comicCreator.currentFolderId
         };
         this.comicCreator.folderStructure[this.comicCreator.currentFolderId].items.push(folderId);
-        this.comicCreator.updateImageLibrary(); // Call method on comicCreator instance
+        // Call the updated method on the imageLibrary instance
+        this.comicCreator.imageLibrary.updateThumbnails(); 
         return folderId;
     }
 
@@ -24,7 +25,8 @@ export class FolderSystem {
         if (this.comicCreator.folderStructure[folderId]) {
             // Update currentFolderId on comicCreator instance
             this.comicCreator.currentFolderId = folderId;
-            this.comicCreator.updateImageLibrary(); // Call method on comicCreator instance
+            // Call the updated method on the imageLibrary instance
+            this.comicCreator.imageLibrary.updateThumbnails(); 
         }
     }
 
@@ -34,7 +36,8 @@ export class FolderSystem {
         if (currentFolder && currentFolder.parent) {
             // Update currentFolderId on comicCreator instance
             this.comicCreator.currentFolderId = currentFolder.parent;
-            this.comicCreator.updateImageLibrary(); // Call method on comicCreator instance
+            // Call the updated method on the imageLibrary instance
+            this.comicCreator.imageLibrary.updateThumbnails();
         }
     }
 
@@ -42,7 +45,8 @@ export class FolderSystem {
     renameFolder(folderId, newName) {
         if (this.comicCreator.folderStructure[folderId]) {
             this.comicCreator.folderStructure[folderId].name = newName;
-            this.comicCreator.updateImageLibrary(); // Call method on comicCreator instance
+            // Call the updated method on the imageLibrary instance
+            this.comicCreator.imageLibrary.updateThumbnails(); 
         }
     }
 
@@ -110,13 +114,12 @@ export class FolderSystem {
                 console.warn(`Item already exists in target folder ${targetFolderIdStr}`);
             }
             
-            // Update the UI (Original logic updated inside the if block)
-            this.comicCreator.updateImageLibrary(); 
+            // Update the UI 
+            this.comicCreator.imageLibrary.updateThumbnails(); // Call updated method
         } else {
             console.error(`Target folder ${targetFolderIdStr} not found`);
-            // Original logic didn't update UI here, but might be needed if removal occurred.
-            // Adding it for safety, consistent with successful move.
-            this.comicCreator.updateImageLibrary(); 
+            // Update UI even if target isn't found, because item might have been removed from source
+            this.comicCreator.imageLibrary.updateThumbnails(); // Call updated method
         }
     }
 } 

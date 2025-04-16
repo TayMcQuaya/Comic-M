@@ -3,12 +3,13 @@ import { ExportManager } from './modules/ExportManager.js'; // Import the new ma
 import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // Import Utils
 import { FolderSystem } from './modules/FolderSystem.js'; // Import FolderSystem
 import { DragAndDropManager } from './modules/DragAndDropManager.js'; // Import DragAndDropManager
+import { ImageLibrary } from './modules/ImageLibrary.js'; // Import ImageLibrary
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
 class ComicCreator {
     constructor() {
-        this.uploadedImages = [];
+        // this.uploadedImages = []; // Moved to ImageLibrary
         this.pages = [{
             layout: null,
             panelStates: [] // Will store image positions and transforms for each panel
@@ -33,21 +34,22 @@ class ComicCreator {
         this.exportManager = new ExportManager(this); 
         this.folderSystem = new FolderSystem(this); // Instantiate FolderSystem
         this.dragAndDropManager = new DragAndDropManager(this); // Instantiate DragAndDropManager
+        this.imageLibrary = new ImageLibrary(this); // Instantiate ImageLibrary
         
         this.init();
     }
 
     init() {
-        // Initialize selection tracking
-        this.selectedAssets = [];
-        this.lastSelectedAsset = null;
+        // Initialize selection tracking - Moved to ImageLibrary
+        // this.selectedAssets = [];
+        // this.lastSelectedAsset = null;
         
         // Set up global document click handler for selection clearing
         document.addEventListener('click', (e) => {
             // Only clear selection if clicking outside of thumbnails and folders
             if (!e.target.closest('.thumbnail-container') && 
                 !e.target.closest('.folder-container')) {
-                this.clearSelection();
+                this.imageLibrary.clearSelection(); // Ensure call uses imageLibrary instance
             }
         });
         
@@ -75,11 +77,11 @@ class ComicCreator {
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('drop-target');
-            this.handleImageUpload(e.dataTransfer.files);
+            this.imageLibrary.handleImageUpload(e.dataTransfer.files); // Updated call
         });
 
         fileInput.addEventListener('change', (e) => {
-            this.handleImageUpload(e.target.files);
+            this.imageLibrary.handleImageUpload(e.target.files); // Updated call
         });
     }
 
@@ -112,256 +114,21 @@ class ComicCreator {
 
         const newImages = await Promise.all(imagePromises);
         console.log('[handleImageUpload] All images processed:', newImages.length, 'images');
-        this.uploadedImages.push(...newImages);
+        this.imageLibrary.addImages(newImages);
         
         // Add new images to current folder
         newImages.forEach(image => {
             this.folderStructure[this.currentFolderId].items.push(image.id.toString());
         });
         
-        console.log('[handleImageUpload] Current uploadedImages array:', this.uploadedImages.length, 'total images');
-        this.updateImageLibrary();
-        this.enableNextButton();
+        console.log('[handleImageUpload] Current uploadedImages array:', this.imageLibrary.getImages().length, 'total images');
+        this.imageLibrary.updateThumbnails();
+        this.imageLibrary.enableNextButton(); // Updated call
     }
 
-    updateImageLibrary() {
-        // Find all thumbnails-grid containers
-        const grids = document.querySelectorAll('.thumbnails-grid');
-        
-        console.log('updateImageLibrary called. Current uploadedImages count:', this.uploadedImages.length);
-        console.log('Current folder ID:', this.currentFolderId);
-        
-        // Get all currently used image IDs from panels
-        const usedImageIds = Array.from(document.querySelectorAll('.comic-panel'))
-            .map(panel => panel.dataset.imageId)
-            .filter(id => id);
-        
-        // Save current selection state before clearing the grids
-        const selectedAssetIds = [...this.selectedAssets];
-        
-        // Update each grid with the images
-        grids.forEach(grid => {
-            // Clear existing content
-            grid.innerHTML = '';
-
-            // Add back button if not in root folder
-            if (this.currentFolderId !== 'root') {
-                const backButton = document.createElement('div');
-                backButton.className = 'back-to-parent-folder';
-                backButton.innerHTML = `
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back</span>
-                `;
-                backButton.addEventListener('click', () => this.folderSystem.navigateBack());
-                grid.appendChild(backButton);
-            }
-
-            // Add create folder button in editor sidebar
-            if (grid.closest('.editor-sidebar')) {
-                const createFolderBtn = document.createElement('div');
-                createFolderBtn.className = 'create-folder-btn';
-                createFolderBtn.innerHTML = `
-                    <i class="fas fa-folder-plus"></i>
-                    <span>Create Folder</span>
-                `;
-                createFolderBtn.addEventListener('click', () => this.folderSystem.createFolder());
-                grid.appendChild(createFolderBtn);
-            }
-
-            // Get current folder's items
-            const currentFolder = this.folderStructure[this.currentFolderId];
-            
-            if (!currentFolder) {
-                console.error('ERROR: Current folder not found in folderStructure:', this.currentFolderId);
-                console.log('Available folders:', Object.keys(this.folderStructure));
-                return; // Exit to prevent errors
-            }
-            
-            let lastContainer = null;  // Track the last created container
-            
-            // Add folders first
-            currentFolder.items.forEach(itemId => {
-                const itemIdStr = itemId.toString();
-                
-                if (itemIdStr.startsWith('folder_')) {
-                    const folder = this.folderStructure[itemIdStr];
-                    if (!folder) {
-                        console.error('ERROR: Referenced folder not found in structure:', itemIdStr);
-                        return; // Skip this item
-                    }
-                    
-                const container = document.createElement('div');
-                    lastContainer = container;  // Update last container
-                    container.className = 'folder-container';
-                    container.draggable = true;
-                    container.dataset.folderId = itemIdStr;
-
-                    container.innerHTML = `
-                        <i class="fas fa-folder"></i>
-                        <div class="folder-name" contenteditable="true">${folder.name}</div>
-                    `;
-
-                    // Setup folder name editing
-                    const nameElement = container.querySelector('.folder-name');
-                    nameElement.addEventListener('blur', () => {
-                        this.folderSystem.renameFolder(itemIdStr, nameElement.textContent);
-                    });
-                    nameElement.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter') {
-                            e.preventDefault();
-                            nameElement.blur();
-                        }
-                    });
-
-                    // Setup double click to open folder
-                    container.addEventListener('dblclick', () => {
-                        this.folderSystem.navigateToFolder(itemIdStr);
-                    });
-
-                    // Setup drag and drop for folders
-                    this.dragAndDropManager.setupFolderDragAndDrop(container);
-
-                    grid.appendChild(container);
-                }
-            });
-
-            // Then add images
-            currentFolder.items.forEach(itemId => {
-                const itemIdStr = itemId.toString();
-                if (!itemIdStr.startsWith('folder_')) {
-                    const image = this.uploadedImages.find(img => String(img.id) === itemIdStr);
-                    
-                    if (image) {
-                        const container = document.createElement('div');
-                        lastContainer = container;  // Update last container
-                container.className = 'thumbnail-container';
-                        if (usedImageIds.includes(itemIdStr)) {
-                    container.classList.add('in-use');
-                }
-                        
-                        // Restore selection state
-                        if (selectedAssetIds.includes(itemIdStr)) {
-                            container.classList.add('selected');
-                        }
-                        
-                container.draggable = true;
-                        container.dataset.imageId = itemIdStr;
-
-                container.innerHTML = `
-                    <img src="${image.src}" alt="${image.name}">
-                    <div class="image-name">${image.name}</div>
-                            ${grid.closest('.editor-sidebar') ? '' : `<button class="delete-btn" data-image-id="${itemIdStr}">×</button>`}
-                `;
-                
-                // Setup delete button if it exists
-                const deleteBtn = container.querySelector('.delete-btn');
-                if (deleteBtn) {
-                            deleteBtn.addEventListener('click', (e) => {
-                                e.stopPropagation(); // Prevent selection when deleting
-                                this.deleteImage(itemIdStr);
-                            });
-                }
-                
-                grid.appendChild(container);
-
-                        // Add selection click handler
-                        this.setupImageSelection(container); // Revert: Call the method on 'this' (ComicCreator) directly
-                        
-                        // Setup drag and drop
-                        this.dragAndDropManager.setupImageDragAndDrop(container);
-                    } else {
-                        console.warn('Image not found for ID:', itemIdStr);
-                    }
-                }
-            });
-
-            // Setup grid drop zone
-            this.dragAndDropManager.setupGridDropZone(grid);
-        });
-    }
-
-    setupImageSelection(container) {
-        container.addEventListener('click', (e) => {
-            e.stopPropagation(); // Prevent event from reaching document
-            
-            const itemId = container.dataset.imageId;
-            
-            // Handle multi-selection with Ctrl/Cmd key
-            if (e.ctrlKey || e.metaKey) {
-                const index = this.selectedAssets.indexOf(itemId);
-                if (index !== -1) {
-                    // Deselect
-                    this.selectedAssets.splice(index, 1);
-                    container.classList.remove('selected');
-                } else {
-                    // Select
-                    this.selectedAssets.push(itemId);
-                    container.classList.add('selected');
-                }
-                this.lastSelectedAsset = itemId;
-            }
-            // Handle range selection with Shift key
-            else if (e.shiftKey && this.lastSelectedAsset) {
-                const grid = container.closest('.thumbnails-grid');
-                const visibleContainers = Array.from(grid.querySelectorAll('.thumbnail-container:not(.folder-container)'));
-                
-                const lastIndex = visibleContainers.findIndex(c => c.dataset.imageId === this.lastSelectedAsset);
-                const currentIndex = visibleContainers.findIndex(c => c.dataset.imageId === itemId);
-                
-                if (lastIndex !== -1 && currentIndex !== -1) {
-                    // Clear current selection
-                    this.selectedAssets = [];
-                    document.querySelectorAll('.thumbnail-container.selected').forEach(el => {
-                        el.classList.remove('selected');
-                    });
-                    
-                    // Select range
-                    const start = Math.min(lastIndex, currentIndex);
-                    const end = Math.max(lastIndex, currentIndex);
-                    
-                    for (let i = start; i <= end; i++) {
-                        if (visibleContainers[i] && visibleContainers[i].dataset.imageId) {
-                            const id = visibleContainers[i].dataset.imageId;
-                            this.selectedAssets.push(id);
-                            visibleContainers[i].classList.add('selected');
-                        }
-                    }
-                }
-            }
-            // Normal click - clear selection and select only this item
-            else {
-                document.querySelectorAll('.thumbnail-container.selected').forEach(el => {
-                    el.classList.remove('selected');
-                });
-                this.selectedAssets = [itemId];
-                container.classList.add('selected');
-                this.lastSelectedAsset = itemId;
-            }
-        });
-    }
-    
     
 
-    deleteImage(imageId) {
-        // Remove from uploadedImages
-        this.uploadedImages = this.uploadedImages.filter(img => String(img.id) !== imageId);
-        
-        // Remove from folder structure
-        Object.values(this.folderStructure).forEach(folder => {
-            const index = folder.items.indexOf(imageId);
-            if (index !== -1) {
-                folder.items.splice(index, 1);
-            }
-        });
-        
-        this.updateImageLibrary();
-        this.enableNextButton();
-    }
-
-    enableNextButton() {
-        const nextBtn = document.querySelector('#next-step-btn');
-        nextBtn.disabled = this.uploadedImages.length === 0;
-    }
+   
 
     setupLayoutSelection() {
         const layoutGrid = document.querySelector('.layout-grid');
@@ -490,7 +257,7 @@ class ComicCreator {
                 return;
             }
             
-            const image = this.uploadedImages.find(img => String(img.id) === imageId);
+            const image = this.imageLibrary.getImageById(imageId);
             console.log('[Canvas Drop] Found image object in uploadedImages:', image);
             if (!image) {
                 console.error('[Canvas Drop] Image not found in uploadedImages for ID:', imageId); // <<< Error log if not found
@@ -1361,15 +1128,15 @@ class ComicCreator {
                 uploadArea.addEventListener('drop', (e) => {
                     e.preventDefault();
                     uploadArea.classList.remove('drop-target');
-                    this.handleImageUpload(e.dataTransfer.files);
+                    this.imageLibrary.handleImageUpload(e.dataTransfer.files); // Update call
                 });
                 fileInput.addEventListener('change', (e) => {
-                    this.handleImageUpload(e.target.files);
+                    this.imageLibrary.handleImageUpload(e.target.files); // Update call
                 });
             }
             
             // Update image library
-            this.updateImageLibrary();
+            this.imageLibrary.updateThumbnails(); // Verify call
         }
         
         const canvas = document.querySelector('#comic-canvas');
@@ -1777,7 +1544,7 @@ class ComicCreator {
         
         // Restore background image if present
         if (page.backgroundState && page.backgroundState.imageId) {
-            const bgImage = this.uploadedImages.find(img => String(img.id) === String(page.backgroundState.imageId));
+            const bgImage = this.imageLibrary.getImageById(String(page.backgroundState.imageId));
             if (bgImage) {
                 const bgImg = document.createElement('img');
                 bgImg.src = bgImage.src;
@@ -1813,7 +1580,7 @@ class ComicCreator {
                 
                 // Restore image if present
                 if (state.imageId) {
-                    const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                    const image = this.imageLibrary.getImageById(String(state.imageId));
                     if (image) {
                         const img = document.createElement('img');
                         img.src = image.dataUrl || image.src;
@@ -2030,7 +1797,7 @@ class ComicCreator {
         // Restore stickers
         if (stickerStates.length > 0) {
             stickerStates.forEach(state => {
-                const image = this.uploadedImages.find(img => String(img.id) === String(state.imageId));
+                const image = this.imageLibrary.getImageById(String(state.imageId));
                 if (image) {
                     const stickerImg = document.createElement('img');
                     stickerImg.src = image.src;
@@ -2353,13 +2120,13 @@ class ComicCreator {
 
 
     reorderImages(fromId, toId) {
-        const fromIndex = this.uploadedImages.findIndex(img => String(img.id) === fromId);
-        const toIndex = this.uploadedImages.findIndex(img => String(img.id) === toId);
+        const fromIndex = this.imageLibrary.getImages().findIndex(img => String(img.id) === fromId);
+        const toIndex = this.imageLibrary.getImages().findIndex(img => String(img.id) === toId);
         
         if (fromIndex !== -1 && toIndex !== -1) {
             // Reorder the array
-            const [movedImage] = this.uploadedImages.splice(fromIndex, 1);
-            this.uploadedImages.splice(toIndex, 0, movedImage);
+            const [movedImage] = this.imageLibrary.getImages().splice(fromIndex, 1);
+            this.imageLibrary.getImages().splice(toIndex, 0, movedImage);
             
             // Update the display
             this.updateImageLibrary();
@@ -3886,7 +3653,7 @@ class ComicCreator {
                     imageId: panel.imageId || null
                 }))
             })),
-            images: this.uploadedImages.map(img => ({
+            images: this.imageLibrary.getImages().map(img => ({
                 id: img.id,
                 name: img.name,
                 width: img.width,
@@ -3922,11 +3689,11 @@ class ComicCreator {
             }
             
             // Save the previous uploadedImages and folderStructure for potential recovery
-            const previousUploadedImages = [...this.uploadedImages];
+            const previousImages = [...this.imageLibrary.getImages()];
             const previousFolderStructure = JSON.parse(JSON.stringify(this.folderStructure));
             
             // Clear current state
-            this.uploadedImages = [];
+            this.imageLibrary.clearImages();
             this.pages = [];
             this.currentPageIndex = 0;
             
@@ -3979,10 +3746,10 @@ class ComicCreator {
                 });
             }));
             
-            this.uploadedImages = loadedImages;
+            this.imageLibrary.addImages(loadedImages);
             
             // Log the loaded images data
-            console.log('Images loaded into this.uploadedImages:', this.uploadedImages.map(img => ({
+            console.log('Images loaded into this.imageLibrary:', this.imageLibrary.getImages().map(img => ({
                 id: img.id, 
                 name: img.name, 
                 srcStart: img.src.substring(0, 60)
@@ -4008,14 +3775,14 @@ class ComicCreator {
                 // Old format without folder structure, place all images in root folder
                 console.log('Loading older project format without folder structure (v1.0)');
                 // Add all image IDs to root folder
-                this.uploadedImages.forEach(image => {
+                this.imageLibrary.getImages().forEach(image => {
                     // Avoid duplicate entries
                     if (!this.folderStructure.root.items.includes(image.id)) {
                         this.folderStructure.root.items.push(image.id.toString());
                     }
                 });
                 console.log('Created root folder with all images:', {
-                    imageCount: this.uploadedImages.length,
+                    imageCount: this.imageLibrary.getImages().length,
                     rootItemCount: this.folderStructure.root.items.length
                 });
                 console.log('Final folder structure before UI update:', JSON.stringify(this.folderStructure, null, 2));
@@ -4034,7 +3801,7 @@ class ComicCreator {
             // If there's a critical integrity error, recover previous state
             if (integrityError) {
                 console.warn('Recovering previous folder structure and images due to integrity error');
-                this.uploadedImages = previousUploadedImages;
+                this.imageLibrary.addImages(previousImages);
                 this.folderStructure = previousFolderStructure;
                 throw new Error('Failed to load project due to folder structure integrity error');
             }
@@ -5285,8 +5052,8 @@ class ComicCreator {
 
     // Helper methods for selection management
     clearSelection() {
-        this.selectedAssets = [];
-        this.lastSelectedAsset = null;
+        this.imageLibrary.clearSelectedAssets();
+        this.imageLibrary.setLastSelectedAsset(null);
         document.querySelectorAll('.thumbnail-container.selected').forEach(el => {
             el.classList.remove('selected');
         });
