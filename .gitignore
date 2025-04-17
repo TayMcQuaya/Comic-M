@@ -4,3 +4,17 @@ instructions.txt
 
 node_modules
 statemanager.txt
+*.egg-info
+.DS_Store/
+.env/
+.idea/
+.pytest_cache/
+.vscode/
+__pycache__/
+build/
+coverage/
+logs/
+project_structure.py
+project_structure.txt
+temp/
+venv/

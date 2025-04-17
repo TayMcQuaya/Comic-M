@@ -4,6 +4,7 @@ import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // I
 import { FolderSystem } from './modules/FolderSystem.js'; // Import FolderSystem
 import { DragAndDropManager } from './modules/DragAndDropManager.js'; // Import DragAndDropManager
 import { ImageLibrary } from './modules/ImageLibrary.js'; // Import ImageLibrary
+import { PanelManager } from './modules/PanelManager.js'; // Import PanelManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -19,6 +20,7 @@ class ComicCreator {
         this.useGlobalBackgroundStyle = false; // Global background toggle
         this.globalBackgroundStyle = 'classic-white'; // Default global background style
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
+        // this.currentPanel = null; // Moved to PanelManager
         // Add folder system properties
         this.folderStructure = {
             root: {
@@ -30,11 +32,12 @@ class ComicCreator {
         };
         this.currentFolderId = 'root';
         
-        // Instantiate the ExportManager
+        // Instantiate the Managers
         this.exportManager = new ExportManager(this); 
         this.folderSystem = new FolderSystem(this); // Instantiate FolderSystem
         this.dragAndDropManager = new DragAndDropManager(this); // Instantiate DragAndDropManager
         this.imageLibrary = new ImageLibrary(this); // Instantiate ImageLibrary
+        this.panelManager = new PanelManager(this); // Instantiate PanelManager
         
         this.init();
     }
@@ -192,8 +195,9 @@ class ComicCreator {
                 // Check current sidebar mode and selected element
                 switch (this.currentSidebarMode) {
                     case 'panels':
-                        if (this.currentPanel && this.currentPanel.querySelector('img')) {
-                            this.clearPanelImage(this.currentPanel);
+                        // Use the PanelManager's currentPanel property and clear method
+                        if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
+                            this.panelManager.clearPanelImage(this.panelManager.currentPanel);
                         }
                         break;
                     case 'backgrounds':
@@ -274,7 +278,8 @@ class ComicCreator {
                     if (panel) {
                         panel.classList.remove('drop-target');
                         console.log('Mode: Panels - Dropped image ID:', imageId, 'onto panel');
-                        this.addImageToPanel(panel, image);
+                        // Call the method on the PanelManager instance
+                        this.panelManager.addImageToPanel(panel, image); 
                     } else {
                         console.log('Mode: Panels - Drop outside panel ignored.');
                     }
@@ -317,7 +322,8 @@ class ComicCreator {
                 return; 
             } else if (panel) {
                 // Clicked on a panel but not text/sticker inside it
-                this.selectPanel(panel);
+                // Call the method on the PanelManager instance
+                this.panelManager.selectPanel(panel);
             } else {
                 // Clicked on the canvas background or empty area
                 this.deselectAll();
@@ -325,292 +331,6 @@ class ComicCreator {
         });
     }
 
-    
-
-    addImageToPanel(panel, image) {
-        if (!panel || !image) {
-            console.error('[addImageToPanel] Cannot add image: invalid panel or image', { panel, image }); // <<< Keep existing error log
-            return;
-        }
-        
-        console.log('[addImageToPanel] Called with panel:', panel, 'and image:', image); // <<< Debug log
-        
-        try {
-            const img = document.createElement('img');
-            img.src = image.src;
-            img.alt = image.name;
-            console.log('[addImageToPanel] Created img element with src:', img.src); // <<< Debug log
-            
-            // Find and remove any existing image in the panel
-            const existingImg = panel.querySelector('img');
-            if (existingImg) {
-                existingImg.remove();
-                console.log('[addImageToPanel] Removed existing image from panel.');
-            }
-            
-            // Append the new image
-            panel.appendChild(img);
-            console.log('[addImageToPanel] Appended img to panel:', panel); // <<< Debug log
-            
-            // Set initial image styles
-            img.style.position = 'absolute';
-            img.style.left = '50%';
-            img.style.top = '50%';
-            img.style.transform = 'translate(-50%, -50%) scale(1)';
-    
-            // Calculate initial scale to fit the panel while maintaining aspect ratio
-            img.onload = () => {
-                console.log('Image loaded, calculating scale...'); // Debug log
-                const panelWidth = panel.offsetWidth;
-                const panelHeight = panel.offsetHeight;
-                const imageWidth = img.naturalWidth;
-                const imageHeight = img.naturalHeight;
-    
-                console.log('Panel dimensions:', panelWidth, panelHeight); // Debug log
-                console.log('Image dimensions:', imageWidth, imageHeight); // Debug log
-    
-                const scaleX = panelWidth / imageWidth;
-                const scaleY = panelHeight / imageHeight;
-                const scale = Math.max(scaleX, scaleY);
-    
-                img.style.transform = `translate(-50%, -50%) scale(${scale})`;
-                
-                panel.dataset.initialScale = scale;
-                panel.dataset.currentScale = scale;
-                
-                console.log('Applied scale:', scale); // Debug log
-            };
-            
-            // Store image data and update visual states
-            panel.dataset.imageId = image.id.toString();
-            this.imageLibrary.updateThumbnails(); // Update thumbnail states (FIXED CALL)
-            
-            this.dragAndDropManager.setupImageDragging(img);
-            this.selectPanel(panel);
-        } catch (error) {
-            console.error('Error adding image to panel:', error);
-        }
-    }
-
-
-    selectPanel(panel) {
-        if (this.currentPanel) {
-            this.currentPanel.classList.remove('selected');
-            // Reset cursor for previous panel's image
-            const prevImg = this.currentPanel.querySelector('img');
-            if (prevImg) {
-                prevImg.style.cursor = 'default';
-                prevImg.style.pointerEvents = 'none';
-            }
-        }
-        
-        this.currentPanel = panel;
-        
-        if (panel) {
-            panel.classList.add('selected');
-            
-            // Set cursor for current panel's image
-            const img = panel.querySelector('img');
-            if (img) {
-                img.style.cursor = 'grab';
-                img.style.pointerEvents = 'auto';
-            }
-            
-            this.updatePanelControls(panel);
-        } else {
-            // Clear panel controls when no panel is selected
-            const controls = document.querySelector('.panel-controls');
-            if (controls) controls.innerHTML = '';
-        }
-    }
-
-    updatePanelControls(panel) {
-        const controls = document.querySelector('.panel-controls');
-        if (!controls) return;
-
-        if (!panel) {
-            this.showSelectPanelModal();
-            return;
-        }
-
-        // Clear existing controls
-        controls.innerHTML = `
-            <div class="control-group">
-                <h4 style="text-align: center;">Image Controls</h4>
-                <div class="zoom-group">
-                    <label>Zoom</label>
-                    <input type="range" class="zoom-control" min="50" max="300" value="100">
-                    <span class="zoom-value">100%</span>
-                    <button class="reset-zoom-btn">
-                        <i class="fas fa-undo"></i> Reset Zoom
-                    </button>
-                </div>
-                <div class="flip-group" style="margin-top: 1rem;">
-                    <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
-                        <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
-                    </button>
-                </div>
-            </div>
-            <div class="control-group">
-                <h4 style="text-align: center;">Rotation</h4>
-                <div class="rotation-group">
-                    <label>Angle</label>
-                    <input type="range" class="rotation-control" min="-180" max="180" value="0" step="1">
-                    <span class="rotation-value">0°</span>
-                    <button class="reset-rotation-btn">
-                        <i class="fas fa-undo"></i> Reset Rotation
-                    </button>
-                </div>
-            </div>
-            <div class="control-group">
-                <h4 style="text-align: center;">Position</h4>
-                <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
-                    <label style="font-size: 16px;">Step Size: </label>
-                    <input type="number" 
-                           class="step-size-input" 
-                           value="1" 
-                           min="0.1" 
-                           max="20" 
-                           step="0.1" 
-                           style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
-                </div>
-                <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
-                    <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
-                    <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
-                    <div style="grid-area: center;"></div>
-                    <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
-                    <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
-                </div>
-            </div>`;
-
-        // Add zoom control listeners
-        const zoomControl = controls.querySelector('.zoom-control');
-        const zoomValue = controls.querySelector('.zoom-value');
-        
-        if (zoomControl) {
-            zoomControl.addEventListener('input', (e) => this.handleZoom(e, panel));
-            
-            // Make zoom value editable using the helper function
-            this.makeSliderValueEditable(zoomControl, zoomValue, '%', 0);
-        }
-
-        // Add reset zoom button listener
-        const resetZoomBtn = controls.querySelector('.reset-zoom-btn');
-        if (resetZoomBtn) {
-            resetZoomBtn.addEventListener('click', () => {
-                const img = panel.querySelector('img');
-                if (!img) return;
-
-                // Reset zoom to 100%
-                const initialScale = parseFloat(panel.dataset.initialScale) || 1;
-                img.style.transform = img.style.transform.replace(/scale\(.*?\)/, `scale(${initialScale})`);
-                panel.dataset.currentScale = initialScale;
-
-                // Update zoom control and value display
-                if (zoomControl) {
-                    zoomControl.value = 100;
-                    zoomValue.textContent = '100%';
-                }
-
-                // Save the current page state
-                this.saveCurrentPageState();
-            });
-        }
-
-        // Add flip horizontal button listener
-        const flipHorizontalBtn = controls.querySelector('.flip-horizontal-btn');
-        if (flipHorizontalBtn) {
-            const img = panel.querySelector('img');
-            if (img) {
-                // Set initial state based on current transform
-                const isFlipped = img.style.transform.includes('scaleX(-1)');
-                flipHorizontalBtn.classList.toggle('active', isFlipped);
-                
-                flipHorizontalBtn.addEventListener('click', () => {
-                    const currentTransform = img.style.transform || '';
-                    const isCurrentlyFlipped = currentTransform.includes('scaleX(-1)');
-                    
-                    // Toggle the flip state
-                    if (isCurrentlyFlipped) {
-                        img.style.transform = currentTransform.replace(/\s*scaleX\(-1\)/, '');
-                        panel.dataset.isFlippedHorizontally = 'false';
-                    } else {
-                        img.style.transform = `${currentTransform} scaleX(-1)`;
-                        panel.dataset.isFlippedHorizontally = 'true';
-                    }
-                    
-                    // Toggle button active state
-                    flipHorizontalBtn.classList.toggle('active');
-                    
-                    // Save the current page state
-                    this.saveCurrentPageState();
-                });
-            }
-        }
-
-        // Add rotation control listeners
-        const rotationControl = controls.querySelector('.rotation-control');
-        const rotationValue = controls.querySelector('.rotation-value');
-        
-        if (rotationControl) {
-            // Get current rotation angle from image or panel dataset
-            const img = panel.querySelector('img');
-            if (img) {
-                const currentRotation = parseInt(panel.dataset.rotation || '0');
-                rotationControl.value = currentRotation;
-                rotationValue.textContent = `${currentRotation}°`;
-                
-                rotationControl.addEventListener('input', (e) => {
-                    const angle = parseInt(e.target.value);
-                    panel.dataset.rotation = angle;
-                    
-                    // Update transform with new rotation while preserving other transforms
-                    const currentTransform = img.style.transform || '';
-                    if (currentTransform.includes('rotate')) {
-                        img.style.transform = currentTransform.replace(/rotate\([^)]+\)/, `rotate(${angle}deg)`);
-                    } else {
-                        img.style.transform = currentTransform + ` rotate(${angle}deg)`;
-                    }
-                    
-                    rotationValue.textContent = `${angle}°`;
-                    this.saveCurrentPageState();
-                });
-                
-                // Make rotation value editable
-                this.makeSliderValueEditable(rotationControl, rotationValue, '°', 0);
-            }
-        }
-        
-        // Add reset rotation button listener
-        const resetRotationBtn = controls.querySelector('.reset-rotation-btn');
-        if (resetRotationBtn) {
-            resetRotationBtn.addEventListener('click', () => {
-                const img = panel.querySelector('img');
-                if (!img) return;
-                
-                // Reset rotation to 0 degrees
-                panel.dataset.rotation = '0';
-                
-                // Remove rotation from transform while preserving other transforms
-                const currentTransform = img.style.transform || '';
-                img.style.transform = currentTransform.replace(/\s*rotate\([^)]+\)/g, '');
-                
-                // Update rotation control and value display
-                if (rotationControl) {
-                    rotationControl.value = 0;
-                    rotationValue.textContent = '0°';
-                }
-
-                // Save the current page state
-                this.saveCurrentPageState();
-            });
-        }
-
-        // Add position control listeners
-        controls.querySelectorAll('.position-btn').forEach(btn => {
-            btn.addEventListener('click', () => this.handlePositionChange(btn, panel));
-        });
-    }
     
     // Helper method to update a specific transform function in a transform string
     updateTransform(transform, type, newValue) {
@@ -648,101 +368,6 @@ class ComicCreator {
         return newTransform.trim();
     }
 
-    clearPanelImage(panel) {
-        if (!panel) return;
-        
-        // Find and remove the image element specifically
-        const img = panel.querySelector('img');
-        if (img) {
-            img.remove();
-        }
-        
-        // Reset panel state related to the image
-        delete panel.dataset.imageId;
-        delete panel.dataset.initialScale;
-        delete panel.dataset.currentScale;
-        
-        // Update controls and thumbnail states
-        this.updatePanelControls(panel);
-        this.updateImageLibrary();
-        
-        // Save the current page state
-        this.saveCurrentPageState();
-    }
-
-    handleZoom(e, panel) {
-        const img = panel.querySelector('img');
-        if (!img) return;
-
-        const initialScale = parseFloat(panel.dataset.initialScale) || 1;
-        const zoomPercentage = parseFloat(e.target.value);
-        const newScale = (initialScale * zoomPercentage) / 100;
-        
-        // Update transform while maintaining position
-        const currentTransform = img.style.transform;
-        const newTransform = currentTransform.replace(/scale\(.*?\)/, `scale(${newScale})`);
-        img.style.transform = newTransform;
-        
-        // Store current scale
-        panel.dataset.currentScale = newScale;
-        
-        const zoomValue = e.target.parentElement.querySelector('.zoom-value');
-        if (zoomValue) {
-            zoomValue.textContent = `${Math.round(zoomPercentage)}%`;
-        }
-
-        // Save the current page state
-        this.saveCurrentPageState();
-    }
-
-    handlePositionChange(btn, panel) {
-        const img = panel.querySelector('img');
-        if (!img) return;
-
-        // Get and validate step size from input
-        const stepSizeInput = document.querySelector('.step-size-input');
-        let step = 1; // Default value
-        
-        if (stepSizeInput) {
-            const inputValue = parseFloat(stepSizeInput.value);
-            // Ensure the value is a positive number and within bounds
-            if (!isNaN(inputValue) && inputValue >= 0.1 && inputValue <= 20) {
-                step = inputValue;
-            } else {
-                // Reset to default if invalid
-                stepSizeInput.value = "1";
-            }
-        }
-
-        const direction = btn.classList.contains('up') ? 'up' :
-                        btn.classList.contains('down') ? 'down' :
-                        btn.classList.contains('left') ? 'left' :
-                        btn.classList.contains('right') ? 'right' : null;
-        
-        if (!direction) return;
-
-        const currentLeft = parseFloat(img.style.left) || 50;
-        const currentTop = parseFloat(img.style.top) || 50;
-
-        switch (direction) {
-            case 'up':
-                img.style.top = `${(currentTop - step).toFixed(1)}%`;
-                break;
-            case 'down':
-                img.style.top = `${(currentTop + step).toFixed(1)}%`;
-                break;
-            case 'left':
-                img.style.left = `${(currentLeft - step).toFixed(1)}%`;
-                break;
-            case 'right':
-                img.style.left = `${(currentLeft + step).toFixed(1)}%`;
-                break;
-        }
-
-        // Save the current page state
-        this.saveCurrentPageState();
-    }
-
     saveCurrentPageState() {
         console.log(`Saving current page state for page ${this.currentPageIndex}`);
         const currentPage = this.pages[this.currentPageIndex];
@@ -775,44 +400,31 @@ class ComicCreator {
             }
         }
         
-        // Save panel states
+        // Save panel states (Get basic state from PanelManager)
+        const panelImageStates = this.panelManager.savePanelStates();
+
+        // Get panel DOM elements again (or pass from PanelManager if preferred)
         const panels = Array.from(document.querySelectorAll('.comic-panel'));
-        currentPage.panelStates = panels.map(panel => {
-            const img = panel.querySelector('img');
-            const panelState = {
-                backgroundStyle: panel.dataset.backgroundStyle || 'classic-white',
-                textElements: []
-            };
-            
-            // Save image data if present
-            if (img) {
-                const imageId = panel.dataset.imageId || img.dataset.imageId;
-                
-                panelState.imageId = imageId;
-                panelState.transform = img.style.transform || 'translate(-50%, -50%) scale(1)';
-                panelState.left = img.style.left || '50%';
-                panelState.top = img.style.top || '50%';
-                panelState.initialScale = panel.dataset.initialScale || '1';
-                panelState.currentScale = panel.dataset.currentScale || '1';
-                panelState.rotation = panel.dataset.rotation || '0';
-                panelState.isFlippedHorizontally = panel.dataset.isFlippedHorizontally === 'true';
-            }
-            
-            // Save text elements
+
+        currentPage.panelStates = panels.map((panel, index) => {
+            // Start with the state saved by PanelManager (image/transform)
+            // Ensure we have a state object even if PanelManager returned sparse array
+            const state = panelImageStates[index] || {}; 
+
+            // --- Add text saving logic back here (from original ComicCreator) ---
+            state.textElements = []; // Initialize text elements array for this panel
             Array.from(panel.querySelectorAll('.text-bubble')).forEach(textBubble => {
                 const textElement = textBubble.querySelector('.text-content');
-                
-                // Extract the class names for bubble type
+                if (!textElement) return; // Skip if text element is missing
+
                 const bubbleClasses = Array.from(textBubble.classList)
                     .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
                                     'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
                                     'no-bubble'].includes(cls));
-                
-                // Extract tail position class
                 const tailPositionClass = Array.from(textBubble.classList)
                     .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
-                
-                panelState.textElements.push({
+
+                state.textElements.push({
                     id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
                     previousBubbleType: textBubble.dataset.previousBubbleType || '',
@@ -821,7 +433,6 @@ class ComicCreator {
                     style: {
                         left: textBubble.style.left,
                         top: textBubble.style.top,
-                        // Only save width/height if they are explicitly set
                         ...(textBubble.style.width && { width: textBubble.style.width }),
                         ...(textBubble.style.height && { height: textBubble.style.height }),
                         transform: textBubble.style.transform,
@@ -846,8 +457,12 @@ class ComicCreator {
                     }
                 });
             });
+            // --- End Text Saving Logic ---
+
+            // Add background style saving (can be moved later)
+            state.backgroundStyle = panel.dataset.backgroundStyle || 'classic-white'; 
             
-            return panelState;
+            return state;
         });
 
         // Save sticker states
@@ -1161,34 +776,12 @@ class ComicCreator {
         }
 
         // Calculate the available space for panels
-        const panelAreaWidth = 620;
-        const panelAreaHeight = 620;
-        const panelGap = 12;
+        // const panelAreaWidth = 620; // Moved to PanelManager
+        // const panelAreaHeight = 620; // Moved to PanelManager
+        // const panelGap = 12; // Moved to PanelManager
 
-        // Create panels according to the layout
-        layoutConfig.panels.forEach(panel => {
-            const div = document.createElement('div');
-            div.className = 'comic-panel';
-            
-            // Calculate base positions
-            const baseX = panel.x * panelAreaWidth / 100;
-            const baseY = panel.y * panelAreaHeight / 100;
-            const baseWidth = panel.width * panelAreaWidth / 100;
-            const baseHeight = panel.height * panelAreaHeight / 100;
-
-            // Add spacing between panels
-            const adjustedX = baseX + 40 + (panel.x > 0 ? panelGap / 2 : 0);
-            const adjustedY = baseY + 40 + (panel.y > 0 ? panelGap / 2 : 0);
-            const adjustedWidth = baseWidth - panelGap;
-            const adjustedHeight = baseHeight - panelGap;
-            
-            div.style.left = adjustedX + 'px';
-            div.style.top = adjustedY + 'px';
-            div.style.width = adjustedWidth + 'px';
-            div.style.height = adjustedHeight + 'px';
-            
-            canvas.appendChild(div);
-        });
+        // Create panels using the PanelManager
+        this.panelManager.createPanels(layoutConfig, canvas);
 
         // Apply default background style if no layout is provided
         if (!layout) {
@@ -1566,60 +1159,24 @@ class ComicCreator {
 
         // Restore panel states
         const panels = document.querySelectorAll('.comic-panel');
-        if (panelStates.length > 0) {
+        // Call PanelManager to handle image/transform loading
+        this.panelManager.loadPanelStates(panelStates);
+
+        // --- Restore Text Elements within Panels (Remains in ComicCreator) ---
+        if (panelStates.length > 0 && panels.length > 0) {
             const processablePanels = Math.min(panels.length, panelStates.length);
-            console.log(`Restoring ${processablePanels} panel states`);
+            console.log(`ComicCreator: Restoring text for ${processablePanels} panels`);
             
             for (let index = 0; index < processablePanels; index++) {
                 const panel = panels[index];
                 const state = panelStates[index];
                 
-                // Check if state exists before accessing its properties
                 if (state) { 
-                    if (state.backgroundStyle) {
-                        panel.dataset.backgroundStyle = state.backgroundStyle;
-                    }
-                    
-                    // Restore image if present (Check state AND state.imageId)
-                    if (state.imageId) { 
-                        const image = this.imageLibrary.getImageById(String(state.imageId));
-                        if (image) {
-                            const img = document.createElement('img');
-                            img.src = image.dataUrl || image.src;
-                            img.alt = image.name;
-                            img.draggable = false;
-                            img.dataset.imageId = state.imageId;
-                            
-                            Object.assign(img.style, {
-                                position: 'absolute',
-                                left: state.left || '50%',
-                                top: state.top || '50%',
-                                transform: state.transform || 'translate(-50%, -50%) scale(1)'
-                            });
-                            
-                            panel.appendChild(img);
-                            panel.classList.add('has-image');
-                            
-                            if (state.initialScale) panel.dataset.initialScale = state.initialScale;
-                            if (state.currentScale) panel.dataset.currentScale = state.currentScale;
-                            if (state.rotation) panel.dataset.rotation = state.rotation;
-                            if (typeof state.isFlippedHorizontally === 'boolean') {
-                                panel.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
-                                // If flipped, ensure scaleX(-1) is in the transform
-                                if (state.isFlippedHorizontally && !img.style.transform.includes('scaleX(-1)')) {
-                                    img.style.transform = `${img.style.transform} scaleX(-1)`;
-                                }
-                            }
-                            
-                            this.dragAndDropManager.setupImageDragging(img);
-                        } else {
-                             console.warn(`Panel image ID ${state.imageId} not found in loaded images.`);
-                        }
-                    }
-
+                    // --- Start of Text Restoration Logic (Keep this part) ---
                     // Restore text elements if any (Check state AND state.textElements)
                     if (state.textElements) {
                         state.textElements.forEach(textState => {
+                            // ... (Keep the entire text bubble creation and setup logic) ...
                             const textBubble = document.createElement('div');
                             textBubble.className = 'text-bubble';
                             textBubble.id = textState.id;
@@ -1651,21 +1208,15 @@ class ComicCreator {
                             
                             // Convert percentage to pixels if needed
                             if (leftValue.endsWith('%')) {
-                                const panel = document.querySelectorAll('.comic-panel')[index];
-                                if (panel) {
-                                    const panelWidth = panel.offsetWidth;
-                                    const percentValue = parseFloat(leftValue);
-                                    leftValue = `${(percentValue / 100) * panelWidth}px`;
-                                }
+                                const panelWidth = panel.offsetWidth;
+                                const percentValue = parseFloat(leftValue);
+                                leftValue = `${(percentValue / 100) * panelWidth}px`;
                             }
                             
                             if (topValue.endsWith('%')) {
-                                const panel = document.querySelectorAll('.comic-panel')[index];
-                                if (panel) {
-                                    const panelHeight = panel.offsetHeight;
-                                    const percentValue = parseFloat(topValue);
-                                    topValue = `${(percentValue / 100) * panelHeight}px`;
-                                }
+                                const panelHeight = panel.offsetHeight;
+                                const percentValue = parseFloat(topValue);
+                                topValue = `${(percentValue / 100) * panelHeight}px`;
                             }
                             
                             // Apply styles directly with pixel positions
@@ -1794,16 +1345,15 @@ class ComicCreator {
                                 }
                             });
                         });
-                    } else {
-                        // Log if a panel state entry was null/undefined
-                        console.warn(`Panel state at index ${index} is null or undefined. Skipping restoration for this panel.`);
                     }
+                    // --- End of Text Restoration Logic ---
+
                 } else {
                     // Log if a panel state entry was null/undefined
-                    console.warn(`Panel state at index ${index} is null or undefined. Skipping restoration for this panel.`);
+                    console.warn(`ComicCreator: Panel state at index ${index} is null or undefined. Skipping text restoration for this panel.`);
                 }
             } // End for loop
-        } // End if (panelStates.length > 0)
+        }
 
         // Restore stickers
         if (stickerStates.length > 0) {
