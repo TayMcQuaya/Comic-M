@@ -7,6 +7,7 @@ import { ImageLibrary } from './modules/ImageLibrary.js'; // Import ImageLibrary
 import { PanelManager } from './modules/PanelManager.js'; // Import PanelManager
 import { TextManager } from './modules/TextManager.js'; // Import TextManager
 import { StickerManager } from './modules/StickerManager.js'; // Import StickerManager
+import { BackgroundManager } from './modules/BackgroundManager.js'; // Import BackgroundManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -19,8 +20,6 @@ class ComicCreator {
         }];
         this.currentPageIndex = 0;
         this.layouts = layouts; // Store layouts in the instance
-        this.useGlobalBackgroundStyle = false; // Global background toggle
-        this.globalBackgroundStyle = 'classic-white'; // Default global background style
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
         // this.currentPanel = null; // Moved to PanelManager
         // this.currentTextBox = null; // Will be managed by TextManager
@@ -43,6 +42,7 @@ class ComicCreator {
         this.panelManager = new PanelManager(this); // Instantiate PanelManager
         this.textManager = new TextManager(this); // Instantiate TextManager
         this.stickerManager = new StickerManager(this); // Instantiate StickerManager
+        this.backgroundManager = new BackgroundManager(this); // Instantiate BackgroundManager
         
         this.init();
     }
@@ -210,13 +210,12 @@ class ComicCreator {
                     case 'backgrounds':
                         const backgroundElement = document.querySelector('.canvas-background-image');
                         if (backgroundElement) {
-                            backgroundElement.remove();
-                            // Clear state
-                            const currentPage = this.pages[this.currentPageIndex];
-                            if (currentPage) currentPage.backgroundState = null;
-                            this.deselectAll();
-                            this.updateRightSidebarView();
-                            this.saveCurrentPageState();
+                            // Call BackgroundManager to handle removal and state
+                            this.backgroundManager.removeBackgroundImage(); 
+                            this.deselectAll(); // Keep deselectAll here
+                            // updateRightSidebarView is called within removeBackgroundImage if needed
+                        } else {
+                             console.log("Delete key pressed in background mode, but no background image found.");
                         }
                         break;
                     case 'stickers':
@@ -290,7 +289,8 @@ class ComicCreator {
                 case 'backgrounds':
                     // Allow drop anywhere on the canvas for background
                     console.log('Mode: Backgrounds - Dropped image ID:', imageId, 'onto canvas');
-                    this.addBackgroundImage(image);
+                    // Call the method on the BackgroundManager instance
+                    this.backgroundManager.addBackgroundImage(image);
                     // Remove drop-target from panel if dragged over one initially
                     if (panel) panel.classList.remove('drop-target');
                     break;
@@ -429,30 +429,18 @@ class ComicCreator {
             return state;
         });
 
-        // Save canvas background style
-        const canvas = document.querySelector('#comic-canvas');
-        if (canvas) {
-            const backgroundClasses = [
-                'classic-white', 'vintage-paper', 'dotted-pattern',
-                'halftone', 'graph-paper', 'gradient-fade'
-            ];
-            
-            // Find current background style
-            const currentStyle = Array.from(canvas.classList)
-                .find(cls => backgroundClasses.includes(cls)) || 'classic-white';
-            
-            // If global background is enabled, update global style
-            if (this.useGlobalBackgroundStyle) {
-                this.globalBackgroundStyle = currentStyle;
-                // Set this style for all pages
-                this.pages.forEach(page => {
-                    page.canvasBackgroundStyle = currentStyle;
-                });
-            } else {
-                // Only update current page's background style
-                currentPage.canvasBackgroundStyle = currentStyle;
-            }
-        }
+        // --- Background State Saving (Handled by BackgroundManager actions) ---
+        // The BackgroundManager methods (applyBackgroundStyle, addBackgroundImage, etc.)
+        // directly update the relevant properties (canvasBackgroundStyle, backgroundState) 
+        // on the current page object within this.comicCreator.pages.
+        // So, no specific extraction needed here for saving, but ensure those methods do update the page state.
+        // We also need to ensure the global state is saved correctly in saveProject.
+
+        // --- Update ComicCreator state from BackgroundManager ---
+        // Reflect the manager's state back onto the main instance for saving project state
+        this.useGlobalBackgroundStyle = this.backgroundManager.useGlobalBackgroundStyle;
+        this.globalBackgroundStyle = this.backgroundManager.globalBackgroundStyle;
+        // --- End BackgroundManager State Update ---
         
         console.log(`Saved page ${this.currentPageIndex} with ${currentPage.panelStates.length} panel states and layout ID ${currentPage.layout}`);
     }
@@ -678,7 +666,8 @@ class ComicCreator {
 
         // Apply default background style if no layout is provided
         if (!layout) {
-            this.applyBackgroundStyle('classic-white');
+            // Call the method on the BackgroundManager instance
+            this.backgroundManager.applyBackgroundStyle('classic-white'); 
         }
 
         // Only save state if this is a new page creation and not loading an existing page
@@ -1012,17 +1001,9 @@ class ComicCreator {
         // Create comic structure first (calls PanelManager.createPanels)
         this.createComic(layoutConfig);
 
-        // Set canvas background style
-        if (comicCanvas) {
-            comicCanvas.className = ''; // Clear existing classes
-            if (this.useGlobalBackgroundStyle) {
-                comicCanvas.classList.add(this.globalBackgroundStyle);
-            } else if (page.canvasBackgroundStyle) {
-                comicCanvas.classList.add(page.canvasBackgroundStyle);
-            } else {
-                comicCanvas.classList.add('classic-white');
-            }
-        }
+        // Set canvas background style using BackgroundManager
+        this.backgroundManager.loadCurrentPageBackground(); 
+        // REMOVED: Direct manipulation of canvas classList for background
 
         // Store the states we need to restore
         const panelStates = page.panelStates || [];
@@ -1095,37 +1076,6 @@ class ComicCreator {
     }
 
    
-    applyBackgroundStyle(style) {
-        const canvas = document.querySelector('#comic-canvas');
-        if (!canvas) return;
-
-        // Remove any existing background classes
-        const backgroundClasses = [
-            'classic-white', 'vintage-paper', 'dotted-pattern',
-            'halftone', 'graph-paper', 'gradient-fade'
-        ];
-        canvas.classList.remove(...backgroundClasses);
-        
-        // Add the new style class
-        canvas.classList.add(style);
-
-        // Update current page state
-        const currentPage = this.pages[this.currentPageIndex];
-        if (currentPage) {
-            currentPage.canvasBackgroundStyle = style;
-        }
-
-        // If global background is enabled, apply to all pages
-        if (this.useGlobalBackgroundStyle) {
-            this.globalBackgroundStyle = style;
-            this.pages.forEach(page => {
-                page.canvasBackgroundStyle = style;
-            });
-        }
-
-        // Save the current state
-        this.saveCurrentPageState();
-    }
 
     deleteCurrentPage() {
         console.log('Delete page clicked. Current page index:', this.currentPageIndex);
@@ -1270,10 +1220,12 @@ class ComicCreator {
             // Load global background settings if present
             if (projectState.hasOwnProperty('useGlobalBackgroundStyle')) {
                 this.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle;
+                this.backgroundManager.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle; // Update manager too
             }
             
             if (projectState.hasOwnProperty('globalBackgroundStyle')) {
                 this.globalBackgroundStyle = projectState.globalBackgroundStyle;
+                this.backgroundManager.globalBackgroundStyle = projectState.globalBackgroundStyle; // Update manager too
             }
             
             // Load images first
@@ -1691,7 +1643,8 @@ class ComicCreator {
             case 'backgrounds':
                  console.log("Right sidebar: Backgrounds tab active.");
                 // Always show background controls when this tab is active
-                this.updateBackgroundControls(this.currentBackground); // Pass current background if it exists
+                this.backgroundManager.updateBackgroundControls(); // Call manager method
+                // REMOVED: Direct call to this.updateBackgroundControls()
                 break;
                 
             case 'stickers':
@@ -1722,250 +1675,6 @@ class ComicCreator {
         }
     }
 
-    // --- Update Background Controls ---
-    updateBackgroundControls(backgroundElement) {
-        console.log("Updating controls for background:", backgroundElement ? backgroundElement.dataset.imageId : 'None');
-        const propertiesPanel = document.querySelector('.properties-panel');
-        if (!propertiesPanel) return;
-
-        let bgProps = propertiesPanel.querySelector('#background-properties');
-        if (!bgProps) {
-            bgProps = document.createElement('div');
-            bgProps.id = 'background-properties';
-            bgProps.className = 'properties-section';
-            propertiesPanel.appendChild(bgProps);
-        }
-
-        // Hide others
-        propertiesPanel.querySelectorAll('.properties-section:not(#background-properties)')
-           .forEach(sec => sec.style.display = 'none');
-
-        // Check if current page has a custom background image
-        const currentPage = this.pages[this.currentPageIndex];
-        const hasCustomBackground = currentPage && currentPage.backgroundState && currentPage.backgroundState.imageId;
-
-        // Show background controls
-        bgProps.innerHTML = `
-            <h4>Background Settings</h4>
-            <div class="panel-controls">
-                <div class="control-group">
-                    <h4 style="text-align: center;">Background Style</h4>
-                    <div class="background-styles">
-                        <button class="style-btn" data-style="classic-white">
-                            <span class="preview classic-white"></span>
-                            Classic White
-                        </button>
-                        <button class="style-btn" data-style="vintage-paper">
-                            <span class="preview vintage-paper"></span>
-                            Vintage Paper
-                        </button>
-                        <button class="style-btn" data-style="dotted-pattern">
-                            <span class="preview dotted-pattern"></span>
-                            Dotted Pattern
-                        </button>
-                        <button class="style-btn" data-style="halftone">
-                            <span class="preview halftone"></span>
-                            Halftone
-                        </button>
-                        <button class="style-btn" data-style="graph-paper">
-                            <span class="preview graph-paper"></span>
-                            Graph Paper
-                        </button>
-                        <button class="style-btn" data-style="gradient-fade">
-                            <span class="preview gradient-fade"></span>
-                            Gradient Fade
-                        </button>
-                    </div>
-                    <div class="global-background-control" style="margin-top: 10px; text-align: left; display: flex; align-items: center;">
-                        <input type="checkbox" id="use-global-background" ${this.useGlobalBackgroundStyle ? 'checked' : ''}>
-                        <label for="use-global-background" style="margin-left: 8px; font-size: 14px;">Apply to all pages</label>
-                    </div>
-                </div>
-                ${hasCustomBackground ? `
-                <div class="control-group">
-                    <h4 style="text-align: center;">Background Image</h4>
-                    <button id="apply-custom-bg-all-btn" class="action-btn" style="width: 100%; margin-bottom: 1rem;">
-                        <i class="fas fa-copy"></i> Apply This Image to All Pages
-                    </button>
-                </div>
-                ` : ''}
-                ${backgroundElement ? `
-                <div class="control-group">
-                    <h4 style="text-align: center;">Position</h4>
-                    <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
-                        <label style="font-size: 16px;">Step Size: </label>
-                        <input type="number" 
-                               class="step-size-input" 
-                               value="1" 
-                               min="0.1" 
-                               max="20" 
-                               step="0.1" 
-                               style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
-                    </div>
-                    <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
-                        <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
-                        <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
-                        <div style="grid-area: center;"></div>
-                        <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
-                        <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
-                    </div>
-                </div>
-                ` : '<p>Select a background image by dragging it onto the canvas while the "Backgrounds" tab is active.</p>'}
-            </div>`;
-
-        bgProps.style.display = 'block';
-
-        // Add global background checkbox listener
-        const globalBackgroundCheckbox = bgProps.querySelector('#use-global-background');
-        if (globalBackgroundCheckbox) {
-            globalBackgroundCheckbox.addEventListener('change', (e) => {
-                this.useGlobalBackgroundStyle = e.target.checked;
-                
-                if (e.target.checked) {
-                    // Get current background style
-                    const canvas = document.querySelector('#comic-canvas');
-                    const backgroundClasses = [
-                        'classic-white', 'vintage-paper', 'dotted-pattern',
-                        'halftone', 'graph-paper', 'gradient-fade'
-                    ];
-                    const currentStyle = Array.from(canvas.classList)
-                        .find(cls => backgroundClasses.includes(cls)) || 'classic-white';
-                    
-                    // Set as global style
-                    this.globalBackgroundStyle = currentStyle;
-                    
-                    // Apply to all pages
-                    this.pages.forEach(page => {
-                        page.canvasBackgroundStyle = currentStyle;
-                    });
-                }
-                
-                // Save current page state
-                this.saveCurrentPageState();
-            });
-        }
-
-        // Add apply custom background to all pages button listener
-        const applyCustomBgAllBtn = bgProps.querySelector('#apply-custom-bg-all-btn');
-        if (applyCustomBgAllBtn) {
-            applyCustomBgAllBtn.addEventListener('click', () => {
-                this.applyCustomBackgroundToAll();
-            });
-        }
-
-        // Add event listeners if we have a background element
-        if (backgroundElement) {
-            // Delete button listener
-            const deleteBtn = bgProps.querySelector('.delete-background-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = () => {
-                    backgroundElement.remove();
-                    // Clear state
-                    const currentPage = this.pages[this.currentPageIndex];
-                    if (currentPage) currentPage.backgroundState = null;
-                    this.deselectAll();
-                    this.updateRightSidebarView();
-                    this.saveCurrentPageState();
-                };
-            }
-
-            // Zoom control listener
-            const zoomControl = bgProps.querySelector('.zoom-control');
-            if (zoomControl) {
-                const currentScale = parseFloat(backgroundElement.dataset.scale) || 1;
-                zoomControl.value = currentScale * 100;
-                const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
-                if (zoomValue) {
-                    zoomValue.textContent = `${Math.round(currentScale * 100)}%`;
-                }
-
-                zoomControl.addEventListener('input', (e) => {
-                    const scale = parseFloat(e.target.value) / 100;
-                    backgroundElement.style.transform = `scale(${scale})`;
-                    backgroundElement.dataset.scale = scale;
-                    zoomValue.textContent = `${Math.round(scale * 100)}%`;
-                    this.saveCurrentPageState();
-                });
-            }
-
-            // Reset zoom button listener
-            const resetZoomBtn = bgProps.querySelector('.reset-zoom-btn');
-            if (resetZoomBtn) {
-                resetZoomBtn.addEventListener('click', () => {
-                    backgroundElement.style.transform = 'scale(1)';
-                    backgroundElement.dataset.scale = '1';
-                    if (zoomControl) {
-                        zoomControl.value = 100;
-                        const zoomValue = zoomControl.parentElement.querySelector('.zoom-value');
-                        if (zoomValue) {
-                            zoomValue.textContent = '100%';
-                        }
-                    }
-                    this.saveCurrentPageState();
-                });
-            }
-
-            // Position controls
-            const positionBtns = bgProps.querySelectorAll('.position-btn');
-            positionBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const stepSizeInput = bgProps.querySelector('.step-size-input');
-                    let step = parseFloat(stepSizeInput?.value || '1');
-                    if (isNaN(step) || step < 0.1 || step > 20) step = 1;
-
-                    const currentLeft = parseFloat(backgroundElement.style.left) || 50;
-                    const currentTop = parseFloat(backgroundElement.style.top) || 50;
-
-                    if (btn.classList.contains('up')) {
-                        backgroundElement.style.top = `${(currentTop - step).toFixed(1)}%`;
-                    } else if (btn.classList.contains('down')) {
-                        backgroundElement.style.top = `${(currentTop + step).toFixed(1)}%`;
-                    } else if (btn.classList.contains('left')) {
-                        backgroundElement.style.left = `${(currentLeft - step).toFixed(1)}%`;
-                    } else if (btn.classList.contains('right')) {
-                        backgroundElement.style.left = `${(currentLeft + step).toFixed(1)}%`;
-                    }
-                    this.saveCurrentPageState();
-                });
-            });
-        }
-
-        // Add background style button listeners
-        const styleButtons = bgProps.querySelectorAll('.style-btn');
-        styleButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const style = btn.dataset.style;
-                // If there's a custom background image, remove it first
-                const existingBg = document.querySelector('.canvas-background-image');
-                if (existingBg) {
-                    existingBg.remove();
-                    const currentPage = this.pages[this.currentPageIndex];
-                    if (currentPage) currentPage.backgroundState = null;
-                }
-                this.applyBackgroundStyle(style);
-                styleButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.saveCurrentPageState();
-            });
-        });
-
-        // Set active state for current background style
-        const canvas = document.querySelector('#comic-canvas');
-        if (canvas) {
-            const backgroundClasses = [
-                'classic-white', 'vintage-paper', 'dotted-pattern',
-                'halftone', 'graph-paper', 'gradient-fade'
-            ];
-            const currentStyle = Array.from(canvas.classList)
-                .find(cls => backgroundClasses.includes(cls));
-            if (currentStyle) {
-                const activeBtn = bgProps.querySelector(`[data-style="${currentStyle}"]`);
-                if (activeBtn) {
-                    activeBtn.classList.add('active');
-                }
-            }
-        }
-    }
 
     // --- Update Sticker Controls ---
     updateStickerControls(stickerElement) {
@@ -2077,106 +1786,6 @@ class ComicCreator {
                 this.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
             }
         }
-    }
-
-    // --- Add Background Image --- 
-    addBackgroundImage(image) {
-        console.log("[addBackgroundImage] Called with image:", image); // <<< Debug log
-        const canvas = document.querySelector('#comic-canvas');
-        if (!canvas) {
-            console.error("[addBackgroundImage] Canvas element not found!"); // <<< Keep existing error log
-            return;
-        }
-
-        // Store current states before making changes
-        const currentPage = this.pages[this.currentPageIndex];
-        const existingPanelStates = currentPage.panelStates ? [...currentPage.panelStates] : [];
-        const existingStickerStates = currentPage.stickerStates ? [...currentPage.stickerStates] : [];
-
-        // Remove existing background image for this page if any
-        const existingBg = canvas.querySelector('.canvas-background-image');
-        if (existingBg) {
-            existingBg.remove();
-        }
-
-        // Create the new background image element
-        const bgImg = document.createElement('img');
-        bgImg.src = image.src;
-        bgImg.alt = "Canvas Background";
-        bgImg.className = 'canvas-background-image'; // Add class for identification
-        console.log('[addBackgroundImage] Created img element with src:', bgImg.src); // <<< Debug log
-        bgImg.style.position = 'absolute';
-        bgImg.style.top = '0';
-        bgImg.style.left = '0';
-        bgImg.style.width = '100%'; // Cover the entire canvas
-        bgImg.style.height = '100%';
-        bgImg.style.objectFit = 'cover'; // Or 'contain' depending on desired behavior
-        bgImg.style.zIndex = '0'; // Ensure it's behind panels and stickers
-        bgImg.dataset.imageId = image.id; // Store image ID
-
-        // Prepend to the canvas so it's behind other elements
-        canvas.insertBefore(bgImg, canvas.firstChild);
-        console.log('[addBackgroundImage] Inserted img into canvas:', canvas); // <<< Debug log
-
-        // Update the page state while preserving existing states
-        currentPage.backgroundState = {
-            imageId: image.id
-        };
-        currentPage.panelStates = existingPanelStates;
-        currentPage.stickerStates = existingStickerStates;
-
-        console.log('Background state saved for page:', this.currentPageIndex, {
-            background: currentPage.backgroundState,
-            panels: currentPage.panelStates.length,
-            stickers: currentPage.stickerStates.length
-        });
-
-        // Save the overall page state
-        this.saveCurrentPageState();
-    }
-
-    // --- Apply Custom Background to All Pages ---
-    applyCustomBackgroundToAll() {
-        // Get the current page's background image ID
-        const currentPage = this.pages[this.currentPageIndex];
-        const currentImageId = currentPage?.backgroundState?.imageId;
-        
-        if (!currentImageId) {
-            console.warn('No custom background image found on the current page.');
-            this.showNotification('No custom background image to apply', 'warning');
-            return;
-        }
-        
-        console.log(`Applying background image ID ${currentImageId} to all pages`);
-        
-        // Apply the background image to all pages
-        this.pages.forEach(page => {
-            // Set the background image state for this page
-            page.backgroundState = { imageId: currentImageId };
-            
-            // Remove any predefined style class (or set to default)
-            page.canvasBackgroundStyle = null;
-        });
-        
-        // Disable the global background style option to avoid conflicts
-        this.useGlobalBackgroundStyle = false;
-        
-        // Update the UI checkbox if it exists
-        const globalCheckbox = document.getElementById('use-global-background');
-        if (globalCheckbox) {
-            globalCheckbox.checked = false;
-        }
-        
-        // Refresh the current page to show the changes
-        this.loadPageState(this.currentPageIndex);
-        
-        // Save the current page state
-        this.saveCurrentPageState();
-        
-        // Show success notification
-        this.showNotification('Background image applied to all pages', 'success');
-        
-        console.log('Applied custom background image to all pages successfully.');
     }
     
     // --- Show Notification ---

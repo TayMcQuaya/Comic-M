@@ -21,9 +21,9 @@ We are refactoring the code incrementally, module by module:
 
 ## Progress So Far
 
-*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`, `ImageLibrary`, `PanelManager`, `TextManager`, `StickerManager`
-*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`, `src/js/modules/ImageLibrary.js`, `src/js/modules/PanelManager.js`, `src/js/modules/TextManager.js`, `src/js/modules/StickerManager.js`
-*   **Methods/Functions Moved:** 
+*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`, `ImageLibrary`, `PanelManager`, `TextManager`, `StickerManager`, `BackgroundManager`
+*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`, `src/js/modules/ImageLibrary.js`, `src/js/modules/PanelManager.js`, `src/js/modules/TextManager.js`, `src/js/modules/StickerManager.js`, `src/js/modules/BackgroundManager.js`
+*   **Methods/Functions Moved/Managed:** 
     *   `ExportManager`: `preloadFontsForExport`, `downloadComic`, `processElementsForExport`
     *   `Utils`: `globalRgbToHex`, `getTextWithLineBreaks`
     *   `FolderSystem`: `createFolder`, `navigateToFolder`, `navigateBack`, `renameFolder`, `moveItemToFolder`
@@ -32,6 +32,7 @@ We are refactoring the code incrementally, module by module:
     *   `PanelManager`: Properties (`currentPanel`), Methods (`createPanels` (from `createComic`), `addImageToPanel`, `clearPanelImage`, `selectPanel`, `updatePanelControls`, `handleZoom`, `handlePositionChange`, `savePanelStates` (from `saveCurrentPageState`), `loadPanelStates` (from `loadPageState`))
     *   `TextManager`: Properties (`currentTextBox`), Methods (`addTextToPanel`, `addTextToCanvas`, `deleteSelectedTextBox`, `selectTextBox`, `updateTextProperties`, `showTextFormatPopup`, `applyStyle`, `saveTextStates` (from `saveCurrentPageState`), `loadTextStates` (from `loadPageState`), likely others related to style/bubble controls)
     *   `StickerManager`: Properties (`currentSticker`), Methods (`addSticker`, `selectSticker`, `deleteSelectedSticker`, `updateStickerControls`, `saveStickerStates` (from `saveCurrentPageState`), `loadStickerStates` (from `loadPageState`), `deselectCurrentSticker`)
+    *   `BackgroundManager`: Properties (`useGlobalBackgroundStyle`, `globalBackgroundStyle`), Methods (`addBackgroundImage`, `removeBackgroundImage`, `applyBackgroundStyle`, `toggleGlobalBackground`, `applyCustomBackgroundToAll`, `updateBackgroundControls`, `loadCurrentPageBackground`)
 *   **Integration:** Modules imported and instantiated in `main.js`. Calls updated.
 *   **Cleanup:** Original methods/functions/properties removed from `main.js`.
 *   **Status:** Functionality confirmed working for extracted modules.
@@ -45,7 +46,7 @@ The following modules still need to be extracted from `main.js`:
 *   ~~`PanelManager.js` (panel creation based on layout, image placement (`addImageToPanel`), panel selection, image controls within panels (`updatePanelControls`, `handleZoom`, `handlePositionChange` etc.))~~ **(Completed)**
 *   ~~`TextManager.js` (text bubble creation (`addTextToPanel`, `addTextToCanvas`), editing, styling (`updateTextProperties`, `showTextFormatPopup`), positioning, effects)~~ **(Completed)**
 *   ~~`StickerManager.js` (sticker adding, selection, controls, dragging)~~ **(Completed)**
-*   `BackgroundManager.js` (handling background styles and images, global vs. page-specific)
+*   ~~`BackgroundManager.js` (handling background styles and images, global vs. page-specific)~~ **(Completed)**
 *   `UIManager.js` (UI updates like sidebar tabs, right sidebar view, notifications, modals, page navigation UI)
 
 *(Note: A new coordinating `ComicCreator.js` module will eventually replace much of the remaining logic in `main.js`, which will become the main entry point.)* 
