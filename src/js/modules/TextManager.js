@@ -1,0 +1,1782 @@
+import { globalRgbToHex, getTextWithLineBreaks } from './Utils.js'; // Import Utils
+
+export class TextManager {
+    constructor(comicCreator) {
+        // Store the reference to the main ComicCreator instance
+        // This allows access to other managers (like DragAndDropManager), 
+        // shared state (like pages), and UI update methods.
+        this.comicCreator = comicCreator;
+
+        // Track the currently selected text box element within the editor
+        this.currentTextBox = null;
+
+        console.log("TextManager initialized");
+    }
+
+    // Methods related to text bubble creation, selection, styling, 
+    // state management, and event handling will be moved here.
+
+    addTextToPanel(panel) {
+        // Create text container with default speech bubble
+        const textId = `text_${Date.now()}`;
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-bubble speech-bubble';
+        textContainer.id = textId;
+        textContainer.dataset.bubbleType = 'speech-bubble';
+        textContainer.style.position = 'absolute';
+        // Use pixels, position near panel center initially
+        const panelRect = panel.getBoundingClientRect(); 
+        // Use clientWidth/Height which includes padding
+        const initialLeft = Math.max(0, (panel.clientWidth / 2) - 50); // Approx center minus half default width
+        const initialTop = Math.max(0, (panel.clientHeight / 2) - 25); // Approx center minus half default height
+        textContainer.style.left = `${initialLeft}px`; 
+        textContainer.style.top = `${initialTop}px`;
+        // textContainer.style.transform = 'translate(-50%, -50%)'; // No longer using transform for centering
+        textContainer.style.minWidth = '100px';
+        textContainer.style.minHeight = '50px';
+        textContainer.style.padding = '10px';
+        textContainer.style.zIndex = '10';
+        
+        // Create editable text element
+        const textElement = document.createElement('div');
+        textElement.className = 'text-content';
+        textElement.contentEditable = true;
+        textElement.innerHTML = 'Click to edit text';
+        textElement.style.outline = 'none';
+        textElement.style.wordWrap = 'break-word';
+        textElement.style.color = '#000000'; // Set default text color to black
+        textElement.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
+        
+        // Add drag handle for better usability
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
+        dragHandle.title = 'Drag to move';
+        
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
+        resizeHandle.title = 'Drag to resize';
+        
+        // Add edit formatting button
+        const formatButton = document.createElement('div');
+        formatButton.className = 'format-text-btn';
+        formatButton.innerHTML = '<i class="fas fa-palette"></i>';
+        formatButton.title = 'Format text';
+        
+        // Add delete button
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'delete-text-btn';
+        deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+        deleteButton.title = 'Delete text';
+        
+        // Append elements
+        textContainer.appendChild(textElement);
+        textContainer.appendChild(dragHandle);
+        textContainer.appendChild(resizeHandle);
+        textContainer.appendChild(formatButton);
+        textContainer.appendChild(deleteButton);
+        panel.appendChild(textContainer);
+        
+        // Make draggable (via ComicCreator)
+        this.comicCreator.dragAndDropManager.makeTextDraggable(textContainer, dragHandle);
+        
+        // Make resizable (via ComicCreator)
+        this.comicCreator.dragAndDropManager.makeTextResizable(textContainer, resizeHandle);
+        
+        // Setup delete functionality
+        deleteButton.addEventListener('click', () => {
+            textContainer.remove();
+            
+            // Hide the formatting popup if open
+            const popup = document.getElementById('text-format-popup');
+            if (popup) popup.style.display = 'none';
+            
+            // Hide properties panel (handled by deselectAll)
+            this.comicCreator.deselectAll(); 
+
+            // Save state (via ComicCreator)
+            this.comicCreator.saveCurrentPageState();
+        });
+        
+        // Setup formatting button
+        formatButton.addEventListener('click', (e) => {
+            this.showTextFormatPopup(textContainer, e); // Call internal method
+        });
+        
+        // Setup text selection
+        textContainer.addEventListener('click', (e) => {
+            // Avoid selecting if clicking internal controls or the text itself initially
+            if (e.target !== textElement && 
+                !e.target.closest('.format-text-btn') && 
+                !e.target.closest('.resize-handle') && 
+                !e.target.closest('.delete-text-btn') &&
+                !e.target.closest('.drag-handle')) { 
+                this.selectTextBox(textContainer); // Call internal method
+                
+                // Prevent the event from propagating to avoid deselection by canvas click
+                e.stopPropagation();
+            }
+        });
+        
+        // Add a second click listener to the text element that lets the contentEditable work
+        // but also selects the text bubble when clicked on the edge/padding of the text element
+        textElement.addEventListener('click', (e) => {
+            // Calculate if the click is near the edge of the text element (within 10px of the border)
+            const rect = textElement.getBoundingClientRect();
+            const isNearEdge = 
+                e.clientX - rect.left < 10 || 
+                rect.right - e.clientX < 10 || 
+                e.clientY - rect.top < 10 || 
+                rect.bottom - e.clientY < 10;
+                
+            if (isNearEdge) {
+                // If clicking near the edge, select the text box but don't interfere with editing
+                this.selectTextBox(textContainer); // Call internal method
+                // Don't prevent default so text editing still works
+            }
+            // Allow click to propagate for contentEditable focus
+        });
+        
+        // Automatically select the new text box
+        this.selectTextBox(textContainer); // Call internal method
+
+        // Save state immediately after adding
+        this.comicCreator.saveCurrentPageState(); 
+        
+        return textContainer;
+    }
+
+    addTextToCanvas() {
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) {
+            console.error("Cannot add text, canvas not found.");
+            return;
+        }
+
+        // Determine z-index based on current mode (via ComicCreator)
+        const zIndex = this.comicCreator.currentSidebarMode === 'backgrounds' ? '5' : '100'; // Below panels for bg, same level as stickers otherwise
+
+        // Create text container
+        const textId = `canvas_text_${Date.now()}`;
+        const textContainer = document.createElement('div');
+        textContainer.className = 'text-bubble speech-bubble'; // Default style
+        textContainer.id = textId;
+        textContainer.dataset.bubbleType = 'speech-bubble';
+        textContainer.style.position = 'absolute';
+        // Center position based on canvas, not panel
+        const canvasRect = canvas.getBoundingClientRect();
+        // Position top-left corner near center initially
+        const initialLeft = Math.max(0, (canvasRect.width / 2) - 50); // Approx center minus half default width
+        const initialTop = Math.max(0, (canvasRect.height / 2) - 25); // Approx center minus half default height
+        textContainer.style.left = `${initialLeft}px`; 
+        textContainer.style.top = `${initialTop}px`;
+        // textContainer.style.transform = 'translate(-50%, -50%)'; // REMOVE this centering transform
+        textContainer.style.minWidth = '100px';
+        textContainer.style.padding = '10px';
+        textContainer.style.zIndex = zIndex; // Set z-index based on mode
+
+        // Create editable text element
+        const textElement = document.createElement('div');
+        textElement.className = 'text-content';
+        textElement.contentEditable = true;
+        textElement.innerHTML = 'Click to edit text';
+        textElement.style.outline = 'none';
+        textElement.style.wordWrap = 'break-word';
+        textElement.style.color = '#000000';
+        textElement.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
+
+        // Add control handles (same as addTextToPanel)
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
+        dragHandle.title = 'Drag to move';
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
+        resizeHandle.title = 'Drag to resize';
+
+        const formatButton = document.createElement('div');
+        formatButton.className = 'format-text-btn';
+        formatButton.innerHTML = '<i class="fas fa-palette"></i>';
+        formatButton.title = 'Format text';
+
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'delete-text-btn';
+        deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+        deleteButton.title = 'Delete text';
+
+        // Append elements
+        textContainer.appendChild(textElement);
+        textContainer.appendChild(dragHandle);
+        textContainer.appendChild(resizeHandle);
+        textContainer.appendChild(formatButton);
+        textContainer.appendChild(deleteButton);
+        canvas.appendChild(textContainer); // Append directly to canvas
+
+        // Make draggable (via ComicCreator)
+        this.comicCreator.dragAndDropManager.makeCanvasTextDraggable(textContainer, dragHandle); // Use a new/adapted function
+
+        // Make resizable (via ComicCreator)
+        this.comicCreator.dragAndDropManager.makeTextResizable(textContainer, resizeHandle);
+
+        // Setup delete functionality (same as addTextToPanel)
+        deleteButton.addEventListener('click', () => {
+            textContainer.remove();
+            const popup = document.getElementById('text-format-popup');
+            if (popup) popup.style.display = 'none';
+            // No text properties panel to hide specifically here, deselectAll handles it
+            this.comicCreator.deselectAll(); 
+            this.comicCreator.saveCurrentPageState(); // Save state after deletion (via ComicCreator)
+        });
+
+        // Setup formatting button (same as addTextToPanel)
+        formatButton.addEventListener('click', (e) => {
+            this.showTextFormatPopup(textContainer, e); // Call internal method
+        });
+
+        // Setup text selection (same logic, just ensure it works on canvas)
+        textContainer.addEventListener('click', (e) => {
+            if (e.target !== textElement && 
+                !e.target.closest('.format-text-btn') && 
+                !e.target.closest('.resize-handle') && 
+                !e.target.closest('.delete-text-btn') &&
+                !e.target.closest('.drag-handle')) {
+                this.selectTextBox(textContainer); // Call internal method
+                e.stopPropagation();
+            }
+        });
+        textElement.addEventListener('click', (e) => {
+            const rect = textElement.getBoundingClientRect();
+            const isNearEdge = 
+                e.clientX - rect.left < 10 || 
+                rect.right - e.clientX < 10 || 
+                e.clientY - rect.top < 10 || 
+                rect.bottom - e.clientY < 10;
+            if (isNearEdge) {
+                this.selectTextBox(textContainer); // Call internal method
+            }
+            // Allow click to propagate for contentEditable focus
+        });
+
+        // Automatically select the new text box
+        this.selectTextBox(textContainer); // Call internal method
+
+        // Save state immediately after adding (via ComicCreator)
+        this.comicCreator.saveCurrentPageState(); 
+
+        return textContainer;
+    }
+
+    selectTextBox(textBox) {
+        // Deselect any previously selected text box (visually)
+        document.querySelectorAll('.text-bubble').forEach(box => {
+            box.classList.remove('selected-text');
+        });
+        
+        // Select the current text box
+        textBox.classList.add('selected-text');
+        this.currentTextBox = textBox; // Use internal property
+        
+        // Ensure the correct properties panel is visible
+        const propertiesPanel = document.querySelector('.properties-panel');
+        if (!propertiesPanel) {
+            console.error('Error: Main properties panel (.properties-panel) not found.');
+            return;
+        }
+
+        // Hide all other property sections first
+        propertiesPanel.querySelectorAll('.properties-section').forEach(sec => {
+            sec.style.display = 'none';
+        });
+
+        // Find or create the text properties container
+        let textProperties = propertiesPanel.querySelector('#text-properties');
+        if (!textProperties) { 
+            console.log('#text-properties not found, creating it.');
+            textProperties = document.createElement('div');
+            textProperties.id = 'text-properties';
+            textProperties.className = 'properties-section'; // Add class for consistency
+            propertiesPanel.appendChild(textProperties);
+        }
+        
+        // Show the text properties panel
+        textProperties.style.display = 'block';
+        
+        // Update properties panel content
+        this.updateTextProperties(textBox); // Call internal method
+    }
+    
+    updateTextProperties(textBox) {
+        const textProperties = document.getElementById('text-properties');
+        if (!textProperties) { 
+             console.error('Error: Text properties panel (#text-properties) not found in updateTextProperties.');
+            return;
+        }
+        
+        const textElement = textBox.querySelector('.text-content');
+        if (!textElement) {
+            console.error("Could not find '.text-content' inside the provided textBox element.", textBox);
+            textProperties.innerHTML = '<p>Error loading text properties.</p>'; 
+            return;
+        }
+        const computedStyle = window.getComputedStyle(textElement);
+        
+        // (Keep the innerHTML generation from main.js - too long to paste here)
+        textProperties.innerHTML = `...`; // Placeholder for brevity
+        textProperties.innerHTML = `
+            <h4>Text Settings</h4>
+            <div class="text-controls">
+                <div class="control-group">
+                    <label>Bubble Style</label>
+                    <select class="bubble-type">
+                        <option value="speech-bubble">Speech Bubble</option>
+                        <option value="thought-bubble">Thought Bubble</option>
+                        <option value="caption-box">Caption/Narration</option>
+                        <option value="shout-bubble">Shout Bubble</option>
+                        <option value="whisper-bubble">Whisper Bubble</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Font</label>
+                    <div class="custom-select">
+                    <select class="font-family">
+                            <option disabled class="font-category">Common Fonts</option>
+                            <option value="Arial" class="font-option">
+                                <span class="font-preview font-arial">Arial - Comic Text</span>
+                            </option>
+                            <option value="Comic Sans MS" class="font-option">
+                                <span class="font-preview font-comic-sans">Comic Sans MS - Comic Text</span>
+                            </option>
+                            <option value="Times New Roman" class="font-option">
+                                <span class="font-preview font-times">Times New Roman - Comic Text</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Sound Effects</option>
+                            <option value="Impact" class="font-option">
+                                <span class="font-preview font-impact">Impact - BOOM!</span>
+                            </option>
+                            <option value="Bangers" class="font-option">
+                                <span class="font-preview font-bangers">Bangers - POW!</span>
+                            </option>
+                            <option value="Anton" class="font-option">
+                                <span class="font-preview font-anton">Anton - CRASH!</span>
+                            </option>
+                            <option value="Russo One" class="font-option">
+                                <span class="font-preview font-russo-one">Russo One - WHAM!</span>
+                            </option>
+                            <option value="Fredoka One" class="font-option">
+                                <span class="font-preview font-fredoka-one">Fredoka One - SPLASH!</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Handwriting Styles</option>
+                            <option value="Comic Neue" class="font-option">
+                                <span class="font-preview font-comic-neue">Comic Neue - Casual</span>
+                            </option>
+                            <option value="Permanent Marker" class="font-option">
+                                <span class="font-preview font-permanent-marker">Permanent Marker</span>
+                            </option>
+                            <option value="Gloria Hallelujah" class="font-option">
+                                <span class="font-preview font-gloria-hallelujah">Gloria Hallelujah</span>
+                            </option>
+                            <option value="Architects Daughter" class="font-option">
+                                <span class="font-preview font-architects-daughter">Architects Daughter</span>
+                            </option>
+                            <option value="Shadows Into Light" class="font-option">
+                                <span class="font-preview font-shadows-into-light">Shadows Into Light</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Title/Header Fonts</option>
+                            <option value="Luckiest Guy" class="font-option">
+                                <span class="font-preview font-luckiest-guy">Luckiest Guy</span>
+                            </option>
+                            <option value="Boogaloo" class="font-option">
+                                <span class="font-preview font-boogaloo">Boogaloo</span>
+                            </option>
+                            <option value="Acme" class="font-option">
+                                <span class="font-preview font-acme">Acme</span>
+                            </option>
+                            <option value="Press Start 2P" class="font-option">
+                                <span class="font-preview font-press-start-2p">Press Start 2P</span>
+                            </option>
+                    </select>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Size</label>
+                    <input type="range" class="font-size" min="8" max="36" value="16">
+                    <span class="font-size-value">16px</span>
+                </div>
+                <div class="control-group">
+                    <label>Text Color</label>
+                    <div class="color-picker-container">
+                        <input type="color" class="font-color" value="#000000">
+                        <div class="hex-display font-color-hex">#000000</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Bubble Color</label>
+                    <div class="color-picker-container">
+                        <input type="color" class="bubble-color" value="#ffffff">
+                        <div class="hex-display bubble-color-hex">#ffffff</div>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Text Style</label>
+                    <div class="text-style-buttons">
+                        <button class="style-btn bold-btn ${textElement.style.fontWeight === 'bold' ? 'active' : ''}" title="Bold">
+                            <i class="fas fa-bold"></i>
+                        </button>
+                        <button class="style-btn italic-btn ${textElement.style.fontStyle === 'italic' ? 'active' : ''}" title="Italic">
+                            <i class="fas fa-italic"></i>
+                        </button>
+                        <button class="style-btn underline-btn ${textElement.style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
+                            <i class="fas fa-underline"></i>
+                        </button>
+                        <button class="style-btn all-caps-btn ${textElement.style.textTransform === 'uppercase' ? 'active' : ''}" title="All Caps">
+                            <i class="fas fa-font"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label>Rotation</label>
+                    <input type="range" class="rotation" min="-180" max="180" value="0">
+                    <span class="rotation-value">0°</span>
+                </div>
+            </div>
+        `;
+        
+        // Set initial values (using globalRgbToHex from import)
+        const bubbleType = textProperties.querySelector('.bubble-type');
+        bubbleType.value = textBox.dataset.bubbleType || 'speech-bubble';
+        
+        const fontFamily = textProperties.querySelector('.font-family');
+        fontFamily.value = computedStyle.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Arial';
+        
+        const fontSize = textProperties.querySelector('.font-size');
+        const fontSizeValue = parseInt(computedStyle.fontSize) || 16;
+        fontSize.value = fontSizeValue;
+        textProperties.querySelector('.font-size-value').textContent = `${fontSizeValue}px`;
+        
+        const fontColor = textProperties.querySelector('.font-color');
+        const fontColorHex = textProperties.querySelector('.font-color-hex');
+        const fontColorValue = globalRgbToHex(computedStyle.color) || '#000000'; 
+        fontColor.value = fontColorValue;
+        fontColorHex.textContent = fontColorValue;
+        
+        const bubbleColor = textProperties.querySelector('.bubble-color');
+        const bubbleColorHex = textProperties.querySelector('.bubble-color-hex');
+        const bubbleColorValue = globalRgbToHex(window.getComputedStyle(textBox).backgroundColor) || '#ffffff'; 
+        bubbleColor.value = bubbleColorValue;
+        bubbleColorHex.textContent = bubbleColorValue;
+        
+        const rotation = textProperties.querySelector('.rotation');
+        const transform = textBox.style.transform;
+        const rotateMatch = transform.match(/rotate\(([-\d.]+)deg\)/);
+        const rotationValue = rotateMatch ? parseFloat(rotateMatch[1]) : 0;
+        rotation.value = rotationValue;
+        textProperties.querySelector('.rotation-value').textContent = `${rotationValue}°`;
+        
+        // Add event listeners (referencing this.comicCreator.saveCurrentPageState and this.comicCreator.makeSliderValueEditable)
+        bubbleType.addEventListener('change', () => {
+            textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble');
+            textBox.classList.add(bubbleType.value);
+            textBox.dataset.bubbleType = bubbleType.value;
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        fontFamily.addEventListener('change', () => {
+            textElement.style.fontFamily = fontFamily.value;
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        fontSize.addEventListener('input', () => {
+            textElement.style.fontSize = `${fontSize.value}px`;
+            textProperties.querySelector('.font-size-value').textContent = `${fontSize.value}px`;
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        fontColor.addEventListener('input', () => {
+            textElement.style.color = fontColor.value;
+            fontColorHex.textContent = fontColor.value.toUpperCase();
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        fontColorHex.contentEditable = true;
+        fontColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const hexValue = fontColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    fontColor.value = hexValue;
+                    textElement.style.color = hexValue;
+                    this.comicCreator.saveCurrentPageState(); // Use comicCreator
+                } else {
+                    fontColorHex.textContent = fontColor.value.toUpperCase();
+                }
+                fontColorHex.blur();
+            }
+        });
+        fontColorHex.addEventListener('blur', () => {
+            const hexValue = fontColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                fontColor.value = hexValue;
+                textElement.style.color = hexValue;
+                this.comicCreator.saveCurrentPageState(); // Use comicCreator
+            } else {
+                fontColorHex.textContent = fontColor.value.toUpperCase();
+            }
+        });
+        
+        bubbleColor.addEventListener('input', () => {
+            textBox.style.backgroundColor = bubbleColor.value;
+            textBox.style.setProperty('--bubble-background-color', bubbleColor.value);
+            bubbleColorHex.textContent = bubbleColor.value.toUpperCase();
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        bubbleColorHex.contentEditable = true;
+        bubbleColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const hexValue = bubbleColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    bubbleColor.value = hexValue;
+                    textBox.style.backgroundColor = hexValue;
+                    textBox.style.setProperty('--bubble-background-color', hexValue);
+                    this.comicCreator.saveCurrentPageState(); // Use comicCreator
+                } else {
+                    bubbleColorHex.textContent = bubbleColor.value.toUpperCase();
+                }
+                bubbleColorHex.blur();
+            }
+        });
+        bubbleColorHex.addEventListener('blur', () => {
+            const hexValue = bubbleColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                bubbleColor.value = hexValue;
+                textBox.style.backgroundColor = hexValue;
+                textBox.style.setProperty('--bubble-background-color', hexValue);
+                this.comicCreator.saveCurrentPageState(); // Use comicCreator
+            } else {
+                bubbleColorHex.textContent = bubbleColor.value.toUpperCase();
+            }
+        });
+        
+        const boldBtn = textProperties.querySelector('.bold-btn');
+        boldBtn.addEventListener('click', () => {
+            const isBold = textElement.style.fontWeight === 'bold';
+            textElement.style.fontWeight = isBold ? 'normal' : 'bold';
+            boldBtn.classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        const italicBtn = textProperties.querySelector('.italic-btn');
+        italicBtn.addEventListener('click', () => {
+            const isItalic = textElement.style.fontStyle === 'italic';
+            textElement.style.fontStyle = isItalic ? 'normal' : 'italic';
+            italicBtn.classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        const underlineBtn = textProperties.querySelector('.underline-btn');
+        underlineBtn.addEventListener('click', () => {
+            const isUnderline = textElement.style.textDecoration === 'underline';
+            textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
+            underlineBtn.classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        const allCapsBtn = textProperties.querySelector('.all-caps-btn');
+        allCapsBtn.addEventListener('click', () => {
+            const isAllCaps = textElement.style.textTransform === 'uppercase';
+            textElement.style.textTransform = isAllCaps ? 'none' : 'uppercase';
+            allCapsBtn.classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        const rotationSlider = textProperties.querySelector('.rotation');
+        const rotationValueDisplay = textProperties.querySelector('.rotation-value');
+
+        // ... (rest of initialization and event listener for rotation) ...
+         if (rotationSlider) {
+            rotationSlider.addEventListener('input', () => {
+                const value = rotationSlider.value;
+                rotationValueDisplay.textContent = `${Math.round(value)}°`;
+                textBox.style.transform = `rotate(${value}deg)`;
+                this.comicCreator.saveCurrentPageState(); // Use comicCreator
+            });
+        }
+        
+        // Make rotation value editable (via ComicCreator)
+        if (rotationSlider && rotationValueDisplay) { 
+            this.comicCreator.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
+        } else {
+            console.error("Could not find rotation slider or value display element in text properties panel.");
+        }
+        
+        // Set active state for buttons
+        if (textElement.style.fontWeight === 'bold') boldBtn.classList.add('active');
+        if (textElement.style.fontStyle === 'italic') italicBtn.classList.add('active');
+        if (textElement.style.textDecoration === 'underline') underlineBtn.classList.add('active');
+        if (textElement.style.textTransform === 'uppercase') allCapsBtn.classList.add('active');
+    }
+    
+
+    showTextFormatPopup(textBox, event) {
+        let popup = document.getElementById('text-format-popup');
+        if (popup) popup.remove();
+        
+        // Select this text box (calls internal selectTextBox)
+        this.selectTextBox(textBox); 
+        
+        popup = document.createElement('div');
+        popup.id = 'text-format-popup';
+        popup.className = 'text-format-popup';
+        
+        const propertiesPanel = document.querySelector('.properties-panel');
+        const propRect = propertiesPanel.getBoundingClientRect();
+        const top = propRect.top;
+        const left = propRect.left - 310; 
+        popup.style.top = `${top}px`;
+        popup.style.left = `${left}px`;
+        
+        const textElement = textBox.querySelector('.text-content');
+        
+        // (Keep the innerHTML generation from main.js - too long to paste here)
+        popup.innerHTML = `...`; // Placeholder for brevity
+         popup.innerHTML = `
+            <div class="popup-header">
+                <h3>Text Formatting</h3>
+                <button class="close-popup"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="popup-content">
+                <div class="popup-section">
+                    <h4>Bubble Style</h4>
+                    <div class="bubble-toggle">
+                        <label>
+                            <input type="checkbox" id="show-bubble" ${textBox.dataset.bubbleType !== 'no-bubble' ? 'checked' : ''}>
+                            Show Bubble
+                        </label>
+                    </div>
+                    <div class="bubble-options">
+                        <div class="bubble-grid">
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'speech-bubble' ? 'selected' : ''}" data-type="speech-bubble">
+                                <div class="bubble-preview speech-bubble-preview"></div>
+                                <span>Speech</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'thought-bubble' ? 'selected' : ''}" data-type="thought-bubble">
+                                <div class="bubble-preview thought-bubble-preview"></div>
+                                <span>Thought</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'caption-box' ? 'selected' : ''}" data-type="caption-box">
+                                <div class="bubble-preview caption-box-preview"></div>
+                                <span>Caption</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'shout-bubble' ? 'selected' : ''}" data-type="shout-bubble">
+                                <div class="bubble-preview shout-bubble-preview"></div>
+                                <span>Shout</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'whisper-bubble' ? 'selected' : ''}" data-type="whisper-bubble">
+                                <div class="bubble-preview whisper-bubble-preview"></div>
+                                <span>Whisper</span>
+                            </div>
+                            <div class="bubble-option ${textBox.dataset.bubbleType === 'jagged-bubble' ? 'selected' : ''}" data-type="jagged-bubble">
+                                <div class="bubble-preview jagged-bubble-preview"></div>
+                                <span>Jagged</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
+                    <h4>Text Style</h4>
+                    <div class="text-font-section">
+                        <label for="font-family">Font</label>
+                        <select id="font-family" class="font-family">
+                            <option disabled class="font-category">Common Fonts</option>
+                            <option value="Arial" class="font-option" ${textElement.style.fontFamily === 'Arial' ? 'selected' : ''}>
+                                <span class="font-preview font-arial">Arial - Comic Text</span>
+                            </option>
+                            <option value="Comic Sans MS" class="font-option" ${textElement.style.fontFamily === 'Comic Sans MS' ? 'selected' : ''}>
+                                <span class="font-preview font-comic-sans">Comic Sans MS - Comic Text</span>
+                            </option>
+                            <option value="Times New Roman" class="font-option" ${textElement.style.fontFamily === 'Times New Roman' ? 'selected' : ''}>
+                                <span class="font-preview font-times">Times New Roman - Comic Text</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Sound Effects</option>
+                            <option value="Impact" class="font-option" ${textElement.style.fontFamily === 'Impact' ? 'selected' : ''}>
+                                <span class="font-preview font-impact">Impact - BOOM!</span>
+                            </option>
+                            <option value="Bangers" class="font-option" ${textElement.style.fontFamily === 'Bangers' ? 'selected' : ''}>
+                                <span class="font-preview font-bangers">Bangers - POW!</span>
+                            </option>
+                            <option value="Anton" class="font-option" ${textElement.style.fontFamily === 'Anton' ? 'selected' : ''}>
+                                <span class="font-preview font-anton">Anton - CRASH!</span>
+                            </option>
+                            <option value="Russo One" class="font-option" ${textElement.style.fontFamily === 'Russo One' ? 'selected' : ''}>
+                                <span class="font-preview font-russo-one">Russo One - WHAM!</span>
+                            </option>
+                            <option value="Fredoka One" class="font-option" ${textElement.style.fontFamily === 'Fredoka One' ? 'selected' : ''}>
+                                <span class="font-preview font-fredoka-one">Fredoka One - SPLASH!</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Handwriting Styles</option>
+                            <option value="Comic Neue" class="font-option" ${textElement.style.fontFamily === 'Comic Neue' ? 'selected' : ''}>
+                                <span class="font-preview font-comic-neue">Comic Neue - Casual</span>
+                            </option>
+                            <option value="Permanent Marker" class="font-option" ${textElement.style.fontFamily === 'Permanent Marker' ? 'selected' : ''}>
+                                <span class="font-preview font-permanent-marker">Permanent Marker</span>
+                            </option>
+                            <option value="Gloria Hallelujah" class="font-option" ${textElement.style.fontFamily === 'Gloria Hallelujah' ? 'selected' : ''}>
+                                <span class="font-preview font-gloria-hallelujah">Gloria Hallelujah</span>
+                            </option>
+                            <option value="Architects Daughter" class="font-option" ${textElement.style.fontFamily === 'Architects Daughter' ? 'selected' : ''}>
+                                <span class="font-preview font-architects-daughter">Architects Daughter</span>
+                            </option>
+                            <option value="Shadows Into Light" class="font-option" ${textElement.style.fontFamily === 'Shadows Into Light' ? 'selected' : ''}>
+                                <span class="font-preview font-shadows-into-light">Shadows Into Light</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Title/Header Fonts</option>
+                            <option value="Luckiest Guy" class="font-option" ${textElement.style.fontFamily === 'Luckiest Guy' ? 'selected' : ''}>
+                                <span class="font-preview font-luckiest-guy">Luckiest Guy</span>
+                            </option>
+                            <option value="Boogaloo" class="font-option" ${textElement.style.fontFamily === 'Boogaloo' ? 'selected' : ''}>
+                                <span class="font-preview font-boogaloo">Boogaloo</span>
+                            </option>
+                            <option value="Acme" class="font-option" ${textElement.style.fontFamily === 'Acme' ? 'selected' : ''}>
+                                <span class="font-preview font-acme">Acme</span>
+                            </option>
+                            <option value="Press Start 2P" class="font-option" ${textElement.style.fontFamily === 'Press Start 2P' ? 'selected' : ''}>
+                                <span class="font-preview font-press-start-2p">Press Start 2P</span>
+                            </option>
+                        </select>
+                    </div>
+                    
+                    <div class="text-style-grid">
+                        <div class="style-control">
+                            <label for="font-size">Size</label>
+                            <div class="size-control">
+                                <input type="range" id="font-size" class="font-size red-slider" min="8" max="72" value="${parseInt(textElement.style.fontSize) || 16}">
+                                <span class="font-size-value">${parseInt(textElement.style.fontSize) || 16}px</span>
+                            </div>
+                        </div>
+                        
+                        <div class="style-control">
+                            <label for="line-height">Line Spacing</label>
+                            <div class="line-height-control" style="display: flex; align-items: center; gap: 10px;">
+                                <input type="range" id="line-height" class="line-height red-slider" min="0.8" max="5" step="0.1" value="1.2" style="flex-grow: 1;">
+                                <span class="line-height-value" style="min-width: 30px; text-align: right;">1.2</span>
+                            </div>
+                        </div>
+                        
+                        <div class="style-control">
+                            <label>Style</label>
+                            <div class="text-style-buttons">
+                                <button class="style-btn bold-btn ${textElement.style.fontWeight === 'bold' ? 'active' : ''}" title="Bold">
+                                    <i class="fas fa-bold"></i>
+                                </button>
+                                <button class="style-btn italic-btn ${textElement.style.fontStyle === 'italic' ? 'active' : ''}" title="Italic">
+                                    <i class="fas fa-italic"></i>
+                                </button>
+                                <button class="style-btn underline-btn ${textElement.style.textDecoration === 'underline' ? 'active' : ''}" title="Underline">
+                                    <i class="fas fa-underline"></i>
+                                </button>
+                                <button class="style-btn all-caps-btn ${textElement.style.textTransform === 'uppercase' ? 'active' : ''}" title="All Caps">
+                                    <i class="fas fa-font"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="style-control">
+                            <label>Alignment</label>
+                            <div class="text-align-buttons">
+                                <button class="align-btn align-left ${textElement.style.textAlign === 'left' ? 'active' : ''}" title="Align Left">
+                                    <i class="fas fa-align-left"></i>
+                                </button>
+                                <button class="align-btn align-center ${!textElement.style.textAlign || textElement.style.textAlign === 'center' ? 'active' : ''}" title="Align Center">
+                                    <i class="fas fa-align-center"></i>
+                                </button>
+                                <button class="align-btn align-right ${textElement.style.textAlign === 'right' ? 'active' : ''}" title="Align Right">
+                                    <i class="fas fa-align-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="color-section">
+                        <div class="color-control">
+                            <label for="text-color">Text Color</label>
+                            <div class="color-picker-container">
+                                <!-- Use imported function directly -->
+                                <input type="color" id="text-color" class="text-color" value="${globalRgbToHex(window.getComputedStyle(textElement).color)}">
+                                <div class="hex-display text-color-hex">${globalRgbToHex(window.getComputedStyle(textElement).color).toUpperCase()}</div>
+                            </div>
+                        </div>
+                        <div class="color-control">
+                            <label for="bubble-color">Bubble Color</label>
+                            <div class="color-picker-container">
+                                <!-- Use imported function directly -->
+                                <input type="color" id="bubble-color" class="bubble-color" value="${globalRgbToHex(this.getBubbleBackgroundColor(textBox))}">
+                                <div class="hex-display bubble-color-hex">${globalRgbToHex(this.getBubbleBackgroundColor(textBox)).toUpperCase()}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
+                    <h4>Effects</h4>
+                    <div class="effects-grid">
+                        <div class="effect-control">
+                            <label>Text Effects</label>
+                            <div class="outline-control">
+                                <input type="checkbox" id="text-outline" ${textElement.style.webkitTextStroke ? 'checked' : ''}>
+                                <input type="number" id="outline-thickness" class="outline-thickness" value="${this.getOutlineThickness(textElement)}" min="1" max="5" step="0.5" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                <div class="color-picker-container">
+                                    <!-- Use imported function directly -->
+                                    <input type="color" id="outline-color" value="${globalRgbToHex(this.getOutlineColor(textElement))}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                    <div class="hex-display outline-color-hex" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>${globalRgbToHex(this.getOutlineColor(textElement)).toUpperCase()}</div>
+                                </div>
+                            </div>
+                            <div class="shadow-control">
+                                <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
+                                <div class="color-picker-container">
+                                    <!-- Use imported function directly -->
+                                    <input type="color" id="shadow-color" value="${globalRgbToHex(this.getShadowColor(textElement))}" ${!textElement.style.textShadow ? 'disabled' : ''}>
+                                    <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${globalRgbToHex(this.getShadowColor(textElement)).toUpperCase()}</div>
+                                </div>
+                            </div>
+                            <div class="opacity-control">
+                                <label>
+                                    <input type="checkbox" id="bubble-opacity" ${textBox.style.opacity === '0.5' ? 'checked' : ''}>
+                                    50% Opacity
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="effect-control">
+                            <label for="bubble-tail-position">Bubble Tail</label>
+                            <select id="bubble-tail-position" ${textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box' ? 'disabled' : ''}>
+                                <option value="bottom-left" ${textBox.dataset.tailPosition === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
+                                <option value="bottom-center" ${textBox.dataset.tailPosition === 'bottom-center' ? 'selected' : ''}>Bottom Center</option>
+                                <option value="bottom-right" ${textBox.dataset.tailPosition === 'bottom-right' ? 'selected' : ''}>Bottom Right</option>
+                                <option value="left-center" ${textBox.dataset.tailPosition === 'left-center' ? 'selected' : ''}>Left Center</option>
+                                <option value="right-center" ${textBox.dataset.tailPosition === 'right-center' ? 'selected' : ''}>Right Center</option>
+                                <option value="top-left" ${textBox.dataset.tailPosition === 'top-left' ? 'selected' : ''}>Top Left</option>
+                                <option value="top-center" ${textBox.dataset.tailPosition === 'top-center' ? 'selected' : ''}>Top Center</option>
+                                <option value="top-right" ${textBox.dataset.tailPosition === 'top-right' ? 'selected' : ''}>Top Right</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
+                    <h4>Position</h4>
+                    <div class="position-controls">
+                        <div class="position-grid">
+                            <button class="position-grid-btn" data-position="top-left">↖</button>
+                            <button class="position-grid-btn" data-position="top-center">↑</button>
+                            <button class="position-grid-btn" data-position="top-right">↗</button>
+                            <button class="position-grid-btn" data-position="middle-left">←</button>
+                            <button class="position-grid-btn" data-position="middle-center">•</button>
+                            <button class="position-grid-btn" data-position="middle-right">→</button>
+                            <button class="position-grid-btn" data-position="bottom-left">↙</button>
+                            <button class="position-grid-btn" data-position="bottom-center">↓</button>
+                            <button class="position-grid-btn" data-position="bottom-right">↘</button>
+                        </div>
+                        
+                        <div class="rotation-control">
+                            <label for="rotation">Rotation</label>
+                            <div class="rotation-slider">
+                                <input type="range" id="rotation" class="rotation" min="-180" max="180" value="${this.getRotationValue(textBox)}">
+                                <span class="rotation-value">${this.getRotationValue(textBox)}°</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(popup);
+        
+        // Set up event listeners for the popup (calls internal method)
+        this.setupPopupEventListeners(popup, textBox); 
+    }
+    
+    setupPopupEventListeners(popup, textBox) {
+        const textElement = textBox.querySelector('.text-content');
+        
+        // Close button
+        popup.querySelector('.close-popup').addEventListener('click', () => {
+            popup.remove();
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        // Close when clicking outside
+        document.addEventListener('mousedown', (e) => {
+            // Check if popup exists before trying to check contains
+            const currentPopup = document.getElementById('text-format-popup'); 
+            if (currentPopup && !currentPopup.contains(e.target) && !textBox.contains(e.target)) {
+                currentPopup.remove();
+                this.comicCreator.saveCurrentPageState(); // Use comicCreator
+            }
+        });
+        
+        // Bubble toggle
+        const bubbleToggle = popup.querySelector('#show-bubble');
+        bubbleToggle.addEventListener('change', () => {
+            // ... (logic for bubble toggle) ...
+            if (bubbleToggle.checked) {
+                const previousType = textBox.dataset.previousBubbleType || 'speech-bubble';
+                textBox.classList.remove('no-bubble');
+                textBox.classList.add(previousType);
+                textBox.dataset.bubbleType = previousType;
+                popup.querySelector('#bubble-tail-position').disabled = (previousType === 'caption-box');
+            } else {
+                textBox.dataset.previousBubbleType = textBox.dataset.bubbleType;
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble');
+                textBox.classList.add('no-bubble');
+                textBox.dataset.bubbleType = 'no-bubble';
+                popup.querySelector('#bubble-tail-position').disabled = true;
+            }
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        // Bubble style options
+        popup.querySelectorAll('.bubble-option').forEach(option => {
+            option.addEventListener('click', () => {
+                // ... (logic for bubble options) ...
+                popup.querySelectorAll('.bubble-option').forEach(opt => opt.classList.remove('selected'));
+                option.classList.add('selected');
+                const bubbleType = option.dataset.type;
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble', 'no-bubble');
+                textBox.classList.add(bubbleType);
+                textBox.dataset.bubbleType = bubbleType;
+                bubbleToggle.checked = true;
+                popup.querySelector('#bubble-tail-position').disabled = (bubbleType === 'caption-box');
+                if (bubbleType === 'shout-bubble') {
+                    textElement.style.fontWeight = 'bold';
+                    textElement.style.textTransform = 'uppercase';
+                    popup.querySelector('.bold-btn').classList.add('active');
+                } else if (bubbleType === 'whisper-bubble') {
+                    textElement.style.fontStyle = 'italic';
+                    textElement.style.opacity = '0.8';
+                    popup.querySelector('.italic-btn').classList.add('active');
+                } else if (bubbleType === 'caption-box') {
+                    textElement.style.fontStyle = 'italic';
+                    popup.querySelector('.italic-btn').classList.add('active');
+                }
+                this.comicCreator.saveCurrentPageState(); // Use comicCreator
+            });
+        });
+        
+        // Font family
+        popup.querySelector('#font-family').addEventListener('change', (e) => {
+            textElement.style.fontFamily = e.target.value;
+            // No immediate save needed, usually done when popup closes
+        });
+        
+        // Font size
+        const fontSizeSlider = popup.querySelector('#font-size');
+        const fontSizeValue = popup.querySelector('.font-size-value');
+        fontSizeSlider.addEventListener('input', () => {
+            textElement.style.fontSize = `${fontSizeSlider.value}px`;
+            fontSizeValue.textContent = `${fontSizeSlider.value}px`;
+            // No immediate save needed
+        });
+        
+        // Make font size value editable (via ComicCreator)
+        this.comicCreator.makeSliderValueEditable(fontSizeSlider, fontSizeValue, 'px', 0);
+
+        // Text style buttons
+        popup.querySelector('.bold-btn').addEventListener('click', () => {
+            const isBold = textElement.style.fontWeight === 'bold';
+            textElement.style.fontWeight = isBold ? 'normal' : 'bold';
+            popup.querySelector('.bold-btn').classList.toggle('active');
+            // No immediate save needed
+        });
+        // ... (italic, underline buttons similar) ...
+         popup.querySelector('.italic-btn').addEventListener('click', () => {
+            const isItalic = textElement.style.fontStyle === 'italic';
+            textElement.style.fontStyle = isItalic ? 'normal' : 'italic';
+            popup.querySelector('.italic-btn').classList.toggle('active');
+        });
+        popup.querySelector('.underline-btn').addEventListener('click', () => {
+            const isUnderline = textElement.style.textDecoration === 'underline';
+            textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
+            popup.querySelector('.underline-btn').classList.toggle('active');
+        });
+        
+        // All Caps toggle
+        popup.querySelector('.all-caps-btn').addEventListener('click', () => {
+            const isAllCaps = textElement.style.textTransform === 'uppercase';
+            textElement.style.textTransform = isAllCaps ? 'none' : 'uppercase';
+            popup.querySelector('.all-caps-btn').classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator (explicit save needed here? Check original)
+        });
+        
+        // Text alignment buttons
+        // ... (left, center, right listeners - no immediate save needed) ...
+        popup.querySelector('.align-left').addEventListener('click', () => {
+            textElement.style.textAlign = 'left';
+            popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            popup.querySelector('.align-left').classList.add('active');
+        });
+        popup.querySelector('.align-center').addEventListener('click', () => {
+            textElement.style.textAlign = 'center';
+            popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            popup.querySelector('.align-center').classList.add('active');
+        });
+        popup.querySelector('.align-right').addEventListener('click', () => {
+            textElement.style.textAlign = 'right';
+            popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+            popup.querySelector('.align-right').classList.add('active');
+        });
+
+        // Colors
+        // ... (text color picker/hex listeners - no immediate save) ...
+        const textColorPicker = popup.querySelector('#text-color');
+        const textColorHex = popup.querySelector('.text-color-hex');
+        textColorPicker.addEventListener('input', (e) => {
+            textElement.style.color = e.target.value;
+            textColorHex.textContent = e.target.value.toUpperCase();
+        });
+        textColorHex.contentEditable = true;
+        textColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const hexValue = textColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    textColorPicker.value = hexValue;
+                    textElement.style.color = hexValue;
+                } else {
+                    textColorHex.textContent = textColorPicker.value.toUpperCase();
+                }
+                textColorHex.blur();
+            }
+        });
+        textColorHex.addEventListener('blur', () => {
+            const hexValue = textColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                textColorPicker.value = hexValue;
+                textElement.style.color = hexValue;
+            } else {
+                textColorHex.textContent = textColorPicker.value.toUpperCase();
+            }
+        });
+
+        // ... (bubble color picker/hex listeners - no immediate save) ...
+        const bubbleColorPicker = popup.querySelector('#bubble-color');
+        const bubbleColorHex = popup.querySelector('.bubble-color-hex');
+        bubbleColorPicker.addEventListener('input', (e) => {
+            textBox.style.backgroundColor = e.target.value;
+            textBox.style.setProperty('--bubble-background-color', e.target.value);
+            bubbleColorHex.textContent = e.target.value.toUpperCase();
+        });
+        bubbleColorHex.contentEditable = true;
+        bubbleColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const hexValue = bubbleColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    bubbleColorPicker.value = hexValue;
+                    textBox.style.backgroundColor = hexValue;
+                    textBox.style.setProperty('--bubble-background-color', hexValue);
+                } else {
+                    bubbleColorHex.textContent = bubbleColorPicker.value.toUpperCase();
+                }
+                bubbleColorHex.blur();
+            }
+        });
+         bubbleColorHex.addEventListener('blur', () => {
+            const hexValue = bubbleColorHex.textContent.trim();
+            if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                bubbleColorPicker.value = hexValue;
+                textBox.style.backgroundColor = hexValue;
+                textBox.style.setProperty('--bubble-background-color', hexValue);
+            } else {
+                bubbleColorHex.textContent = bubbleColorPicker.value.toUpperCase();
+            }
+        });
+
+        // Text outline listeners (calling internal helpers, saving state via comicCreator)
+        const textOutlineCheckbox = popup.querySelector('#text-outline');
+        const outlineThicknessInput = popup.querySelector('#outline-thickness');
+        const outlineColorPicker = popup.querySelector('#outline-color');
+        const outlineColorHex = popup.querySelector('.outline-color-hex');
+        
+        textOutlineCheckbox.addEventListener('change', () => {
+            if (textOutlineCheckbox.checked) {
+                outlineThicknessInput.disabled = false;
+                outlineColorPicker.disabled = false;
+                outlineColorHex.removeAttribute('disabled');
+                this.applyTextOutline(textElement, outlineColorPicker.value, outlineThicknessInput.value); // Internal call
+            } else {
+                outlineThicknessInput.disabled = true;
+                outlineColorPicker.disabled = true;
+                outlineColorHex.setAttribute('disabled', true);
+                this.removeTextOutline(textElement); // Internal call
+            }
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        // ... (listeners for outline thickness/color inputs, calling internal helpers and comicCreator.saveCurrentPageState) ...
+        outlineThicknessInput.addEventListener('input', () => {
+            if (textOutlineCheckbox.checked) {
+                this.applyTextOutline(textElement, outlineColorPicker.value, outlineThicknessInput.value);
+                this.comicCreator.saveCurrentPageState();
+            }
+        });
+        outlineColorPicker.addEventListener('input', () => {
+            if (textOutlineCheckbox.checked) {
+                const thickness = outlineThicknessInput.value;
+                this.applyTextOutline(textElement, outlineColorPicker.value, thickness);
+                outlineColorHex.textContent = outlineColorPicker.value.toUpperCase();
+                this.comicCreator.saveCurrentPageState();
+            }
+        });
+        outlineColorHex.contentEditable = true;
+        outlineColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !outlineColorHex.hasAttribute('disabled')) {
+                e.preventDefault();
+                const hexValue = outlineColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    outlineColorPicker.value = hexValue;
+                    const thickness = outlineThicknessInput.value;
+                    this.applyTextOutline(textElement, hexValue, thickness);
+                    this.comicCreator.saveCurrentPageState();
+                } else {
+                    outlineColorHex.textContent = outlineColorPicker.value.toUpperCase();
+                }
+                outlineColorHex.blur();
+            }
+        });
+         outlineColorHex.addEventListener('blur', () => {
+            if (!outlineColorHex.hasAttribute('disabled')) {
+                const hexValue = outlineColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    outlineColorPicker.value = hexValue;
+                    const thickness = outlineThicknessInput.value;
+                    this.applyTextOutline(textElement, hexValue, thickness);
+                    this.comicCreator.saveCurrentPageState();
+                } else {
+                    outlineColorHex.textContent = outlineColorPicker.value.toUpperCase();
+                }
+            }
+        });
+
+        // Text shadow listeners (calling internal helpers, saving state via comicCreator)
+        const textShadowCheckbox = popup.querySelector('#text-shadow');
+        const shadowColorPicker = popup.querySelector('#shadow-color');
+        const shadowColorHex = popup.querySelector('.shadow-color-hex');
+        
+        textShadowCheckbox.addEventListener('change', () => {
+            if (textShadowCheckbox.checked) {
+                shadowColorPicker.disabled = false;
+                shadowColorHex.removeAttribute('disabled');
+                this.applyTextShadow(textElement, shadowColorPicker.value); // Internal call
+            } else {
+                shadowColorPicker.disabled = true;
+                shadowColorHex.setAttribute('disabled', true);
+                this.removeTextShadow(textElement); // Internal call
+            }
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        // ... (listeners for shadow color input, calling internal helpers and comicCreator.saveCurrentPageState) ...
+         shadowColorPicker.addEventListener('input', () => {
+            if (textShadowCheckbox.checked) {
+                this.applyTextShadow(textElement, shadowColorPicker.value);
+                shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
+                this.comicCreator.saveCurrentPageState();
+            }
+        });
+        shadowColorHex.contentEditable = true;
+        shadowColorHex.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !shadowColorHex.hasAttribute('disabled')) {
+                e.preventDefault();
+                const hexValue = shadowColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    shadowColorPicker.value = hexValue;
+                    this.applyTextShadow(textElement, hexValue);
+                    this.comicCreator.saveCurrentPageState();
+                } else {
+                    shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
+                }
+            }
+        });
+        shadowColorHex.addEventListener('blur', () => {
+            if (!shadowColorHex.hasAttribute('disabled')) {
+                const hexValue = shadowColorHex.textContent.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                    shadowColorPicker.value = hexValue;
+                    this.applyTextShadow(textElement, hexValue);
+                    this.comicCreator.saveCurrentPageState();
+                } else {
+                    shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
+                }
+            }
+        });
+
+        // Bubble tail position listener (calling internal helper)
+        popup.querySelector('#bubble-tail-position').addEventListener('change', (e) => {
+            this.updateBubbleTail(textBox, e.target.value); // Internal call
+            // No immediate save needed?
+        });
+        
+        // Position grid buttons listeners (calling internal helper)
+        popup.querySelectorAll('.position-grid-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const position = btn.dataset.position;
+                this.positionTextBox(textBox, position); // Internal call
+                // No immediate save needed?
+            });
+        });
+        
+        // Rotation slider listener (calling internal helper for value, saving state via comicCreator)
+        const rotationSlider = popup.querySelector('#rotation');
+        const rotationValue = popup.querySelector('.rotation-value');
+        
+        const initialRotationValue = this.getRotationValue(textBox); // Internal call
+        rotationSlider.value = initialRotationValue;
+        rotationValue.textContent = `${Math.round(initialRotationValue)}°`;
+
+        rotationSlider.addEventListener('input', () => {
+            const value = rotationSlider.value;
+            rotationValue.textContent = `${Math.round(value)}°`;
+            textBox.style.transform = `rotate(${value}deg)`;
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        // Make rotation value editable (via ComicCreator)
+        this.comicCreator.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
+
+        // Add text content change observer for outline update
+        // ... (observer logic calling internal updateOutlineText) ...
+        const observer = new MutationObserver(() => {
+            this.updateOutlineText(textElement); // Internal call
+        });
+        observer.observe(textElement, {
+            characterData: true,
+            childList: true,
+            subtree: true
+        });
+
+        // Add opacity control listener
+        const opacityCheckbox = popup.querySelector('#bubble-opacity');
+        opacityCheckbox.addEventListener('change', () => {
+            if (opacityCheckbox.checked) {
+                textBox.style.setProperty('--bubble-opacity', '0.5');
+            } else {
+                textBox.style.setProperty('--bubble-opacity', '1');
+            }
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+
+        // Line spacing slider listener
+        const lineHeightSlider = popup.querySelector('#line-height');
+        const lineHeightValue = popup.querySelector('.line-height-value');
+
+        const currentLineHeight = textElement.style.lineHeight;
+        let initialLineHeightValue = 1.2; 
+        if (currentLineHeight && currentLineHeight !== 'normal') {
+            initialLineHeightValue = parseFloat(currentLineHeight) || 1.2;
+        }
+        lineHeightSlider.value = initialLineHeightValue;
+        lineHeightValue.textContent = initialLineHeightValue.toFixed(1);
+
+        lineHeightSlider.addEventListener('input', () => {
+            const value = lineHeightSlider.value;
+            lineHeightValue.textContent = parseFloat(value).toFixed(1);
+            textElement.style.lineHeight = value;
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+        
+        // Make line height value editable (via ComicCreator)
+        this.comicCreator.makeSliderValueEditable(lineHeightSlider, lineHeightValue, '', 1);
+    }
+
+    // --- Helper methods for text formatting ---
+    getRotationValue(textBox) {
+        const transform = textBox.style.transform;
+        const rotateMatch = transform.match(/rotate\(([-\d.]+)deg\)/);
+        return rotateMatch ? parseInt(rotateMatch[1]) : 0;
+    }
+    
+    applyTextOutline(textElement, color, thickness = 2) {
+        const text = getTextWithLineBreaks(textElement); // Use imported util
+        const computedStyle = window.getComputedStyle(textElement);
+        
+        textElement.setAttribute('data-has-outline', 'true');
+        textElement.setAttribute('data-text', text);
+        
+        textElement.style.setProperty('--outline-color', color);
+        textElement.style.setProperty('--outline-width', `${thickness}px`);
+        textElement.style.setProperty('--text-color', textElement.style.color || '#000000');
+        
+        const stylesToCopy = [
+            'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 
+            'wordSpacing', 'lineHeight', 'textTransform', 'textAlign', 
+            'textDecoration', 'whiteSpace'
+        ];
+        stylesToCopy.forEach(prop => {
+            const value = computedStyle[prop];
+            if (value) textElement.style[prop] = value;
+        });
+        
+        textElement.style.webkitFontSmoothing = 'antialiased';
+        textElement.style.mozOsxFontSmoothing = 'grayscale';
+        textElement.style.textRendering = 'optimizeLegibility';
+        
+        if (!textElement._outlineObserver) {
+            let outlineUpdateTimer = null;
+            textElement._outlineObserver = new MutationObserver(() => {
+                clearTimeout(outlineUpdateTimer);
+                outlineUpdateTimer = setTimeout(() => {
+                    this.updateOutlineText(textElement); // Internal call
+                }, 100); 
+            });
+            textElement._outlineObserver.observe(textElement, {
+                characterData: true, childList: true, subtree: true
+            });
+        }
+    }
+    
+    removeTextOutline(textElement) {
+        textElement.removeAttribute('data-has-outline');
+        textElement.removeAttribute('data-text');
+        textElement.style.removeProperty('--outline-color');
+        textElement.style.removeProperty('--outline-width');
+        textElement.style.removeProperty('--text-color');
+        
+        if (textElement._outlineObserver) {
+            textElement._outlineObserver.disconnect();
+            delete textElement._outlineObserver;
+        }
+    }
+    
+    applyTextShadow(textElement, color) {
+        textElement.style.textShadow = `2px 2px 2px ${color}`;
+    }
+    
+    removeTextShadow(textElement) {
+        textElement.style.textShadow = 'none';
+    }
+    
+    // removeEffectFromShadow seems unused after refactoring, can be omitted if confirmed
+    /* 
+    removeEffectFromShadow(shadow, prefix) {
+        if (!shadow) return '';
+        const shadows = shadow.split(',');
+        return shadows.filter(s => !s.trim().startsWith(prefix)).join(',');
+    }
+    */
+    
+    updateBubbleTail(textBox, position) {
+        textBox.className = textBox.className.replace(/(?:speech|thought)-tail-\S+/g, '').trim();
+        const bubbleType = textBox.dataset.bubbleType;
+        if (bubbleType === 'speech-bubble') {
+            textBox.classList.add(`speech-tail-${position}`);
+        } else if (bubbleType === 'thought-bubble') {
+            textBox.classList.add(`thought-tail-${position}`);
+        }
+        textBox.dataset.tailPosition = position;
+    }
+    
+    positionTextBox(textBox, position) {
+        const panelOrCanvas = textBox.parentElement;
+        // Bounding rect might need adjustment if appending to canvas vs panel?
+        // For now, assume parent provides the boundary.
+        const parentRect = panelOrCanvas.getBoundingClientRect(); 
+        
+        let left, top;
+        switch (position) {
+            case 'top-left': left = 10; top = 10; break;
+            case 'top-center': left = 50; top = 10; break;
+            case 'top-right': left = 90; top = 10; break;
+            case 'middle-left': left = 10; top = 50; break;
+            case 'middle-center': left = 50; top = 50; break;
+            case 'middle-right': left = 90; top = 50; break;
+            case 'bottom-left': left = 10; top = 90; break;
+            case 'bottom-center': left = 50; top = 90; break;
+            case 'bottom-right': left = 90; top = 90; break;
+            default: left = 50; top = 50;
+        }
+        
+        textBox.style.left = `${left}%`;
+        textBox.style.top = `${top}%`;
+        
+        const translateX = position.includes('left') ? '0%' : 
+                         position.includes('right') ? '-100%' : '-50%';
+        const translateY = position.includes('top') ? '0%' : 
+                         position.includes('bottom') ? '-100%' : '-50%';
+        
+        const rotation = this.getRotationValue(textBox); // Internal call
+        const rotateStyle = rotation !== 0 ? ` rotate(${rotation}deg)` : '';
+        textBox.style.transform = `translate(${translateX}, ${translateY})${rotateStyle}`;
+    }
+
+    getOutlineThickness(textElement) {
+        const stroke = textElement.style.webkitTextStroke || '';
+        const match = stroke.match(/^(\d+(\.\d+)?)px/);
+        return match ? match[1] : '2';
+    }
+
+    getOutlineColor(textElement) {
+        const stroke = textElement.style.webkitTextStroke || '';
+        const color = stroke.match(/[#][a-fA-F0-9]{6}/) || stroke.match(/rgba?\([^)]+\)/);
+        return color ? globalRgbToHex(color[0]) : '#000000'; // Use imported util
+    }
+
+    getShadowColor(textElement) {
+        const shadow = textElement.style.textShadow || '';
+        const color = shadow.match(/[#][a-fA-F0-9]{6}/) || shadow.match(/rgba?\([^)]+\)/);
+        return color ? globalRgbToHex(color[0]) : '#666666'; // Use imported util
+    }
+
+    updateOutlineText(textElement) {
+        if (textElement.dataset.hasOutline === 'true') { 
+            const text = getTextWithLineBreaks(textElement); // Use imported util
+            textElement.setAttribute('data-text', text);
+        }
+    }
+
+    getBubbleBackgroundColor(textBox) {
+        const bubbleColorVariable = textBox.style.getPropertyValue('--bubble-background-color');
+        if (bubbleColorVariable && bubbleColorVariable.trim() !== '') {
+            if (bubbleColorVariable.startsWith('#')) return bubbleColorVariable;
+            return globalRgbToHex(bubbleColorVariable); // Use imported util
+        }
+        const computedBackgroundColor = window.getComputedStyle(textBox).backgroundColor;
+        return globalRgbToHex(computedBackgroundColor); // Use imported util
+    }
+
+    // --- State Management ---
+
+    /**
+     * Extracts text state from the current DOM for saving.
+     * @returns {object} Object containing arrays { panelTextStates: [], canvasTextElements: [] }
+     */
+    saveTextStates() {
+        const panelTextStates = [];
+        const canvasTextElements = [];
+        const canvas = document.querySelector('#comic-canvas');
+        
+        // Save panel text elements
+        const panels = Array.from(document.querySelectorAll('.comic-panel'));
+        panels.forEach(panel => {
+            const panelTexts = [];
+            Array.from(panel.querySelectorAll('.text-bubble')).forEach(textBubble => {
+                const textElement = textBubble.querySelector('.text-content');
+                if (!textElement) return;
+
+                const bubbleClasses = Array.from(textBubble.classList)
+                    .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
+                                    'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
+                                    'no-bubble'].includes(cls));
+                const tailPositionClass = Array.from(textBubble.classList)
+                    .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
+
+                panelTexts.push({
+                    id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
+                    previousBubbleType: textBubble.dataset.previousBubbleType || '',
+                    tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                    content: textElement.innerHTML,
+                    style: {
+                        left: textBubble.style.left,
+                        top: textBubble.style.top,
+                        ...(textBubble.style.width && { width: textBubble.style.width }),
+                        ...(textBubble.style.height && { height: textBubble.style.height }),
+                        transform: textBubble.style.transform,
+                        zIndex: textBubble.style.zIndex,
+                        fontSize: textElement.style.fontSize,
+                        fontFamily: textElement.style.fontFamily,
+                        fontWeight: textElement.style.fontWeight,
+                        fontStyle: textElement.style.fontStyle,
+                        textDecoration: textElement.style.textDecoration,
+                        textAlign: textElement.style.textAlign,
+                        textTransform: textElement.style.textTransform,
+                        color: textElement.style.color,
+                        opacity: textElement.style.opacity,
+                        bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
+                        bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
+                        textShadow: textElement.style.textShadow,
+                        lineHeight: textElement.style.lineHeight || 'normal',
+                        hasOutline: textElement.dataset.hasOutline === 'true',
+                        outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
+                        outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
+                        textContentPadding: textElement.style.padding // Save text content padding
+                    }
+                });
+            });
+            panelTextStates.push(panelTexts); // Add array of text states for this panel
+        });
+
+        // Save canvas text elements
+        if (canvas) {
+            const canvasTextBubbles = Array.from(canvas.querySelectorAll(':scope > .text-bubble'));
+            if (canvasTextBubbles.length > 0) {
+                canvasTextBubbles.forEach(textBubble => {
+                    const textElement = textBubble.querySelector('.text-content');
+                    if (!textElement) return;
+
+                    const bubbleClasses = Array.from(textBubble.classList)
+                        .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
+                                      'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
+                                      'no-bubble'].includes(cls));
+                    const tailPositionClass = Array.from(textBubble.classList)
+                        .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
+                    
+                    canvasTextElements.push({
+                        id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
+                        previousBubbleType: textBubble.dataset.previousBubbleType || '',
+                        tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                        content: textElement.innerHTML,
+                        style: {
+                            left: textBubble.style.left,
+                            top: textBubble.style.top,
+                            ...(textBubble.style.width && { width: textBubble.style.width }),
+                            ...(textBubble.style.height && { height: textBubble.style.height }),
+                            transform: textBubble.style.transform,
+                            zIndex: textBubble.style.zIndex,
+                            fontSize: textElement.style.fontSize,
+                            fontFamily: textElement.style.fontFamily,
+                            fontWeight: textElement.style.fontWeight,
+                            fontStyle: textElement.style.fontStyle,
+                            textDecoration: textElement.style.textDecoration,
+                            textAlign: textElement.style.textAlign,
+                            textTransform: textElement.style.textTransform,
+                            color: textElement.style.color,
+                            opacity: textElement.style.opacity,
+                            bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
+                            bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || 'white',
+                            textShadow: textElement.style.textShadow,
+                            lineHeight: textElement.style.lineHeight || 'normal',
+                            hasOutline: textElement.dataset.hasOutline === 'true',
+                            outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
+                            outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
+                            textContentPadding: textElement.style.padding || '2.5px 2px 5px 2px' // Save text content padding
+                        }
+                    });
+                });
+            }
+        }
+
+        return { panelTextStates, canvasTextElements };
+    }
+
+    /**
+     * Restores text elements onto the DOM based on saved state.
+     * @param {object} pageState - The state object for the current page.
+     */
+    loadTextStates(pageState) {
+        const panels = document.querySelectorAll('.comic-panel');
+        const comicCanvas = document.querySelector('#comic-canvas');
+
+        // Restore panel text elements
+        if (pageState.panelStates && panels.length > 0) {
+            const processablePanels = Math.min(panels.length, pageState.panelStates.length);
+            console.log(`TextManager: Restoring text for ${processablePanels} panels`);
+            
+            for (let index = 0; index < processablePanels; index++) {
+                const panel = panels[index];
+                const state = pageState.panelStates[index];
+                
+                if (state && state.textElements) { 
+                    state.textElements.forEach(textState => {
+                        this.restoreTextBubble(textState, panel); // Use helper
+                    });
+                } else {
+                    console.warn(`TextManager: Panel state or textElements missing at index ${index}.`);
+                }
+            } 
+        }
+
+        // Restore canvas text elements
+        if (pageState.canvasTextElements && comicCanvas) {
+            console.log(`TextManager: Restoring ${pageState.canvasTextElements.length} canvas text elements`);
+            pageState.canvasTextElements.forEach(textState => {
+                this.restoreTextBubble(textState, comicCanvas); // Use helper, pass canvas as parent
+            });
+        }
+    }
+
+    /**
+     * Helper function to create and append a text bubble from saved state.
+     * @param {object} textState - The saved state for a single text bubble.
+     * @param {HTMLElement} parentElement - The element to append the bubble to (panel or canvas).
+     */
+    restoreTextBubble(textState, parentElement) {
+        const textBubble = document.createElement('div');
+        textBubble.className = 'text-bubble';
+        textBubble.id = textState.id;
+        textBubble.dataset.bubbleType = textState.bubbleType;
+        textBubble.dataset.previousBubbleType = textState.previousBubbleType;
+        textBubble.dataset.tailPosition = textState.tailPosition;
+        
+        const textContent = document.createElement('div');
+        textContent.className = 'text-content';
+        textContent.contentEditable = true;
+        textContent.innerHTML = textState.content;
+        textContent.style.outline = 'none';
+        textContent.style.wordWrap = 'break-word';
+        textContent.style.color = '#000000';
+        textContent.style.padding = '2.5px 2px 5px 2px'; // Default/reduced padding
+        
+        // Apply bubble styling
+        textBubble.classList.add(textState.bubbleType || 'speech-bubble');
+        if (textState.tailPosition) {
+            const tailClass = `${textState.bubbleType.split('-')[0]}-tail-${textState.tailPosition}`;
+            textBubble.classList.add(tailClass);
+        }
+        
+        // Apply styles (use helper for position?)
+        const bubbleStyle = textState.style || {};
+        let leftValue = bubbleStyle.left || '10px';
+        let topValue = bubbleStyle.top || '10px';
+
+        // Convert percentage to pixels if needed (relative to parent)
+        if (leftValue.endsWith('%')) {
+            const parentWidth = parentElement.offsetWidth;
+            leftValue = `${(parseFloat(leftValue) / 100) * parentWidth}px`;
+        }
+        if (topValue.endsWith('%')) {
+            const parentHeight = parentElement.offsetHeight;
+            topValue = `${(parseFloat(topValue) / 100) * parentHeight}px`;
+        }
+
+        Object.assign(textBubble.style, {
+            position: 'absolute',
+            left: leftValue,
+            top: topValue,
+            width: bubbleStyle.width || 'auto',
+            height: bubbleStyle.height || 'auto',
+            transform: bubbleStyle.transform || 'none',
+            zIndex: bubbleStyle.zIndex || (parentElement.id === 'comic-canvas' ? '10' : '10'), // Default zIndex
+            padding: bubbleStyle.padding || '10px' // Restore padding
+        });
+
+        // Apply text content styles
+        Object.assign(textContent.style, {
+            fontFamily: bubbleStyle.fontFamily,
+            fontSize: bubbleStyle.fontSize,
+            fontWeight: bubbleStyle.fontWeight,
+            fontStyle: bubbleStyle.fontStyle,
+            textDecoration: bubbleStyle.textDecoration,
+            textAlign: bubbleStyle.textAlign,
+            textTransform: bubbleStyle.textTransform,
+            color: bubbleStyle.color,
+            opacity: bubbleStyle.opacity,
+            textShadow: bubbleStyle.textShadow,
+            lineHeight: bubbleStyle.lineHeight || 'normal',
+            padding: bubbleStyle.textContentPadding || '2.5px 2px 5px 2px'
+        });
+
+        // Restore bubble background and opacity
+        textBubble.style.setProperty('--bubble-background-color',
+            bubbleStyle.bubbleBackgroundColor || bubbleStyle.backgroundColor || 'white');
+        if (bubbleStyle.bubbleOpacity) {
+            textBubble.style.setProperty('--bubble-opacity', bubbleStyle.bubbleOpacity);
+        }
+
+        // Restore outline if present
+        if (bubbleStyle.hasOutline) {
+            textContent.dataset.hasOutline = 'true';
+            this.applyTextOutline(textContent, bubbleStyle.outlineColor || '#000000', bubbleStyle.outlineWidth || '2px');
+        }
+
+        // Add handles and buttons
+        const dragHandle = document.createElement('div');
+        dragHandle.className = 'drag-handle';
+        dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
+        dragHandle.title = 'Drag to move';
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
+        resizeHandle.title = 'Drag to resize';
+
+        const formatButton = document.createElement('div');
+        formatButton.className = 'format-text-btn';
+        formatButton.innerHTML = '<i class="fas fa-palette"></i>';
+        formatButton.title = 'Format text';
+
+        const deleteButton = document.createElement('div');
+        deleteButton.className = 'delete-text-btn';
+        deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+        deleteButton.title = 'Delete text';
+
+        // Append elements
+        textBubble.appendChild(textContent);
+        textBubble.appendChild(dragHandle);
+        textBubble.appendChild(resizeHandle);
+        textBubble.appendChild(formatButton);
+        textBubble.appendChild(deleteButton);
+        parentElement.appendChild(textBubble);
+
+        // Add event listeners (using comicCreator for DragDrop)
+        if (parentElement.id === 'comic-canvas') {
+            this.comicCreator.dragAndDropManager.makeCanvasTextDraggable(textBubble, dragHandle);
+        } else {
+            this.comicCreator.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
+        }
+        this.comicCreator.dragAndDropManager.makeTextResizable(textBubble, resizeHandle); 
+
+        deleteButton.addEventListener('click', () => {
+            textBubble.remove();
+            const popup = document.getElementById('text-format-popup');
+            if (popup) popup.style.display = 'none';
+            if (this.currentTextBox === textBubble) {
+                this.currentTextBox = null;
+                // Maybe call comicCreator.updateRightSidebarView() ?
+            }
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+        });
+
+        formatButton.addEventListener('click', (e) => {
+            this.showTextFormatPopup(textBubble, e); // Internal call
+        });
+
+        textBubble.addEventListener('click', (e) => {
+             if (e.target.closest('.drag-handle, .resize-handle, .format-text-btn, .delete-text-btn')) return; 
+             if (e.target === textBubble || e.target === textBubble.querySelector('.text-content-outline')) {
+                 this.selectTextBox(textBubble); // Internal call
+                 e.stopPropagation();
+             }
+        });
+
+        textContent.addEventListener('click', (e) => {
+            this.selectTextBox(textBubble); // Internal call
+         });
+
+         textContent.addEventListener('blur', () => {
+             // Maybe save state on blur?
+             // this.comicCreator.saveCurrentPageState();
+         });
+
+         textContent.addEventListener('input', () => {
+             this.updateOutlineText(textContent); // Internal call
+         });
+    }
+
+    // --- Event Handling ---
+
+    /**
+     * Deletes the currently selected text box.
+     */
+    deleteSelectedTextBox() {
+        if (!this.currentTextBox) return;
+
+        const popup = document.getElementById('text-format-popup');
+        if (popup) popup.remove(); // Remove formatting popup if open
+
+        this.currentTextBox.remove();
+        this.currentTextBox = null;
+        this.comicCreator.deselectAll(); // Ensure sidebar updates
+        this.comicCreator.saveCurrentPageState();
+    }
+} 
