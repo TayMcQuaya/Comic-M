@@ -21,8 +21,8 @@ We are refactoring the code incrementally, module by module:
 
 ## Progress So Far
 
-*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`, `ImageLibrary`, `PanelManager`
-*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`, `src/js/modules/ImageLibrary.js`, `src/js/modules/PanelManager.js`
+*   **Modules Extracted:** `ExportManager`, `Utils`, `FolderSystem`, `DragAndDropManager`, `ImageLibrary`, `PanelManager`, `TextManager`, `StickerManager`
+*   **Files Created:** `src/js/modules/ExportManager.js`, `src/js/modules/Utils.js`, `src/js/modules/FolderSystem.js`, `src/js/modules/DragAndDropManager.js`, `src/js/modules/ImageLibrary.js`, `src/js/modules/PanelManager.js`, `src/js/modules/TextManager.js`, `src/js/modules/StickerManager.js`
 *   **Methods/Functions Moved:** 
     *   `ExportManager`: `preloadFontsForExport`, `downloadComic`, `processElementsForExport`
     *   `Utils`: `globalRgbToHex`, `getTextWithLineBreaks`
@@ -30,6 +30,8 @@ We are refactoring the code incrementally, module by module:
     *   `DragAndDropManager`: `setupImageDragAndDrop`, `setupFolderDragAndDrop`, `setupGridDropZone`, `setupImageDragging`, `makeTextDraggable`, `makeTextResizable`, `makeStickerDraggable`, `makeCanvasTextDraggable`
     *   `ImageLibrary`: Properties (`uploadedImages`, `selectedAssets`, `lastSelectedAsset`), Methods (`handleImageUpload`, `updateThumbnails` (was `updateImageLibrary`), `deleteImage`, `clearSelection`, `enableNextButton`, `handleAssetSelection`, `selectSingleAsset`, plus property accessors)
     *   `PanelManager`: Properties (`currentPanel`), Methods (`createPanels` (from `createComic`), `addImageToPanel`, `clearPanelImage`, `selectPanel`, `updatePanelControls`, `handleZoom`, `handlePositionChange`, `savePanelStates` (from `saveCurrentPageState`), `loadPanelStates` (from `loadPageState`))
+    *   `TextManager`: Properties (`currentTextBox`), Methods (`addTextToPanel`, `addTextToCanvas`, `deleteSelectedTextBox`, `selectTextBox`, `updateTextProperties`, `showTextFormatPopup`, `applyStyle`, `saveTextStates` (from `saveCurrentPageState`), `loadTextStates` (from `loadPageState`), likely others related to style/bubble controls)
+    *   `StickerManager`: Properties (`currentSticker`), Methods (`addSticker`, `selectSticker`, `deleteSelectedSticker`, `updateStickerControls`, `saveStickerStates` (from `saveCurrentPageState`), `loadStickerStates` (from `loadPageState`), `deselectCurrentSticker`)
 *   **Integration:** Modules imported and instantiated in `main.js`. Calls updated.
 *   **Cleanup:** Original methods/functions/properties removed from `main.js`.
 *   **Status:** Functionality confirmed working for extracted modules.
@@ -41,8 +43,8 @@ The following modules still need to be extracted from `main.js`:
 *   ~~`DragAndDrop.js` (drag and drop functionality for images, folders, text, stickers)~~ **(Completed)**
 *   ~~`ImageLibrary.js` (image upload, display (`updateImageLibrary`), selection, deletion)~~ **(Completed)**
 *   ~~`PanelManager.js` (panel creation based on layout, image placement (`addImageToPanel`), panel selection, image controls within panels (`updatePanelControls`, `handleZoom`, `handlePositionChange` etc.))~~ **(Completed)**
-*   `TextManager.js` (text bubble creation (`addTextToPanel`, `addTextToCanvas`), editing, styling (`updateTextProperties`, `showTextFormatPopup`), positioning, effects)
-*   `StickerManager.js` (sticker adding, selection, controls, dragging)
+*   ~~`TextManager.js` (text bubble creation (`addTextToPanel`, `addTextToCanvas`), editing, styling (`updateTextProperties`, `showTextFormatPopup`), positioning, effects)~~ **(Completed)**
+*   ~~`StickerManager.js` (sticker adding, selection, controls, dragging)~~ **(Completed)**
 *   `BackgroundManager.js` (handling background styles and images, global vs. page-specific)
 *   `UIManager.js` (UI updates like sidebar tabs, right sidebar view, notifications, modals, page navigation UI)
 

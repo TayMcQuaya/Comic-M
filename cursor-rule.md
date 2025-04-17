@@ -1,87 +1,99 @@
-# Cursor Rule: Refactoring TextManager from main.js
+# Cursor Rule: Refactoring StickerManager from main.js
 
 ## Goal
-Extract all text bubble management related logic from `src/js/main.js` into a new module `src/js/modules/TextManager.js`.
+Extract all sticker management related logic from `src/js/main.js` into a new module `src/js/modules/StickerManager.js`.
 
 ## Constraint
 - Maintain 100% identical functionality and visual design.
 - Do not break or alter any unrelated functionality in `main.js`.
 - The refactoring should happen incrementally.
 
-## Identified Methods/Logic for `TextManager`
+## Identified Methods/Logic for `StickerManager`
 
-*   **Text Bubble Creation:** `addTextToPanel`, `addTextToCanvas`.
-*   **Selection:** `selectTextBox`.
-*   **UI/Controls:** `updateTextProperties`, `showTextFormatPopup`, `setupPopupEventListeners`.
-*   **Styling/Effects Helpers:** `getRotationValue`, `applyTextOutline`, `removeTextOutline`, `applyTextShadow`, `removeTextShadow`, `updateBubbleTail`, `positionTextBox`, `getOutlineThickness`, `getOutlineColor`, `getShadowColor`, `getBubbleBackgroundColor`. (Note: `getTextWithLineBreaks` and `globalRgbToHex` are already in `Utils`).
-*   **State Management:** Parts of `saveCurrentPageState` (saving `textElements` in panel state, saving `canvasTextElements` on page state) and `loadPageState` (restoring `textElements` and `canvasTextElements`).
-*   **Event Handling:** Logic within the 'Add Text' button listener, Delete keydown listener (related to text), and click listeners set up on text bubbles/elements.
-*   **Properties:** `currentTextBox` (or potentially `selectedElement` if used for text).
+*   **Properties:**
+    *   `currentSticker`: Tracks the currently selected sticker element.
+*   **Core Methods:**
+    *   `addSticker(image, dropX, dropY)`: Handles adding a new sticker to the canvas.
+    *   `selectSticker(stickerElement)`: Manages the selection state of stickers.
+    *   `deleteSelectedSticker()`: Handles the deletion of the currently selected sticker.
+*   **UI/Controls:**
+    *   `updateStickerControls(stickerElement)`: Populates the right sidebar with controls for the selected sticker.
+    *   Event listeners within `updateStickerControls` for delete, size, flip, etc.
+*   **State Management:**
+    *   `saveStickerStates()`: Extracts logic from `ComicCreator.saveCurrentPageState` to gather state data (position, size, flip, etc.) from all sticker elements on the canvas.
+    *   `loadStickerStates(page)`: Extracts logic from `ComicCreator.loadPageState` to recreate sticker elements on the canvas based on saved state in the `page` object.
+*   **Event Handling (to be updated in `main.js`):**
+    *   Canvas `'drop'` listener: Needs to call `stickerManager.addSticker` when in 'stickers' mode.
+    *   Canvas `'click'` listener: Needs to call `stickerManager.selectSticker` when a sticker is clicked.
+    *   Document `'keydown'` (Delete key): Needs to check `stickerManager.currentSticker` and call `stickerManager.deleteSelectedSticker` when in 'stickers' mode.
+*   **Dependencies:**
+    *   Needs access to `comicCreator` instance to call:
+        *   `comicCreator.imageLibrary.getImageById()`
+        *   `comicCreator.dragAndDropManager.makeStickerDraggable()`
+        *   `comicCreator.saveCurrentPageState()` (called after actions like delete, flip, resize)
+        *   `comicCreator.deselectAll()`
+        *   `comicCreator.makeSliderValueEditable()`
 
 ## Strategy: Phased Approach
 
-1.  **Create `TextManager.js` Skeleton:**
-    *   Create the file `src/js/modules/TextManager.js`.
-    *   Define a `TextManager` class.
+1.  **Create `StickerManager.js` Skeleton:**
+    *   Create the file `src/js/modules/StickerManager.js`.
+    *   Define a `StickerManager` class.
     *   Constructor should accept `comicCreator` instance and store it (`this.comicCreator`).
-    *   Initialize internal state property: `this.currentTextBox = null;`.
+    *   Initialize internal state property: `this.currentSticker = null;`.
 
 2.  **Instantiate in `ComicCreator`:**
-    *   In `main.js`, import `TextManager`.
-    *   In `ComicCreator` constructor, create instance: `this.textManager = new TextManager(this);`.
-    *   Remove `this.currentTextBox = null;` initialization from `ComicCreator` (or update accessors).
+    *   In `main.js`, import `StickerManager`.
+    *   In `ComicCreator` constructor, create instance: `this.stickerManager = new StickerManager(this);`.
+    *   Remove `this.currentSticker = null;` initialization from `ComicCreator` (if it exists). Currently, it's implicitly null.
 
-3.  **Move Text Creation Methods:**
-    *   Move `addTextToPanel` and `addTextToCanvas` one by one.
-    *   **Update Call Sites:** Change calls in `main.js` (e.g., 'Add Text' button listener) to use `this.textManager.addTextToPanel(...)` or `this.textManager.addTextToCanvas(...)`. Remember to pass necessary arguments like the target panel if needed.
-    *   **Update Internal References:**
-        *   `this.dragAndDropManager...` -> `this.comicCreator.dragAndDropManager...`.
-        *   `this.selectTextBox(...)` -> `this.selectTextBox(...)` (will be moved next).
-        *   `this.showTextFormatPopup(...)` -> `this.showTextFormatPopup(...)` (will be moved).
-        *   `this.saveCurrentPageState()` -> `this.comicCreator.saveCurrentPageState()`.
+3.  **Move Core Sticker Methods:**
+    *   Move `addSticker`, `selectSticker`, and `updateStickerControls` one by one.
+    *   **Update Call Sites:** Change calls in `main.js` (e.g., drop listener, click listener, `updateRightSidebarView`) to use `this.stickerManager.methodName(...)`.
+    *   **Update Internal References:** Within the moved methods, update references like:
+        *   `this.currentSticker` -> `this.currentSticker` (within `StickerManager`).
+        *   `this.imageLibrary...` -> `this.comicCreator.imageLibrary...`
+        *   `this.dragAndDropManager...` -> `this.comicCreator.dragAndDropManager...`
+        *   `this.saveCurrentPageState()` -> `this.comicCreator.saveCurrentPageState()`
+        *   `this.selectSticker(...)` -> `this.selectSticker(...)`
+        *   `this.updateStickerControls(...)` -> `this.updateStickerControls(...)`
+        *   `this.deselectAll()` -> `this.comicCreator.deselectAll()`
+        *   `this.makeSliderValueEditable(...)` -> `this.comicCreator.makeSliderValueEditable(...)`
 
-4.  **Move Selection and UI Methods:**
-    *   Move `selectTextBox`, `updateTextProperties`, `showTextFormatPopup`, `setupPopupEventListeners`.
-    *   **Update Call Sites:** Ensure calls from `addTextToPanel`, `addTextToCanvas`, and event listeners are correctly referencing methods within `TextManager`.
-    *   **Update Internal References:**
-        *   `this.currentTextBox` -> `this.currentTextBox` (within `TextManager`).
-        *   `this.deselectAll()` -> `this.comicCreator.deselectAll()`.
-        *   Accessing UI elements (e.g., `#text-properties`, `#text-format-popup`) remains the same.
-        *   `this.saveCurrentPageState()` -> `this.comicCreator.saveCurrentPageState()`.
-        *   Helper methods (`getRotationValue`, etc.) -> `this.helperMethod(...)` (will be moved).
-        *   Utility methods like `globalRgbToHex` -> `this.comicCreator.utils.globalRgbToHex` or import `Utils` directly.
-        *   `this.makeSliderValueEditable(...)` -> `this.comicCreator.makeSliderValueEditable(...)` (potential UIManager candidate).
+4.  **Create and Move Deletion Logic:**
+    *   Create `deleteSelectedSticker()` in `StickerManager`. Move the sticker removal logic (DOM removal, state update, deselect, save) from the 'Delete' keydown handler in `main.js` into this method.
+    *   Update the 'Delete' keydown handler in `main.js` to call `this.stickerManager.deleteSelectedSticker()` when appropriate.
+    *   Update the delete button listener within `updateStickerControls` to call `this.deleteSelectedSticker()`. 
 
-5.  **Move Helper Methods:**
-    *   Move all identified helper methods for styling/effects one by one.
-    *   Verify they are called correctly using `this.methodName(...)` within `TextManager`.
+5.  **Refactor State Management:**
+    *   **Saving:** Create `saveStickerStates()` in `StickerManager`. Move the sticker mapping logic from `ComicCreator.saveCurrentPageState` into this new method. It should query `.canvas-sticker-image` and return an array of state objects. `ComicCreator.saveCurrentPageState` will call `currentPage.stickerStates = this.stickerManager.saveStickerStates();`.
+    *   **Loading:** Create `loadStickerStates(page)` in `StickerManager`. Move the sticker restoration loop from `ComicCreator.loadPageState` into this method. It needs the `page` object to access `page.stickerStates`. `ComicCreator.loadPageState` will call `this.stickerManager.loadStickerStates(page);`.
+    *   Ensure internal calls within loading logic (`this.comicCreator.imageLibrary...`, `this.comicCreator.dragAndDropManager...`, `this.selectSticker`) use the correct references.
 
-6.  **Refactor State Management:**
-    *   **Saving:** Create `saveTextStates()` in `TextManager`. This method should return an object like `{ panelText: [...], canvasText: [...] }`. Extract the logic for mapping panel `textElements` and canvas `textElements` from `ComicCreator.saveCurrentPageState` into this new method. `ComicCreator.saveCurrentPageState` will call `const textStates = this.textManager.saveTextStates();`, then assign `currentPage.panelStates[index].textElements = textStates.panelText[index];` (carefully, inside the panel mapping) and `currentPage.canvasTextElements = textStates.canvasText;`.
-    *   **Loading:** Create `loadTextStates(page)` in `TextManager`. Extract the logic for restoring panel `textElements` and `canvasTextElements` from `ComicCreator.loadPageState`. This method will need the `page` object to access the saved states and the DOM elements (panels, canvas) to append the restored text bubbles. `ComicCreator.loadPageState` will call `this.textManager.loadTextStates(page);`.
-    *   Ensure internal calls within loading logic (e.g., `this.dragAndDropManager...`, `this.selectTextBox`, `this.showTextFormatPopup`) use `this.comicCreator.` or `this.` appropriately.
+6.  **Final Cleanup and Verification:**
+    *   Review `main.js` and remove any remaining direct references or properties related to sticker management that are now handled by `StickerManager`.
+    *   Ensure `deselectAll` in `main.js` calls `this.stickerManager.deselectCurrentSticker()` (or similar method to be added in StickerManager to handle internal state `this.currentSticker = null`).
+    *   Ensure `updateRightSidebarView` correctly calls `this.stickerManager.updateStickerControls()` when needed.
 
-7.  **Update Event Handlers:**
-    *   Modify the 'Delete' keydown listener in `main.js` to check `this.textManager.currentTextBox` and call a new `this.textManager.deleteSelectedTextBox()` method if applicable.
-    *   Ensure click listeners set up within text bubble creation correctly call `this.selectTextBox()` or `this.showTextFormatPopup()`.
-
-8.  **Testing (After Each Major Step):**
-    *   Manually test text functionality thoroughly:
-        *   Adding text to panels and canvas in different modes.
-        *   Selecting text bubbles.
-        *   Using all controls in the text properties panel and the format popup.
-        *   Dragging and resizing text bubbles.
-        *   Deleting text bubbles (via Delete key or future button).
-        *   Saving/Loading projects (ensure text bubbles, content, styles, positions are restored correctly in panels and on canvas).
+7.  **Testing (After Each Major Step):**
+    *   Manually test sticker functionality thoroughly:
+        *   Adding stickers via drag-and-drop in 'stickers' mode.
+        *   Selecting/deselecting stickers.
+        *   Using sticker controls (size, flip, delete button) in the sidebar.
+        *   Deleting selected stickers using the Delete key.
+        *   Dragging stickers.
+        *   Switching between sidebar modes (ensure selection/sidebar updates correctly).
+        *   Saving/Loading projects (ensure stickers, positions, sizes, flip state are restored correctly).
 
 ## Key Considerations Checklist:
-- [ ] Passed `ComicCreator` instance to `TextManager` constructor?
+- [ ] Passed `ComicCreator` instance to `StickerManager` constructor?
 - [ ] Stored `comicCreator` instance as `this.comicCreator`?
-- [ ] Imported `TextManager` in `main.js`?
-- [ ] Instantiated `this.textManager = new TextManager(this);` in `ComicCreator` constructor?
-- [ ] Initialized `this.currentTextBox = null` in `TextManager` constructor?
-- [ ] Updated *all* external calls in `main.js` to use `this.textManager.methodName()`?
+- [ ] Imported `StickerManager` in `main.js`?
+- [ ] Instantiated `this.stickerManager = new StickerManager(this);` in `ComicCreator` constructor?
+- [ ] Initialized `this.currentSticker = null` in `StickerManager` constructor?
+- [ ] Updated *all* relevant external calls in `main.js` to use `this.stickerManager.methodName()`?
 - [ ] Updated *all* internal references within moved methods (check `this.` vs `this.comicCreator.`)?
-- [ ] Refactored save/load logic for text states?
-- [ ] Updated relevant event handlers (Add Text, Delete key)?
+- [ ] Refactored save/load logic for sticker states?
+- [ ] Updated relevant event handlers (Drop, Click, Delete key)?
+- [ ] Added method in `StickerManager` to handle deselecting its internal `currentSticker` and called it from `ComicCreator.deselectAll`?
 - [ ] Tested thoroughly after each step? 

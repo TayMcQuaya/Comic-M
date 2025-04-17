@@ -6,6 +6,7 @@ import { DragAndDropManager } from './modules/DragAndDropManager.js'; // Import 
 import { ImageLibrary } from './modules/ImageLibrary.js'; // Import ImageLibrary
 import { PanelManager } from './modules/PanelManager.js'; // Import PanelManager
 import { TextManager } from './modules/TextManager.js'; // Import TextManager
+import { StickerManager } from './modules/StickerManager.js'; // Import StickerManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -41,6 +42,7 @@ class ComicCreator {
         this.imageLibrary = new ImageLibrary(this); // Instantiate ImageLibrary
         this.panelManager = new PanelManager(this); // Instantiate PanelManager
         this.textManager = new TextManager(this); // Instantiate TextManager
+        this.stickerManager = new StickerManager(this); // Instantiate StickerManager
         
         this.init();
     }
@@ -218,20 +220,11 @@ class ComicCreator {
                         }
                         break;
                     case 'stickers':
-                        if (this.currentSticker) {
-                            const stickerIdToDelete = this.currentSticker.id;
-                            this.currentSticker.remove();
-                            // Remove from state
-                            const pageState = this.pages[this.currentPageIndex];
-                            if (pageState && pageState.stickerStates) {
-                                pageState.stickerStates = pageState.stickerStates.filter(s => s.id !== stickerIdToDelete);
-                            }
-                            this.deselectAll();
-                            this.saveCurrentPageState();
-                        }
-                        // Also check for selected text on canvas in this mode
-                        if (this.textManager.currentTextBox) {
-                            this.textManager.deleteSelectedTextBox(); // Use TextManager method
+                        // Use the StickerManager's currentSticker property and delete method
+                        if (this.stickerManager.currentSticker) {
+                            this.stickerManager.deleteSelectedSticker();
+                        } else if (this.textManager.currentTextBox) { // Also check for selected text
+                            this.textManager.deleteSelectedTextBox();
                         }
                         break;
                 }
@@ -306,7 +299,8 @@ class ComicCreator {
                     // Allow drop anywhere on the canvas for stickers
                     console.log('Mode: Stickers - Dropped image ID:', imageId, 'onto canvas');
                     // Pass viewport drop coordinates (clientX, clientY)
-                    this.addSticker(image, e.clientX, e.clientY); 
+                    // Call the method on the StickerManager instance
+                    this.stickerManager.addSticker(image, e.clientX, e.clientY);
                     // Remove drop-target from panel if dragged over one initially
                     if (panel) panel.classList.remove('drop-target');
                     break;
@@ -322,8 +316,8 @@ class ComicCreator {
             const sticker = e.target.closest('.canvas-sticker-image'); // Check for sticker click
 
             if (sticker) {
-                // Clicked on a sticker - select it
-                this.selectSticker(sticker);
+                // Clicked on a sticker - select it via StickerManager
+                this.stickerManager.selectSticker(sticker);
             } else if (textBox) {
                 // Clicked inside a text box (or its controls, handled by text box listeners)
                 // Let the text box's own click listener handle selection/focus
@@ -414,9 +408,12 @@ class ComicCreator {
 
         // --- Save Text States (via TextManager) ---
         const textStates = this.textManager.saveTextStates(); 
-        const savedPanelText = textStates.panelTextStates; // Array of arrays
         currentPage.canvasTextElements = textStates.canvasTextElements; // Save canvas text
         // --- End Text State Saving ---
+
+        // --- Save Sticker States (via StickerManager) ---
+        currentPage.stickerStates = this.stickerManager.saveStickerStates();
+        // --- End Sticker State Saving ---
 
         const panels = Array.from(document.querySelectorAll('.comic-panel'));
 
@@ -424,29 +421,13 @@ class ComicCreator {
             const state = panelImageStates[index] || {}; 
 
             // Assign saved panel text state
-            state.textElements = savedPanelText[index] || []; 
+            state.textElements = textStates.panelTextStates[index] || []; 
 
             // Add background style saving (can be moved later)
             state.backgroundStyle = panel.dataset.backgroundStyle || 'classic-white'; 
             
             return state;
         });
-
-        // Save sticker states
-        const stickers = Array.from(document.querySelectorAll('.canvas-sticker-image'));
-        currentPage.stickerStates = stickers.map(sticker => ({
-            id: sticker.id,
-            imageId: sticker.dataset.imageId,
-            left: sticker.style.left,
-            top: sticker.style.top,
-            width: sticker.style.width,
-            height: sticker.style.height,
-            transform: sticker.style.transform,
-            rotation: sticker.dataset.rotation || '0',
-            zIndex: sticker.style.zIndex,
-            size: sticker.dataset.size,
-            isFlippedHorizontally: sticker.dataset.isFlippedHorizontally === 'true'
-        }));
 
         // Save canvas background style
         const canvas = document.querySelector('#comic-canvas');
@@ -1078,51 +1059,9 @@ class ComicCreator {
         this.textManager.loadTextStates(page); // Pass the whole page state
         // --- End Text Restoration --- 
 
-        // Restore stickers
-        if (stickerStates.length > 0) {
-            stickerStates.forEach(state => {
-                const image = this.imageLibrary.getImageById(String(state.imageId));
-                if (image) {
-                    const stickerImg = document.createElement('img');
-                    stickerImg.src = image.src;
-                    stickerImg.alt = image.name || 'Sticker';
-                    stickerImg.className = 'canvas-sticker-image';
-                    stickerImg.id = state.id;
-                    stickerImg.dataset.imageId = state.imageId;
-                    
-                    Object.assign(stickerImg.style, {
-                        position: 'absolute',
-                        left: state.left || '0px',
-                        top: state.top || '0px',
-                        width: state.width || '100px',
-                        height: state.height || 'auto',
-                        transform: state.transform || 'scale(1)',
-                        zIndex: state.zIndex || '1'
-                    });
-                    
-                    if (state.size) stickerImg.dataset.size = state.size;
-                    if (state.rotation) stickerImg.dataset.rotation = state.rotation;
-                    if (typeof state.isFlippedHorizontally === 'boolean') {
-                        stickerImg.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
-                        // If flipped, ensure scaleX(-1) is in the transform
-                        if (state.isFlippedHorizontally && !stickerImg.style.transform.includes('scaleX(-1)')) {
-                            stickerImg.style.transform = `${stickerImg.style.transform} scaleX(-1)`;
-                        }
-                    }
-                    
-                    comicCanvas.appendChild(stickerImg);
-                    this.dragAndDropManager.makeStickerDraggable(stickerImg);
-                    
-                    stickerImg.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.selectSticker(stickerImg);
-                    });
-                }
-            });
-        }
-
-        // REMOVED: Panel text loading logic is now in TextManager.loadTextStates()
-        // REMOVED: Canvas text loading logic is now in TextManager.loadTextStates()
+        // --- Restore Sticker Elements (via StickerManager) ---
+        this.stickerManager.loadStickerStates(page);
+        // --- End Sticker Restoration ---
 
         return true;
     }
@@ -1775,7 +1714,7 @@ class ComicCreator {
                     stickerProps.style.display = 'block';
                  } else {
                     // Ensure sticker props div exists for the message
-                    this.updateStickerControls(null); 
+                    this.stickerManager.updateStickerControls(); // Call StickerManager method
                  }
                 break;
             default:
@@ -2273,105 +2212,6 @@ class ComicCreator {
         }, 3000);
     }
 
-    // --- Add Sticker --- 
-    addSticker(image, dropX, dropY) {
-        console.log("[addSticker] Called with image:", image, "at viewport coords", dropX, dropY); // <<< Keep existing log
-        const stickerCanvas = document.querySelector('#comic-canvas');
-        if (!stickerCanvas) {
-            console.error('[addSticker] Canvas element not found!'); // <<< Keep existing error log
-            return;
-        }
-
-        const canvasRect = stickerCanvas.getBoundingClientRect();
-        const relativeX = dropX - canvasRect.left;
-        const relativeY = dropY - canvasRect.top;
-
-        const stickerId = `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const stickerImg = document.createElement('img');
-        
-        Object.assign(stickerImg, {
-            id: stickerId,
-            src: image.dataUrl || image.src,
-            alt: "Sticker",
-            className: 'canvas-sticker-image'
-        });
-        console.log('[addSticker] Created img element with src:', stickerImg.src); // <<< Debug log
-
-        Object.assign(stickerImg.dataset, {
-            imageId: image.id,
-            size: '200'
-        });
-
-        Object.assign(stickerImg.style, {
-            position: 'absolute',
-            width: '200px',
-            height: 'auto',
-            cursor: 'grab',
-            zIndex: '100'
-        });
-
-        // Wait for image to load to get dimensions and set position
-        stickerImg.onload = () => {
-            const imgWidth = stickerImg.offsetWidth;
-            const imgHeight = stickerImg.offsetHeight;
-            const canvasWidth = stickerCanvas.offsetWidth;
-            const canvasHeight = stickerCanvas.offsetHeight;
-
-            // Calculate bounded position
-            let finalLeft = Math.max(0, Math.min(relativeX - imgWidth / 2, canvasWidth - imgWidth));
-            let finalTop = Math.max(0, Math.min(relativeY - imgHeight / 2, canvasHeight - imgHeight));
-
-            Object.assign(stickerImg.style, {
-                left: `${finalLeft}px`,
-                top: `${finalTop}px`
-            });
-
-            // Save state after position is set
-            if (!this.pages[this.currentPageIndex].stickerStates) {
-                this.pages[this.currentPageIndex].stickerStates = [];
-            }
-            
-            this.pages[this.currentPageIndex].stickerStates = this.pages[this.currentPageIndex].stickerStates.filter(s => s.id !== stickerId);
-            
-            this.pages[this.currentPageIndex].stickerStates.push({
-                id: stickerId,
-                imageId: image.id,
-                left: stickerImg.style.left,
-                top: stickerImg.style.top,
-                width: stickerImg.style.width,
-                height: stickerImg.style.height,
-                transform: stickerImg.style.transform || 'scale(1)',
-                rotation: stickerImg.dataset.rotation || '0',
-                zIndex: stickerImg.style.zIndex // Save zIndex too
-            });
-
-            this.saveCurrentPageState();
-        };
-
-        stickerCanvas.appendChild(stickerImg);
-        console.log('[addSticker] Appended img to canvas:', stickerCanvas); // <<< Debug log
-        this.dragAndDropManager.makeStickerDraggable(stickerImg);
-        
-        stickerImg.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.selectSticker(stickerImg);
-        });
-
-        this.selectSticker(stickerImg);
-    }
-
-    // --- Select Sticker --- 
-    selectSticker(stickerElement) {
-        console.log('Selecting sticker:', stickerElement.id);
-        // Deselect any other selected element (panel, text, background, other sticker)
-        this.deselectAll();
-
-        this.currentSticker = stickerElement;
-        stickerElement.classList.add('selected-sticker'); // Add a specific class for styling
-        
-        // Update the right sidebar with sticker controls
-        this.updateStickerControls(stickerElement);
-    }
 
     // --- Deselect All Elements --- 
     deselectAll() {
