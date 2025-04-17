@@ -383,7 +383,7 @@ class ComicCreator {
             
             // Store image data and update visual states
             panel.dataset.imageId = image.id.toString();
-            this.updateImageLibrary(); // Update thumbnail states
+            this.imageLibrary.updateThumbnails(); // Update thumbnail states (FIXED CALL)
             
             this.dragAndDropManager.setupImageDragging(img);
             this.selectPanel(panel);
@@ -1574,225 +1574,236 @@ class ComicCreator {
                 const panel = panels[index];
                 const state = panelStates[index];
                 
-                if (state.backgroundStyle) {
-                    panel.dataset.backgroundStyle = state.backgroundStyle;
-                }
-                
-                // Restore image if present
-                if (state.imageId) {
-                    const image = this.imageLibrary.getImageById(String(state.imageId));
-                    if (image) {
-                        const img = document.createElement('img');
-                        img.src = image.dataUrl || image.src;
-                        img.alt = image.name;
-                        img.draggable = false;
-                        img.dataset.imageId = state.imageId;
-                        
-                        Object.assign(img.style, {
-                            position: 'absolute',
-                            left: state.left || '50%',
-                            top: state.top || '50%',
-                            transform: state.transform || 'translate(-50%, -50%) scale(1)'
-                        });
-                        
-                        panel.appendChild(img);
-                        panel.classList.add('has-image');
-                        
-                        if (state.initialScale) panel.dataset.initialScale = state.initialScale;
-                        if (state.currentScale) panel.dataset.currentScale = state.currentScale;
-                        if (state.rotation) panel.dataset.rotation = state.rotation;
-                        if (typeof state.isFlippedHorizontally === 'boolean') {
-                            panel.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
-                            // If flipped, ensure scaleX(-1) is in the transform
-                            if (state.isFlippedHorizontally && !img.style.transform.includes('scaleX(-1)')) {
-                                img.style.transform = `${img.style.transform} scaleX(-1)`;
-                            }
-                        }
-                        
-                        this.dragAndDropManager.setupImageDragging(img);
+                // Check if state exists before accessing its properties
+                if (state) { 
+                    if (state.backgroundStyle) {
+                        panel.dataset.backgroundStyle = state.backgroundStyle;
                     }
-                }
+                    
+                    // Restore image if present (Check state AND state.imageId)
+                    if (state.imageId) { 
+                        const image = this.imageLibrary.getImageById(String(state.imageId));
+                        if (image) {
+                            const img = document.createElement('img');
+                            img.src = image.dataUrl || image.src;
+                            img.alt = image.name;
+                            img.draggable = false;
+                            img.dataset.imageId = state.imageId;
+                            
+                            Object.assign(img.style, {
+                                position: 'absolute',
+                                left: state.left || '50%',
+                                top: state.top || '50%',
+                                transform: state.transform || 'translate(-50%, -50%) scale(1)'
+                            });
+                            
+                            panel.appendChild(img);
+                            panel.classList.add('has-image');
+                            
+                            if (state.initialScale) panel.dataset.initialScale = state.initialScale;
+                            if (state.currentScale) panel.dataset.currentScale = state.currentScale;
+                            if (state.rotation) panel.dataset.rotation = state.rotation;
+                            if (typeof state.isFlippedHorizontally === 'boolean') {
+                                panel.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
+                                // If flipped, ensure scaleX(-1) is in the transform
+                                if (state.isFlippedHorizontally && !img.style.transform.includes('scaleX(-1)')) {
+                                    img.style.transform = `${img.style.transform} scaleX(-1)`;
+                                }
+                            }
+                            
+                            this.dragAndDropManager.setupImageDragging(img);
+                        } else {
+                             console.warn(`Panel image ID ${state.imageId} not found in loaded images.`);
+                        }
+                    }
 
-                // Restore text elements if any
-                if (state.textElements) {
-                    state.textElements.forEach(textState => {
-                        const textBubble = document.createElement('div');
-                        textBubble.className = 'text-bubble';
-                        textBubble.id = textState.id;
-                        textBubble.dataset.bubbleType = textState.bubbleType;
-                        textBubble.dataset.previousBubbleType = textState.previousBubbleType;
-                        textBubble.dataset.tailPosition = textState.tailPosition;
-                        
-                        const textContent = document.createElement('div');
-                        textContent.className = 'text-content';
-                        textContent.contentEditable = true; // Make text editable
-                        textContent.innerHTML = textState.content;
-                        textContent.style.outline = 'none';
-                        textContent.style.wordWrap = 'break-word';
-                        textContent.style.color = '#000000'; // Set default text color to black
-                        textContent.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
-                        
-                        // Apply bubble styling
-                        textBubble.classList.add(textState.bubbleType || 'speech-bubble');
-                        
-                        // Apply tail position classes if they exist
-                        if (textState.tailPosition) {
-                            const tailClass = `${textState.bubbleType.split('-')[0]}-tail-${textState.tailPosition}`;
-                            textBubble.classList.add(tailClass);
-                        }
-                        
-                        // Ensure position values are in pixels (convert from % if needed)
-                        let leftValue = textState.style.left || '10px';
-                        let topValue = textState.style.top || '10px';
-                        
-                        // Convert percentage to pixels if needed
-                        if (leftValue.endsWith('%')) {
-                            const panel = document.querySelectorAll('.comic-panel')[index];
-                            if (panel) {
-                                const panelWidth = panel.offsetWidth;
-                                const percentValue = parseFloat(leftValue);
-                                leftValue = `${(percentValue / 100) * panelWidth}px`;
-                            }
-                        }
-                        
-                        if (topValue.endsWith('%')) {
-                            const panel = document.querySelectorAll('.comic-panel')[index];
-                            if (panel) {
-                                const panelHeight = panel.offsetHeight;
-                                const percentValue = parseFloat(topValue);
-                                topValue = `${(percentValue / 100) * panelHeight}px`;
-                            }
-                        }
-                        
-                        // Apply styles directly with pixel positions
-                        Object.assign(textBubble.style, {
-                            position: 'absolute',
-                            left: leftValue,
-                            top: topValue,
-                            width: textState.style.width || 'auto',
-                            height: textState.style.height || 'auto',
-                            transform: textState.style.transform || 'none',
-                            padding: textState.style.padding || '2.5px' // Restore padding
-                        });
-                        
-                        // Apply text content styles
-                        Object.assign(textContent.style, {
-                            fontFamily: textState.style.fontFamily,
-                            fontSize: textState.style.fontSize,
-                            fontWeight: textState.style.fontWeight,
-                            fontStyle: textState.style.fontStyle,
-                            textDecoration: textState.style.textDecoration,
-                            textAlign: textState.style.textAlign,
-                            textTransform: textState.style.textTransform,
-                            color: textState.style.color,
-                            opacity: textState.style.opacity,
-                            textShadow: textState.style.textShadow,
-                            lineHeight: textState.style.lineHeight || 'normal',
-                            padding: textState.style.textContentPadding || '2.5px 2px 5px 2px' // Restore text content padding with default
-                        });
-                        
-                        // Set bubble background color from saved state (fallback to white if not set)
-                        textBubble.style.setProperty('--bubble-background-color', 
-                            textState.style.bubbleBackgroundColor || textState.style.backgroundColor || 'white');
-                        
-                        // Set bubble opacity if saved
-                        if (textState.style.bubbleOpacity) {
-                            textBubble.style.setProperty('--bubble-opacity', textState.style.bubbleOpacity);
-                        }
-                        
-                        if (textState.style.hasOutline) {
-                            textContent.dataset.hasOutline = 'true';
-                            textContent.style.setProperty('--outline-width', textState.style.outlineWidth);
-                            textContent.style.setProperty('--outline-color', textState.style.outlineColor);
-                        }
-                        
-                        // Add drag handle
-                        const dragHandle = document.createElement('div');
-                        dragHandle.className = 'drag-handle';
-                        dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
-                        dragHandle.title = 'Drag to move';
-                        
-                        // Add resize handle
-                        const resizeHandle = document.createElement('div');
-                        resizeHandle.className = 'resize-handle';
-                        resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
-                        resizeHandle.title = 'Drag to resize';
-                        
-                        // Add edit formatting button
-                        const formatButton = document.createElement('div');
-                        formatButton.className = 'format-text-btn';
-                        formatButton.innerHTML = '<i class="fas fa-palette"></i>';
-                        formatButton.title = 'Format text';
-                        
-                        // Add delete button
-                        const deleteButton = document.createElement('div');
-                        deleteButton.className = 'delete-text-btn';
-                        deleteButton.innerHTML = '<i class="fas fa-times"></i>';
-                        deleteButton.title = 'Delete text';
-                        
-                        // Append elements
-                        textBubble.appendChild(textContent);
-                        textBubble.appendChild(dragHandle);
-                        textBubble.appendChild(resizeHandle);
-                        textBubble.appendChild(formatButton);
-                        textBubble.appendChild(deleteButton);
-                        panel.appendChild(textBubble);
-                        
-                        // Make draggable
-                        this.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
-                        
-                        // Make resizable
-                        this.dragAndDropManager.makeTextResizable(textBubble, resizeHandle);
-                        
-                        // Setup delete functionality
-                        deleteButton.addEventListener('click', () => {
-                            textBubble.remove();
+                    // Restore text elements if any (Check state AND state.textElements)
+                    if (state.textElements) {
+                        state.textElements.forEach(textState => {
+                            const textBubble = document.createElement('div');
+                            textBubble.className = 'text-bubble';
+                            textBubble.id = textState.id;
+                            textBubble.dataset.bubbleType = textState.bubbleType;
+                            textBubble.dataset.previousBubbleType = textState.previousBubbleType;
+                            textBubble.dataset.tailPosition = textState.tailPosition;
                             
-                            // Hide the formatting popup if open
-                            const popup = document.getElementById('text-format-popup');
-                            if (popup) popup.style.display = 'none';
+                            const textContent = document.createElement('div');
+                            textContent.className = 'text-content';
+                            textContent.contentEditable = true; // Make text editable
+                            textContent.innerHTML = textState.content;
+                            textContent.style.outline = 'none';
+                            textContent.style.wordWrap = 'break-word';
+                            textContent.style.color = '#000000'; // Set default text color to black
+                            textContent.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
                             
-                            // Hide properties panel
-                            document.getElementById('text-properties').style.display = 'none';
-                        });
-                        
-                        // Setup formatting button
-                        formatButton.addEventListener('click', (e) => {
-                            this.showTextFormatPopup(textBubble, e);
-                        });
-                        
-                        // Setup text selection
-                        textBubble.addEventListener('click', (e) => {
-                            if (e.target !== textContent && !e.target.closest('.format-text-btn') && 
-                                !e.target.closest('.resize-handle') && !e.target.closest('.delete-text-btn')) {
-                                this.selectTextBox(textBubble);
-                                
-                                // Prevent the event from propagating to avoid deselection
-                                e.stopPropagation();
+                            // Apply bubble styling
+                            textBubble.classList.add(textState.bubbleType || 'speech-bubble');
+                            
+                            // Apply tail position classes if they exist
+                            if (textState.tailPosition) {
+                                const tailClass = `${textState.bubbleType.split('-')[0]}-tail-${textState.tailPosition}`;
+                                textBubble.classList.add(tailClass);
                             }
-                        });
-                        
-                        // Add a second click listener to the text element that lets the contentEditable work
-                        // but also selects the text bubble when clicked on the edge/padding of the text element
-                        textContent.addEventListener('click', (e) => {
-                            // Calculate if the click is near the edge of the text element (within 10px of the border)
-                            const rect = textContent.getBoundingClientRect();
-                            const isNearEdge = 
-                                e.clientX - rect.left < 10 || 
-                                rect.right - e.clientX < 10 || 
-                                e.clientY - rect.top < 10 || 
-                                rect.bottom - e.clientY < 10;
-                                
-                            if (isNearEdge) {
-                                // If clicking near the edge, select the text box but don't interfere with editing
-                                this.selectTextBox(textBubble);
-                                // Don't prevent default so text editing still works
+                            
+                            // Ensure position values are in pixels (convert from % if needed)
+                            let leftValue = textState.style.left || '10px';
+                            let topValue = textState.style.top || '10px';
+                            
+                            // Convert percentage to pixels if needed
+                            if (leftValue.endsWith('%')) {
+                                const panel = document.querySelectorAll('.comic-panel')[index];
+                                if (panel) {
+                                    const panelWidth = panel.offsetWidth;
+                                    const percentValue = parseFloat(leftValue);
+                                    leftValue = `${(percentValue / 100) * panelWidth}px`;
+                                }
                             }
+                            
+                            if (topValue.endsWith('%')) {
+                                const panel = document.querySelectorAll('.comic-panel')[index];
+                                if (panel) {
+                                    const panelHeight = panel.offsetHeight;
+                                    const percentValue = parseFloat(topValue);
+                                    topValue = `${(percentValue / 100) * panelHeight}px`;
+                                }
+                            }
+                            
+                            // Apply styles directly with pixel positions
+                            Object.assign(textBubble.style, {
+                                position: 'absolute',
+                                left: leftValue,
+                                top: topValue,
+                                width: textState.style.width || 'auto',
+                                height: textState.style.height || 'auto',
+                                transform: textState.style.transform || 'none',
+                                padding: textState.style.padding || '2.5px' // Restore padding
+                            });
+                            
+                            // Apply text content styles
+                            Object.assign(textContent.style, {
+                                fontFamily: textState.style.fontFamily,
+                                fontSize: textState.style.fontSize,
+                                fontWeight: textState.style.fontWeight,
+                                fontStyle: textState.style.fontStyle,
+                                textDecoration: textState.style.textDecoration,
+                                textAlign: textState.style.textAlign,
+                                textTransform: textState.style.textTransform,
+                                color: textState.style.color,
+                                opacity: textState.style.opacity,
+                                textShadow: textState.style.textShadow,
+                                lineHeight: textState.style.lineHeight || 'normal',
+                                padding: textState.style.textContentPadding || '2.5px 2px 5px 2px' // Restore text content padding with default
+                            });
+                            
+                            // Set bubble background color from saved state (fallback to white if not set)
+                            textBubble.style.setProperty('--bubble-background-color', 
+                                textState.style.bubbleBackgroundColor || textState.style.backgroundColor || 'white');
+                            
+                            // Set bubble opacity if saved
+                            if (textState.style.bubbleOpacity) {
+                                textBubble.style.setProperty('--bubble-opacity', textState.style.bubbleOpacity);
+                            }
+                            
+                            if (textState.style.hasOutline) {
+                                textContent.dataset.hasOutline = 'true';
+                                textContent.style.setProperty('--outline-width', textState.style.outlineWidth);
+                                textContent.style.setProperty('--outline-color', textState.style.outlineColor);
+                            }
+                            
+                            // Add drag handle
+                            const dragHandle = document.createElement('div');
+                            dragHandle.className = 'drag-handle';
+                            dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
+                            dragHandle.title = 'Drag to move';
+                            
+                            // Add resize handle
+                            const resizeHandle = document.createElement('div');
+                            resizeHandle.className = 'resize-handle';
+                            resizeHandle.innerHTML = '<i class="fas fa-arrows-alt"></i>';
+                            resizeHandle.title = 'Drag to resize';
+                            
+                            // Add edit formatting button
+                            const formatButton = document.createElement('div');
+                            formatButton.className = 'format-text-btn';
+                            formatButton.innerHTML = '<i class="fas fa-palette"></i>';
+                            formatButton.title = 'Format text';
+                            
+                            // Add delete button
+                            const deleteButton = document.createElement('div');
+                            deleteButton.className = 'delete-text-btn';
+                            deleteButton.innerHTML = '<i class="fas fa-times"></i>';
+                            deleteButton.title = 'Delete text';
+                            
+                            // Append elements
+                            textBubble.appendChild(textContent);
+                            textBubble.appendChild(dragHandle);
+                            textBubble.appendChild(resizeHandle);
+                            textBubble.appendChild(formatButton);
+                            textBubble.appendChild(deleteButton);
+                            panel.appendChild(textBubble);
+                            
+                            // Make draggable
+                            this.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
+                            
+                            // Make resizable
+                            this.dragAndDropManager.makeTextResizable(textBubble, resizeHandle);
+                            
+                            // Setup delete functionality
+                            deleteButton.addEventListener('click', () => {
+                                textBubble.remove();
+                                
+                                // Hide the formatting popup if open
+                                const popup = document.getElementById('text-format-popup');
+                                if (popup) popup.style.display = 'none';
+                                
+                                // Hide properties panel
+                                document.getElementById('text-properties').style.display = 'none';
+                            });
+                            
+                            // Setup formatting button
+                            formatButton.addEventListener('click', (e) => {
+                                this.showTextFormatPopup(textBubble, e);
+                            });
+                            
+                            // Setup text selection
+                            textBubble.addEventListener('click', (e) => {
+                                if (e.target !== textContent && !e.target.closest('.format-text-btn') && 
+                                    !e.target.closest('.resize-handle') && !e.target.closest('.delete-text-btn')) {
+                                    this.selectTextBox(textBubble);
+                                    
+                                    // Prevent the event from propagating to avoid deselection
+                                    e.stopPropagation();
+                                }
+                            });
+                            
+                            // Add a second click listener to the text element that lets the contentEditable work
+                            // but also selects the text bubble when clicked on the edge/padding of the text element
+                            textContent.addEventListener('click', (e) => {
+                                // Calculate if the click is near the edge of the text element (within 10px of the border)
+                                const rect = textContent.getBoundingClientRect();
+                                const isNearEdge = 
+                                    e.clientX - rect.left < 10 || 
+                                    rect.right - e.clientX < 10 || 
+                                    e.clientY - rect.top < 10 || 
+                                    rect.bottom - e.clientY < 10;
+                                    
+                                if (isNearEdge) {
+                                    // If clicking near the edge, select the text box but don't interfere with editing
+                                    this.selectTextBox(textBubble);
+                                    // Don't prevent default so text editing still works
+                                }
+                            });
                         });
-                    });
+                    } else {
+                        // Log if a panel state entry was null/undefined
+                        console.warn(`Panel state at index ${index} is null or undefined. Skipping restoration for this panel.`);
+                    }
+                } else {
+                    // Log if a panel state entry was null/undefined
+                    console.warn(`Panel state at index ${index} is null or undefined. Skipping restoration for this panel.`);
                 }
-            }
-        }
+            } // End for loop
+        } // End if (panelStates.length > 0)
 
         // Restore stickers
         if (stickerStates.length > 0) {
@@ -3817,7 +3828,7 @@ class ComicCreator {
             }
             
             // Update UI - after both images and folder structure are fully loaded
-            this.updateImageLibrary();
+            this.imageLibrary.updateThumbnails(); // Corrected call
             
             // Load the current page
             await this.loadPageState(this.currentPageIndex);

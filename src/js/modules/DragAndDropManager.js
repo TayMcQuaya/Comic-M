@@ -42,6 +42,11 @@ export class DragAndDropManager {
             
             e.preventDefault();
             e.stopPropagation();
+            
+            // Attach move and up listeners to document and window
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+            window.addEventListener('mouseup', onMouseUp); // Added window listener
         };
 
         const onMouseMove = (e) => {
@@ -73,7 +78,12 @@ export class DragAndDropManager {
             img.style.cursor = 'grab';
             img.style.opacity = '1';
             
-            // Save the current page state when we finish dragging
+            // Remove listeners from both document and window
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            window.removeEventListener('mouseup', onMouseUp); // Removed window listener
+            
+            // Save state only AFTER listeners are removed
             this.comicCreator.saveCurrentPageState();
         };
 
@@ -84,8 +94,6 @@ export class DragAndDropManager {
         img.draggable = false; // Disable native dragging
         
         img.addEventListener('mousedown', onMouseDown);
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
         
         // Prevent default drag behavior
         img.addEventListener('dragstart', (e) => {
