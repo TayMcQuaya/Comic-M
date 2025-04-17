@@ -617,8 +617,10 @@ class ComicCreator {
         document.querySelector('#add-text-btn')?.addEventListener('click', () => {
             switch (this.currentSidebarMode) {
                 case 'panels':
-                    if (this.currentPanel) {
-                        this.addTextToPanel(this.currentPanel);
+                    // Check the currentPanel property of the PanelManager instance
+                    if (this.panelManager.currentPanel) { 
+                        // Pass the selected panel from PanelManager to addTextToPanel
+                        this.addTextToPanel(this.panelManager.currentPanel);
                     } else {
                         // If no panel selected in panels mode, show modal
                         this.showSelectPanelModal();
