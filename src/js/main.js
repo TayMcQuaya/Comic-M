@@ -1724,8 +1724,31 @@ class ComicCreator {
         this.updatePageIndicator();
         this.updateNavigationButtons();
         
-        // Navigate to layout selection page
-        this.showLayoutSelection();
+        // Ensure we navigate to layout page regardless of current page
+        // Hide all pages first
+        document.querySelector('#upload-page').classList.remove('active');
+        document.querySelector('#editor-page').classList.remove('active');
+        
+        // Then show only the layout page
+        document.querySelector('#layout-page').classList.add('active');
+        
+        // Reset filter to "All"
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+        
+        // Make sure all layout options are visible
+        document.querySelectorAll('.layout-option').forEach(option => {
+            option.style.display = 'block';
+        });
+        
+        // Update layout selection behavior for new page
+        const layoutOptions = document.querySelectorAll('.layout-option');
+        layoutOptions.forEach(option => {
+            option.onclick = () => {
+                const layoutId = option.dataset.layout;
+                this.addNewPage(layoutId);
+            };
+        });
         
         // Show notification
         this.uiManager.showNotification("New project created", "success");
@@ -1733,118 +1756,9 @@ class ComicCreator {
 
     // --- Update Sticker Controls ---
     updateStickerControls(stickerElement) {
-        console.log("Updating controls for sticker:", stickerElement ? stickerElement.id : 'None');
-
-        const stickerProps = document.querySelector('.properties-panel');
-        if (!stickerProps) return;
-
-        if (!stickerElement) {
-            stickerProps.innerHTML = `
-                <div class="panel-properties">
-                    <h4>Select a sticker to edit its properties</h4>
-                </div>`;
-            return;
-        }
-
-        if (stickerElement) {
-            stickerProps.innerHTML = `
-                <h4>Sticker Settings</h4>
-                <div class="panel-controls">
-                    <div class="control-group">
-                        <h4 style="text-align: center;">Image Controls</h4>
-                        <button class="danger-btn delete-sticker-btn" style="width: 100%; margin-bottom: 1rem;">
-                            <i class="fas fa-trash"></i> Delete Sticker
-                        </button>
-                        <div class="zoom-group">
-                            <label>Size</label>
-                            <input type="range" class="size-control" min="10" max="1000" value="200">
-                            <span class="size-value">200%</span>
-                            <button class="reset-size-btn" style="background: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s ease; font-size: 0.9rem; width: 100%; justify-content: center; margin-top: 10px;">
-                                <i class="fas fa-undo"></i> Reset Size
-                            </button>
-                        </div>
-                        <div class="flip-group" style="margin-top: 1rem;">
-                            <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
-                                <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-
-            // Add delete listener
-            const deleteBtn = stickerProps.querySelector('.delete-sticker-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = () => {
-                    const stickerIdToDelete = stickerElement.id;
-                    stickerElement.remove();
-                    
-                    // Remove from state
-                    const pageState = this.pages[this.currentPageIndex];
-                    if (pageState && pageState.stickerStates) {
-                        pageState.stickerStates = pageState.stickerStates.filter(s => s.id !== stickerIdToDelete);
-                    }
-
-                    this.deselectAll();
-                    this.saveCurrentPageState();
-                };
-            }
-
-            // Add flip horizontal button listener
-            const flipHorizontalBtn = stickerProps.querySelector('.flip-horizontal-btn');
-            if (flipHorizontalBtn) {
-                // Set initial state based on current transform
-                const isFlipped = stickerElement.style.transform.includes('scaleX(-1)');
-                flipHorizontalBtn.classList.toggle('active', isFlipped);
-                
-                flipHorizontalBtn.addEventListener('click', () => {
-                    const currentTransform = stickerElement.style.transform || '';
-                    const isCurrentlyFlipped = currentTransform.includes('scaleX(-1)');
-                    
-                    // Toggle the flip state
-                    if (isCurrentlyFlipped) {
-                        stickerElement.style.transform = currentTransform.replace(/\s*scaleX\(-1\)/, '');
-                        stickerElement.dataset.isFlippedHorizontally = 'false';
-                    } else {
-                        stickerElement.style.transform = `${currentTransform} scaleX(-1)`;
-                        stickerElement.dataset.isFlippedHorizontally = 'true';
-                    }
-                    
-                    // Toggle button active state
-                    flipHorizontalBtn.classList.toggle('active');
-                    
-                    // Save the current page state
-                    this.saveCurrentPageState();
-                });
-            }
-
-            // Size control listener
-            const sizeControl = stickerProps.querySelector('.size-control');
-            if (sizeControl) {
-                const currentSize = parseFloat(stickerElement.dataset.size) || 200;
-                sizeControl.value = currentSize;
-                const sizeValue = sizeControl.parentElement.querySelector('.size-value');
-                if (sizeValue) {
-                    sizeValue.textContent = `${Math.round(currentSize)}%`;
-                }
-
-                sizeControl.addEventListener('input', (e) => {
-                    const size = parseFloat(e.target.value);
-                    const scale = size / 100;
-                    stickerElement.style.width = `${scale * 100}px`; // Base size is 100px
-                    stickerElement.style.height = 'auto'; // Maintain aspect ratio
-                    stickerElement.dataset.size = size;
-                    sizeValue.textContent = `${Math.round(size)}%`;
-                    this.saveCurrentPageState();
-                });
-                
-                // Make size value editable
-                this.uiManager.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
-            }
-        }
+        // Delegate to the StickerManager to handle sticker controls
+        this.stickerManager.updateStickerControls();
     }
-    
-
-
 
     // --- Deselect All Elements --- 
     deselectAll() {
@@ -1882,15 +1796,17 @@ class ComicCreator {
                 if (bgProps) bgProps.style.display = 'none';
             }
         }
+        
+        // Use StickerManager to deselect stickers
         if (this.currentSticker) {
-            this.currentSticker.classList.remove('selected-sticker');
-            this.currentSticker.style.zIndex = '100'; // Reset z-index on deselect too
+            this.stickerManager.deselectCurrentSticker();
             this.currentSticker = null;
-             // Hide sticker props if they exist
-             if (propertiesPanel) {
-                 const stickerProps = propertiesPanel.querySelector('#sticker-properties');
-                 if (stickerProps) stickerProps.style.display = 'none';
-             }
+            
+            // Hide sticker props if they exist
+            if (propertiesPanel) {
+                const stickerProps = propertiesPanel.querySelector('#sticker-properties');
+                if (stickerProps) stickerProps.style.display = 'none';
+            }
         }
         
          // After deselecting everything, update the sidebar based on the current mode

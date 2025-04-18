@@ -4083,6 +4083,17 @@ input[type="color"] {
     box-shadow: none !important;
 }
 
+/* Add specific rules for stickers during export */
+.exporting .canvas-sticker-image {
+    box-shadow: none !important;
+    /* Border will be applied via JavaScript */
+    box-sizing: border-box !important; /* Ensure the border is flush with the image */
+}
+
+.exporting .canvas-sticker-image[data-outline-enabled="true"] {
+    /* Border will be applied via JavaScript for better HTML2Canvas compatibility */
+}
+
 .exporting .text-bubble {
     /* Ensure text bubbles render correctly in exported PDF */
     border: 2px solid rgba(0, 0, 0, 0.7) !important; /* Increase from 1px to 2px for better visibility */
@@ -4339,3 +4350,147 @@ input[type="color"] {
 }
 
 /* Position Controls */
+.canvas-sticker-image.selected-sticker {
+    box-shadow: 0 0 0 2px var(--accent-color);
+    z-index: 100 !important;
+}
+
+/* Sticker with outline */
+.canvas-sticker-image[data-outline-enabled="true"] {
+    outline-offset: -2px; /* No offset for better visibility */
+}
+
+.canvas-sticker-image.selected-sticker[data-outline-enabled="true"] {
+    /* Ensure outline is visible even when selected */
+    outline-offset: 0px;
+}
+
+/* Rotation and transform controls */
+.rotation-group {
+    margin-bottom: 1rem;
+    width: 100%;
+}
+
+.rotation-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+.rotation-control {
+    width: 100%;
+    height: 8px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--border-color);
+    outline: none;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+}
+
+.rotation-control::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rotation-control::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: var(--primary-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.rotation-value {
+    display: inline-block;
+    min-width: 40px;
+    padding: 0 5px;
+    text-align: right;
+    font-weight: bold;
+    color: var(--text-color);
+}
+
+.reset-rotation-btn {
+    margin-top: 0.5rem;
+    width: 100%;
+    background: var(--background-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.reset-rotation-btn:hover {
+    background: var(--hover-color);
+}
+
+/* Outline controls */
+.outline-group {
+    margin-bottom: 1rem;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.outline-toggle {
+    margin-right: 5px;
+}
+
+.outline-controls input[type="number"] {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 6px;
+}
+
+.outline-controls input[type="color"] {
+    -webkit-appearance: none;
+    border: none;
+    width: 32px;
+    height: 32px;
+    cursor: pointer;
+    background: none;
+    border-radius: 4px;
+}
+
+.outline-controls input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.outline-controls input[type="color"]::-webkit-color-swatch {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.outline-controls select {
+    background: var(--input-bg);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 4px 6px;
+    width: 100%;
+    cursor: pointer;
+}
+
+.transform-group {
+    margin-bottom: 1rem;
+}
+
+.color-control {
+}

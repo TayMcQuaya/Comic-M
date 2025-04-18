@@ -199,6 +199,53 @@ export class ExportManager {
                                             el.style.border = '2px solid #000';
                                         }
                                     });
+                                    
+                                    // Process stickers to ensure outlines are properly handled in the export
+                                    Array.from(clonedElement.querySelectorAll('.canvas-sticker-image')).forEach(sticker => {
+                                        // Handle sticker outlines for export
+                                        const outlineEnabled = sticker.dataset.outlineEnabled === 'true';
+                                        if (outlineEnabled) {
+                                            const outlineWidth = sticker.dataset.outlineWidth || '2';
+                                            const outlineColor = sticker.dataset.outlineColor || '#000000';
+                                            const outlineStyle = sticker.dataset.outlineStyle || 'solid';
+                                            
+                                            // Create a wrapper div for the sticker with a border instead of outline
+                                            const wrapper = document.createElement('div');
+                                            wrapper.style.position = 'absolute';
+                                            wrapper.style.left = sticker.style.left;
+                                            wrapper.style.top = sticker.style.top;
+                                            wrapper.style.width = sticker.style.width;
+                                            wrapper.style.height = sticker.style.height;
+                                            wrapper.style.transform = sticker.style.transform;
+                                            wrapper.style.padding = '0';  // Remove padding - border should touch the image
+                                            wrapper.style.boxSizing = 'border-box'; // Use border-box to ensure border is included in dimensions
+                                            wrapper.style.border = `${outlineWidth}px ${outlineStyle} ${outlineColor}`;
+                                            wrapper.style.background = 'transparent';
+                                            wrapper.style.zIndex = sticker.style.zIndex;
+                                            
+                                            // Clone the sticker and append to wrapper
+                                            const stickerClone = sticker.cloneNode(true);
+                                            stickerClone.style.position = 'relative';
+                                            stickerClone.style.left = '0';
+                                            stickerClone.style.top = '0';
+                                            stickerClone.style.width = '100%';
+                                            stickerClone.style.height = '100%';
+                                            stickerClone.style.border = 'none';
+                                            stickerClone.style.outline = 'none';
+                                            stickerClone.style.zIndex = '1';
+                                            wrapper.appendChild(stickerClone);
+                                            
+                                            // Replace the original sticker with the wrapper
+                                            sticker.parentNode.insertBefore(wrapper, sticker);
+                                            sticker.parentNode.removeChild(sticker);
+                                        }
+                                        else {
+                                            // Remove selection styling during export
+                                            sticker.classList.remove('selected-sticker');
+                                            sticker.style.outline = 'none';
+                                            sticker.style.border = 'none';
+                                        }
+                                    });
                                 }
                             });
                             break; // Success, exit retry loop
@@ -387,6 +434,47 @@ export class ExportManager {
             }
         });
         
+        // Process stickers to ensure outlines are properly applied during export
+        const stickers = rootElement.querySelectorAll('.canvas-sticker-image');
+        stickers.forEach(sticker => {
+            // Store original style for restoration
+            originalStyles.push({
+                element: sticker,
+                outline: sticker.style.outline,
+                outlineWidth: sticker.style.outlineWidth,
+                outlineColor: sticker.style.outlineColor,
+                outlineStyle: sticker.style.outlineStyle,
+                outlineOffset: sticker.style.outlineOffset,
+                border: sticker.style.border
+            });
+            
+            // Check if outline is enabled for this sticker
+            const outlineEnabled = sticker.dataset.outlineEnabled === 'true';
+            if (outlineEnabled) {
+                // Get outline properties from dataset
+                const outlineWidth = sticker.dataset.outlineWidth || '2';
+                const outlineColor = sticker.dataset.outlineColor || '#000000';
+                const outlineStyle = sticker.dataset.outlineStyle || 'solid';
+                
+                // Use border instead of outline for better HTML2Canvas compatibility
+                sticker.style.border = `${outlineWidth}px ${outlineStyle} ${outlineColor}`;
+                
+                // Use border-box to ensure border touches the image content
+                sticker.style.boxSizing = 'border-box';
+                sticker.style.padding = '0';
+                
+                // Make sure outline doesn't show during export (we're using border instead)
+                sticker.style.outline = 'none';
+            } else {
+                // Make sure outline and border are removed if not enabled
+                sticker.style.outline = 'none';
+                sticker.style.border = 'none';
+            }
+            
+            // Remove selection styling during export
+            sticker.classList.remove('selected-sticker');
+        });
+        
         // Return function to restore original styles
         return function restoreOriginalStyles() {
             originalStyles.forEach(item => {
@@ -427,6 +515,42 @@ export class ExportManager {
                     element.style.boxShadow = item.boxShadow;
                 } else {
                     element.style.removeProperty('box-shadow');
+                }
+                
+                if (item.outline) {
+                    element.style.outline = item.outline;
+                } else {
+                    element.style.removeProperty('outline');
+                }
+                
+                if (item.outlineWidth) {
+                    element.style.outlineWidth = item.outlineWidth;
+                } else {
+                    element.style.removeProperty('outline-width');
+                }
+                
+                if (item.outlineColor) {
+                    element.style.outlineColor = item.outlineColor;
+                } else {
+                    element.style.removeProperty('outline-color');
+                }
+                
+                if (item.outlineStyle) {
+                    element.style.outlineStyle = item.outlineStyle;
+                } else {
+                    element.style.removeProperty('outline-style');
+                }
+                
+                if (item.outlineOffset) {
+                    element.style.outlineOffset = item.outlineOffset;
+                } else {
+                    element.style.removeProperty('outline-offset');
+                }
+                
+                // Also restore padding and box-sizing if they were modified
+                if (element.classList.contains('canvas-sticker-image')) {
+                    element.style.removeProperty('padding');
+                    element.style.removeProperty('box-sizing');
                 }
             });
         };
