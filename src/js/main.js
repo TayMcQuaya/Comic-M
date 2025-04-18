@@ -152,6 +152,10 @@ class ComicCreator {
             layoutOption.className = 'layout-option';
             layoutOption.dataset.layout = layoutId;
             
+            // Add panel count as a data attribute for filtering
+            const panelCount = layout.panels.length;
+            layoutOption.dataset.panelCount = panelCount;
+            
             layoutOption.innerHTML = `
                 <h3>${layout.name}</h3>
                 <div class="layout-preview">
@@ -163,7 +167,7 @@ class ComicCreator {
             layoutGrid.appendChild(layoutOption);
         });
 
-        // Setup click handler
+        // Setup click handler for layout options
         layoutGrid.addEventListener('click', (e) => {
             const layoutOption = e.target.closest('.layout-option');
             if (layoutOption) {
@@ -172,6 +176,33 @@ class ComicCreator {
                 layoutOption.classList.add('selected');
                 this.createComic();
             }
+        });
+        
+        // Setup filter buttons
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // Update active filter button
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                const filter = button.dataset.filter;
+                
+                // Apply filter to layout options
+                document.querySelectorAll('.layout-option').forEach(option => {
+                    const panelCount = parseInt(option.dataset.panelCount);
+                    
+                    if (filter === 'all') {
+                        option.style.display = 'block';
+                    } else if (filter === '5' && panelCount >= 5) {
+                        option.style.display = 'block';
+                    } else if (filter === panelCount.toString()) {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                });
+            });
         });
     }
 
@@ -900,6 +931,15 @@ class ComicCreator {
         // Show layout selection page
         document.getElementById('editor-page').classList.remove('active');
         document.getElementById('layout-page').classList.add('active');
+        
+        // Reset filter to "All"
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+        
+        // Make sure all layout options are visible
+        document.querySelectorAll('.layout-option').forEach(option => {
+            option.style.display = 'block';
+        });
         
         // Update layout selection behavior for new page
         const layoutOptions = document.querySelectorAll('.layout-option');
