@@ -157,7 +157,7 @@ export class BackgroundManager {
 
         if (!currentImageId) {
             console.warn('[BackgroundManager.applyCustomBackgroundToAll] No custom background image on current page.');
-            this.comicCreator.showNotification('No custom background image to apply', 'warning');
+            this.comicCreator.uiManager.showNotification('No custom background image to apply', 'warning');
             return;
         }
 
@@ -180,7 +180,7 @@ export class BackgroundManager {
         this.comicCreator.saveCurrentPageState();
 
         // Show success notification
-        this.comicCreator.showNotification('Background image applied to all pages', 'success');
+        this.comicCreator.uiManager.showNotification('Background image applied to all pages', 'success');
         console.log('[BackgroundManager.applyCustomBackgroundToAll] Applied custom background to all pages successfully.');
         // Update sidebar controls to reflect global checkbox state
         this.updateBackgroundControls(); 

@@ -154,11 +154,24 @@ export class PanelManager {
                 img.style.pointerEvents = 'auto';
             }
             
-            // Update the panel controls in the UI (method will be moved here too)
-            this.updatePanelControls(panel);
+            // First ensure we're in panels mode
+            if (this.comicCreator.currentSidebarMode !== 'panels') {
+                this.comicCreator.currentSidebarMode = 'panels';
+                // Update tab UI
+                const tabsContainer = document.querySelector('.sidebar-tabs');
+                if (tabsContainer) {
+                    tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    const panelsTab = tabsContainer.querySelector('[data-tab="panels"]');
+                    if (panelsTab) panelsTab.classList.add('active');
+                }
+            }
+            
+            // Update the UI
+            this.comicCreator.uiManager.updateRightSidebarView();
         } else {
             // If no panel is selected (e.g., clicked outside), clear the panel controls
-            // This might be better handled by a dedicated UI manager later
             const controls = document.querySelector('.panel-controls');
             if (controls) controls.innerHTML = ''; // Simple clearing for now
         }
@@ -196,76 +209,94 @@ export class PanelManager {
     /**
      * Updates the panel control sidebar based on the selected panel's state.
      * @param {HTMLElement} panel - The selected panel element.
+     * @param {HTMLElement} container - The DOM element to render controls into.
      */
-    updatePanelControls(panel) {
-        const controls = document.querySelector('.panel-controls');
-        if (!controls) return;
-
-        if (!panel) {
-            // If no panel is selected, show a prompt (handled by ComicCreator for now)
-            this.comicCreator.showSelectPanelModal();
+    updatePanelControls(panel, container) {
+        // const controls = document.querySelector('.panel-controls'); // Removed querySelector
+        // if (!controls) return; // Removed check based on querySelector
+        
+        // Use the provided container
+        if (!container) {
+            console.error("Panel controls container not provided to updatePanelControls");
             return;
         }
 
-        // Clear existing controls and rebuild HTML structure
-        controls.innerHTML = `
-            <div class="control-group">
-                <h4 style="text-align: center;">Image Controls</h4>
-                <div class="zoom-group">
-                    <label>Zoom</label>
-                    <input type="range" class="zoom-control" min="50" max="300" value="100">
-                    <span class="zoom-value">100%</span>
-                    <button class="reset-zoom-btn">
-                        <i class="fas fa-undo"></i> Reset Zoom
-                    </button>
-                </div>
-                <div class="flip-group" style="margin-top: 1rem;">
-                    <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
-                        <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
-                    </button>
-                </div>
-            </div>
-            <div class="control-group">
-                <h4 style="text-align: center;">Rotation</h4>
-                <div class="rotation-group">
-                    <label>Angle</label>
-                    <input type="range" class="rotation-control" min="-180" max="180" value="0" step="1">
-                    <span class="rotation-value">0°</span>
-                    <button class="reset-rotation-btn">
-                        <i class="fas fa-undo"></i> Reset Rotation
-                    </button>
-                </div>
-            </div>
-            <div class="control-group">
-                <h4 style="text-align: center;">Position</h4>
-                <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
-                    <label style="font-size: 16px;">Step Size: </label>
-                    <input type="number" 
-                           class="step-size-input" 
-                           value="1" 
-                           min="0.1" 
-                           max="20" 
-                           step="0.1" 
-                           style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
-                </div>
-                <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
-                    <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
-                    <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
-                    <div style="grid-area: center;"></div>
-                    <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
-                    <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
-                </div>
-            </div>`;
+        if (!panel) {
+            // If no panel is selected, show a prompt
+            container.innerHTML = '<h4>Panel Settings</h4><div class="panel-controls"><p>Select a panel to see its properties.</p></div>';
+            // this.comicCreator.showSelectPanelModal(); // Consider if modal is still needed here
+            return;
+        }
 
-        // Get references to the control elements
-        const zoomControl = controls.querySelector('.zoom-control');
-        const zoomValue = controls.querySelector('.zoom-value');
-        const resetZoomBtn = controls.querySelector('.reset-zoom-btn');
-        const flipHorizontalBtn = controls.querySelector('.flip-horizontal-btn');
-        const rotationControl = controls.querySelector('.rotation-control');
-        const rotationValue = controls.querySelector('.rotation-value');
-        const resetRotationBtn = controls.querySelector('.reset-rotation-btn');
-        const positionBtns = controls.querySelectorAll('.position-btn');
+        // Clear existing controls and rebuild HTML structure *inside the container*
+        container.innerHTML = `
+            <h4>Panel Settings</h4>
+            <div class="panel-controls">  <!-- Added wrapper div -->
+                <div class="control-group">
+                    <h4 style="text-align: center;">Image Controls</h4>
+                    <div class="zoom-group">
+                        <label>Zoom</label>
+                        <input type="range" class="zoom-control" min="50" max="300" value="100">
+                        <span class="zoom-value">100%</span>
+                        <button class="reset-zoom-btn">
+                            <i class="fas fa-undo"></i> Reset Zoom
+                        </button>
+                    </div>
+                    <div class="flip-group" style="margin-top: 1rem;">
+                        <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                            <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
+                        </button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4 style="text-align: center;">Rotation</h4>
+                    <div class="rotation-group">
+                        <label>Angle</label>
+                        <input type="range" class="rotation-control" min="-180" max="180" value="0" step="1">
+                        <span class="rotation-value">0°</span>
+                        <button class="reset-rotation-btn">
+                            <i class="fas fa-undo"></i> Reset Rotation
+                        </button>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <h4 style="text-align: center;">Position</h4>
+                    <div class="step-size-control" style="margin-bottom: 1rem; text-align: center;">
+                        <label style="font-size: 16px;">Step Size: </label>
+                        <input type="number" 
+                               class="step-size-input" 
+                               value="1" 
+                               min="0.1" 
+                               max="20" 
+                               step="0.1" 
+                               style="width: 80px; height: 30px; font-size: 16px; padding: 4px;">
+                    </div>
+                    <div class="position-controls" style="display: grid; grid-template-areas: '. up .' 'left center right' '. down .'; gap: 5px; justify-content: center;">
+                        <button class="position-btn up" style="grid-area: up;"><i class="fas fa-arrow-up"></i></button>
+                        <button class="position-btn left" style="grid-area: left;"><i class="fas fa-arrow-left"></i></button>
+                        <div style="grid-area: center;"></div>
+                        <button class="position-btn right" style="grid-area: right;"><i class="fas fa-arrow-right"></i></button>
+                        <button class="position-btn down" style="grid-area: down;"><i class="fas fa-arrow-down"></i></button>
+                    </div>
+                </div>
+            </div> <!-- Closing wrapper div -->
+            `;
+
+        // Get references to the control elements *within the container*
+        const controlsContainer = container.querySelector('.panel-controls'); // Find the new wrapper
+        if (!controlsContainer) {
+            console.error("Could not find .panel-controls wrapper inside container");
+            return;
+        }
+
+        const zoomControl = controlsContainer.querySelector('.zoom-control');
+        const zoomValue = controlsContainer.querySelector('.zoom-value');
+        const resetZoomBtn = controlsContainer.querySelector('.reset-zoom-btn');
+        const flipHorizontalBtn = controlsContainer.querySelector('.flip-horizontal-btn');
+        const rotationControl = controlsContainer.querySelector('.rotation-control');
+        const rotationValue = controlsContainer.querySelector('.rotation-value');
+        const resetRotationBtn = controlsContainer.querySelector('.reset-rotation-btn');
+        const positionBtns = controlsContainer.querySelectorAll('.position-btn');
         
         const img = panel.querySelector('img'); // Get the image within the panel
 
@@ -281,8 +312,8 @@ export class PanelManager {
             // Add listener for zoom changes (will call handleZoom within this class)
             zoomControl.addEventListener('input', (e) => this.handleZoom(e, panel));
             
-            // Make zoom value editable (using ComicCreator's helper)
-            this.comicCreator.makeSliderValueEditable(zoomControl, zoomValue, '%', 0);
+            // Make zoom value editable via UIManager
+            this.comicCreator.uiManager.makeSliderValueEditable(zoomControl, zoomValue, '%', 0);
         }
 
         // --- Setup Reset Zoom Button --- 
@@ -356,8 +387,8 @@ export class PanelManager {
                 this.comicCreator.saveCurrentPageState();
             });
             
-            // Make rotation value editable (using ComicCreator's helper)
-            this.comicCreator.makeSliderValueEditable(rotationControl, rotationValue, '°', 0);
+            // Make rotation value editable via UIManager
+            this.comicCreator.uiManager.makeSliderValueEditable(rotationControl, rotationValue, '°', 0);
         }
         
         // --- Setup Reset Rotation Button --- 
@@ -386,6 +417,12 @@ export class PanelManager {
             // Add listener for position changes (will call handlePositionChange within this class)
             btn.addEventListener('click', () => this.handlePositionChange(btn, panel));
         });
+
+        // --- Make values editable via UIManager ---
+        // These lines seem redundant now as they were added at the end, but the original calls were higher up.
+        // Removing the redundant calls at the end and keeping the corrected ones in place.
+        // this.comicCreator.uiManager.makeSliderValueEditable(zoomControl, zoomValue, '%', 0);
+        // this.comicCreator.uiManager.makeSliderValueEditable(rotationControl, rotationValue, '°');
     }
 
     /**

@@ -1,109 +1,105 @@
-# Cursor Rule: Refactoring BackgroundManager from main.js
+# Cursor Rule: Refactoring UIManager from main.js
 
 ## Goal
-Extract all background management related logic (styles and images) from `src/js/main.js` into a new module `src/js/modules/BackgroundManager.js`.
+Extract all UI management related logic from `src/js/main.js` into a new module `src/js/modules/UIManager.js`. This includes sidebar functionality, modals, notifications, and page navigation UI.
 
 ## Constraint
 - Maintain 100% identical functionality and visual design.
 - Do not break or alter any unrelated functionality in `main.js`.
 - The refactoring should happen incrementally.
 
-## Identified Methods/Logic for `BackgroundManager`
+## Identified Methods/Logic for `UIManager`
 
-*   **Properties:**
-    *   `useGlobalBackgroundStyle`: Tracks whether the global style is active.
-    *   `globalBackgroundStyle`: Stores the current global style class name.
-    *   Possibly a way to track the currently selected background image element if needed, though direct DOM query might suffice.
-*   **Core Methods:**
-    *   `applyBackgroundStyle(style)`: Applies a predefined CSS class style to the canvas.
-    *   `addBackgroundImage(image)`: Adds a custom image element as the canvas background.
-    *   `removeBackgroundImage()`: Removes the custom background image element.
-    *   `applyCustomBackgroundToAll()`: Applies the current page's background image to all other pages.
-    *   `toggleGlobalBackground(useGlobal)`: Handles enabling/disabling the global style and updating page states accordingly.
-*   **UI/Controls:**
-    *   `updateBackgroundControls()`: Populates the right sidebar with controls for background styles and images. Includes event listeners for style buttons, global toggle, apply-all button.
-*   **State Management:**
-    *   `saveBackgroundState(currentPage)`: Extracts logic from `ComicCreator.saveCurrentPageState` to return the relevant state (`canvasBackgroundStyle`, `backgroundState.imageId`).
-    *   `loadBackgroundState(page)`: Extracts logic from `ComicCreator.loadPageState` to apply the background style or image based on saved `page` data and `useGlobalBackgroundStyle`.
-*   **Event Handling (to be updated in `main.js`):**
-    *   Canvas `'drop'` listener: Needs to call `backgroundManager.addBackgroundImage` when in 'backgrounds' mode.
-    *   Document `'keydown'` (Delete key): Needs to check for background image and call `backgroundManager.removeBackgroundImage` when in 'backgrounds' mode.
+*   **Core UI Setup:**
+    *   `initializeUI()`: Sets up the initial UI elements, particularly page navigation. (Parts of this might remain in `main.js` for initial structure, but event listeners and dynamic updates move to UIManager).
+    *   `setupPageNavigation()`: (Seems like a duplicate/alternative of `initializeUI`'s page navigation part, needs clarification, but the logic for creating and managing page nav controls belongs here).
+*   **Sidebar Management:**
+    *   `setupSidebarTabs()`: Handles switching between 'panels', 'backgrounds', 'stickers' tabs in the left sidebar.
+    *   `updateRightSidebarView()`: Clears and populates the right properties panel based on the current mode and selection (delegates to specific manager methods like `backgroundManager.updateBackgroundControls`, `stickerManager.updateStickerControls`, `panelManager.updatePanelControls`, `textManager.updateTextProperties`).
+*   **Modals:**
+    *   `promptForFilename(...)`: Logic for showing/hiding the filename input modal and handling confirmation/cancellation.
+    *   `reorderPages()`: Logic for showing/hiding the page reorder modal, populating the list, handling drag/drop within the modal, and confirming/cancelling the reorder (calls `applyPageReorder`).
+    *   `showSelectPanelModal()`: Logic for showing/hiding the "Select a panel" notification modal.
+*   **Notifications:**
+    *   `showNotification(message, type)`: Handles creating, displaying, and hiding temporary notifications.
+*   **Page Navigation Updates:**
+    *   `updatePageIndicator()`: Updates the "Page X of Y" text and input value.
+    *   `updateNavigationButtons()`: Enables/disables the previous/next page buttons.
+*   **Utility/Helper:**
+    *   `makeSliderValueEditable(...)`: Helper function to make slider value spans editable. (Could potentially go into `Utils.js` if deemed generic enough, but currently used only by UI controls setup).
+*   **Event Handling (to be updated in `main.js` or delegated):**
+    *   Page navigation button listeners (`#addPage`, `#prevPage`, `#nextPage`, `#deletePage`, `#reorderPagesBtn`, `#goToPage`, `#pageNumberInput`) set up in `initializeUI` need to call methods on `ComicCreator` or `UIManager` as appropriate.
+    *   Sidebar tab click listener (`setupSidebarTabs`).
 *   **Dependencies:**
     *   Needs access to `comicCreator` instance to call:
-        *   `comicCreator.pages`
-        *   `comicCreator.currentPageIndex`
-        *   `comicCreator.imageLibrary.getImageById()`
-        *   `comicCreator.saveCurrentPageState()` (called after actions like style change, add/remove image, toggle global)
-        *   `comicCreator.loadPageState()` (called by `applyCustomBackgroundToAll` to refresh current page)
-        *   `comicCreator.deselectAll()`
-        *   `comicCreator.showNotification()`
+        *   `comicCreator.pages` (for page count, reordering)
+        *   `comicCreator.currentPageIndex` (for page indicators)
+        *   `comicCreator.panelManager`, `comicCreator.backgroundManager`, `comicCreator.stickerManager`, `comicCreator.textManager` (to call their `update...Controls` methods from `updateRightSidebarView`)
+        *   `comicCreator.showLayoutSelection()` (called by Add Page button listener)
+        *   `comicCreator.navigateToPage(...)` (called by page navigation listeners)
+        *   `comicCreator.deleteCurrentPage()` (called by Delete Page button listener)
+        *   `comicCreator.applyPageReorder(...)` (called by reorder modal confirmation)
+        *   `comicCreator.deselectAll()` (called when switching sidebar tabs)
+        *   Potentially other managers if UI directly interacts with them.
 
 ## Strategy: Phased Approach
 
-1.  **Create `BackgroundManager.js` Skeleton:**
-    *   Create the file `src/js/modules/BackgroundManager.js`.
-    *   Define a `BackgroundManager` class.
-    *   Constructor accepts `comicCreator`, stores it.
-    *   Initialize internal state properties: `this.useGlobalBackgroundStyle = comicCreator.useGlobalBackgroundStyle;`, `this.globalBackgroundStyle = comicCreator.globalBackgroundStyle;` (get initial values from comicCreator).
+1.  **Create `UIManager.js` Skeleton:**
+    *   Create the file `src/js/modules/UIManager.js`.
+    *   Define a `UIManager` class.
+    *   Constructor accepts `comicCreator`, stores it as `this.comicCreator`.
 
 2.  **Instantiate in `ComicCreator`:**
-    *   In `main.js`, import `BackgroundManager`.
-    *   In `ComicCreator` constructor, create instance: `this.backgroundManager = new BackgroundManager(this);`.
-    *   Remove `this.useGlobalBackgroundStyle` and `this.globalBackgroundStyle` initializations from `ComicCreator` constructor.
+    *   In `main.js`, import `UIManager`.
+    *   In `ComicCreator` constructor, create instance: `this.uiManager = new UIManager(this);`.
 
-3.  **Move Core Background Methods:**
-    *   Move `addBackgroundImage`, `applyBackgroundStyle`, `applyCustomBackgroundToAll`, and `updateBackgroundControls` one by one.
-    *   **Update Call Sites:** Change calls in `main.js` (e.g., drop listener, `updateRightSidebarView`, `loadPageState`) to use `this.backgroundManager.methodName(...)`.
+3.  **Move UI Setup and Management Methods:**
+    *   Move `setupSidebarTabs`, `updateRightSidebarView`, `showNotification`, `showSelectPanelModal`, `makeSliderValueEditable`.
+    *   **Update Call Sites:** Change calls in `main.js` (e.g., `init`, `deselectAll`, manager `update...Controls` methods if they call `showNotification`, Add Text button listener) to use `this.uiManager.methodName(...)`.
     *   **Update Internal References:** Within the moved methods, update references like:
-        *   `this.useGlobalBackgroundStyle` -> `this.useGlobalBackgroundStyle` (within `BackgroundManager`)
-        *   `this.globalBackgroundStyle` -> `this.globalBackgroundStyle` (within `BackgroundManager`)
-        *   `this.pages` -> `this.comicCreator.pages`
-        *   `this.currentPageIndex` -> `this.comicCreator.currentPageIndex`
-        *   `this.imageLibrary...` -> `this.comicCreator.imageLibrary...`
-        *   `this.saveCurrentPageState()` -> `this.comicCreator.saveCurrentPageState()`
-        *   `this.loadPageState()` -> `this.comicCreator.loadPageState()`
-        *   `this.applyBackgroundStyle(...)` -> `this.applyBackgroundStyle(...)`
-        *   `this.showNotification(...)` -> `this.comicCreator.showNotification(...)`
+        *   `this.currentSidebarMode` -> `this.comicCreator.currentSidebarMode` (UIManager might need to read this state)
+        *   `this.updateRightSidebarView()` -> `this.updateRightSidebarView()` (internal call within UIManager)
+        *   `this.deselectAll()` -> `this.comicCreator.deselectAll()`
+        *   References to other managers (`panelManager`, etc.) -> `this.comicCreator.panelManager`, etc.
 
-4.  **Create and Move Deletion Logic:**
-    *   Create `removeBackgroundImage()` in `BackgroundManager`. Move the background removal logic (DOM removal, state update, deselect, save) from the 'Delete' keydown handler in `main.js` into this method.
-    *   Update the 'Delete' keydown handler in `main.js` to call `this.backgroundManager.removeBackgroundImage()` when appropriate.
+4.  **Move Modal Logic:**
+    *   Move `promptForFilename` and `reorderPages` (including the drag/drop logic *within* the modal).
+    *   **Update Call Sites:** Update calls in `saveProject`, `downloadComic` (`exportManager`), and the reorder button listener (`initializeUI`) to use `this.uiManager.methodName(...)`.
+    *   **Update Internal References:** Ensure callbacks within modals (e.g., confirm/cancel) call appropriate `comicCreator` methods (`applyPageReorder`).
 
-5.  **Create Global Toggle Logic:**
-    *   Create `toggleGlobalBackground(useGlobal)` in `BackgroundManager`. Move the logic from the checkbox listener inside `updateBackgroundControls` into this method. This method will update `this.useGlobalBackgroundStyle`, potentially update `this.globalBackgroundStyle`, apply changes to `comicCreator.pages`, and trigger `saveCurrentPageState`.
-    *   Update the checkbox listener in `updateBackgroundControls` to call `this.toggleGlobalBackground(e.target.checked)`. Also update the initial checkbox state reading from `this.useGlobalBackgroundStyle`.
+5.  **Move Page Navigation Logic:**
+    *   Move `initializeUI` (specifically the part creating page nav elements and attaching listeners).
+    *   Move `updatePageIndicator`, `updateNavigationButtons`. Note: `setupPageNavigation` seems redundant and its code should be merged/handled within `initializeUI`.
+    *   **Update Call Sites:**
+        *   `init` in `main.js` should call `this.uiManager.initializeUI()`.
+        *   Methods in `main.js` that affect page count or index (`addNewPage`, `navigateToPage`, `deleteCurrentPage`, `loadProject`, `applyPageReorder`) should call `this.uiManager.updatePageIndicator()` and `this.uiManager.updateNavigationButtons()`.
+    *   **Update Internal References:** Listeners within the moved `initializeUI` should call `this.comicCreator` methods (`showLayoutSelection`, `navigateToPage`, `deleteCurrentPage`) or `this.comicCreator.uiManager.reorderPages()`.
 
-6.  **Refactor State Management:**
-    *   **Saving:** Update `ComicCreator.saveCurrentPageState`: Replace direct access to `useGlobalBackgroundStyle`/`globalBackgroundStyle` with calls to getters in `BackgroundManager` if needed, or simply ensure `BackgroundManager` updates the properties on the `comicCreator` instance directly (simpler). The saving of `page.canvasBackgroundStyle` and `page.backgroundState` can remain in `main.js` for now, as `BackgroundManager` modifies these via `this.comicCreator.pages`. Similarly, saving `comicCreator.useGlobalBackgroundStyle` and `comicCreator.globalBackgroundStyle` in `saveProject` should fetch current values from the manager instance.
-    *   **Loading:** Modify `ComicCreator.loadPageState`: Replace direct checks of `this.useGlobalBackgroundStyle`/`this.globalBackgroundStyle` with checks on `this.backgroundManager.useGlobalBackgroundStyle`/`this.backgroundManager.globalBackgroundStyle`. Replace direct `canvas.classList.add` with calls to `this.backgroundManager.applyBackgroundStyle()` or `this.backgroundManager.addBackgroundImage()` based on the loaded state.
-    *   Modify `ComicCreator.loadProject`: Ensure `this.backgroundManager.useGlobalBackgroundStyle` and `this.backgroundManager.globalBackgroundStyle` are updated from the loaded `projectState`.
+6.  **Refactor State Management (UI State):**
+    *   The `UIManager` primarily reads state from `ComicCreator` (like `currentPageIndex`, `pages.length`, `currentSidebarMode`) and calls methods on `ComicCreator` or other managers. It likely won't hold much state itself, except potentially references to DOM elements it manages (modals, sidebars, etc.). Ensure all necessary state is accessed via `this.comicCreator`.
 
 7.  **Final Cleanup and Verification:**
-    *   Review `main.js` and remove any remaining direct references or properties related to background management (`useGlobalBackgroundStyle`, `globalBackgroundStyle`) that are now handled by `BackgroundManager`.
-    *   Ensure `deselectAll` in `main.js` correctly handles deselecting background elements (it might not need specific changes if `currentBackground` wasn't a formal property).
-    *   Ensure `updateRightSidebarView` correctly calls `this.backgroundManager.updateBackgroundControls()` when needed.
+    *   Review `main.js` and remove the original methods that were moved to `UIManager`.
+    *   Ensure all event listeners related to UI elements managed by `UIManager` are either set up within `UIManager` or correctly delegate to `UIManager` methods.
 
 8.  **Testing (After Each Major Step):**
-    *   Manually test background functionality thoroughly:
-        *   Applying different predefined styles.
-        *   Adding custom background images via drag-and-drop in 'backgrounds' mode.
-        *   Toggling 'Apply to all pages' for styles and ensuring it affects other pages and saves correctly.
-        *   Using 'Apply This Image to All Pages' button.
-        *   Deleting custom background images using the Delete key.
-        *   Switching between sidebar modes (ensure selection/sidebar updates correctly).
-        *   Saving/Loading projects (ensure background styles, images, and global settings are restored correctly).
+    *   Manually test all UI functionality thoroughly:
+        *   Sidebar tab switching and corresponding right sidebar updates.
+        *   Notifications appearing correctly.
+        *   Filename prompt modal working for Save/Export.
+        *   Page reorder modal working (drag/drop, confirm/cancel).
+        *   "Select Panel" modal appearing correctly.
+        *   Page navigation controls (buttons, input, indicator text) updating correctly after adding/deleting/navigating/reordering/loading pages.
+        *   Editable slider values working.
 
 ## Key Considerations Checklist:
-- [ ] Passed `ComicCreator` instance to `BackgroundManager` constructor?
+- [ ] Passed `ComicCreator` instance to `UIManager` constructor?
 - [ ] Stored `comicCreator` instance as `this.comicCreator`?
-- [ ] Initialized `BackgroundManager` properties from `comicCreator`?
-- [ ] Imported `BackgroundManager` in `main.js`?
-- [ ] Instantiated `this.backgroundManager = new BackgroundManager(this);` in `ComicCreator` constructor?
-- [ ] Removed original properties (`useGlobalBackgroundStyle`, `globalBackgroundStyle`) from `ComicCreator` constructor?
-- [ ] Updated *all* relevant external calls in `main.js` to use `this.backgroundManager.methodName()`?
-- [ ] Updated *all* internal references within moved methods?
-- [ ] Refactored save/load logic for background states in `main.js` to use manager?
-- [ ] Updated relevant event handlers (Drop, Delete key)?
-- [ ] Moved global toggle logic and updated listener?
-- [ ] Updated `loadProject` to set manager state?
-- [ ] Tested thoroughly after each step? 
+- [ ] Imported `UIManager` in `main.js`?
+- [ ] Instantiated `this.uiManager = new UIManager(this);` in `ComicCreator` constructor?
+- [ ] Updated *all* relevant external calls in `main.js` to use `this.uiManager.methodName()`?
+- [ ] Updated *all* internal references within moved methods to use `this.comicCreator...`?
+- [ ] Updated relevant event handlers to call `UIManager` or `ComicCreator` methods?
+- [ ] Ensured page navigation updates are called correctly from `main.js`?
+- [ ] Removed original methods from `main.js` after moving?
+- [ ] Tested thoroughly after each step?

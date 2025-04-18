@@ -8,6 +8,7 @@ import { PanelManager } from './modules/PanelManager.js'; // Import PanelManager
 import { TextManager } from './modules/TextManager.js'; // Import TextManager
 import { StickerManager } from './modules/StickerManager.js'; // Import StickerManager
 import { BackgroundManager } from './modules/BackgroundManager.js'; // Import BackgroundManager
+import { UIManager } from './modules/UIManager.js'; // Import UIManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -43,6 +44,7 @@ class ComicCreator {
         this.textManager = new TextManager(this); // Instantiate TextManager
         this.stickerManager = new StickerManager(this); // Instantiate StickerManager
         this.backgroundManager = new BackgroundManager(this); // Instantiate BackgroundManager
+        this.uiManager = new UIManager(this); // Instantiate UIManager
         
         this.init();
     }
@@ -66,8 +68,8 @@ class ComicCreator {
         this.setupComicEditor();
         this.setupEventListeners();
         this.setupProjectControls(); // Add this line
-        this.initializeUI();
-        this.setupSidebarTabs(); // Add this line to set up tab listeners
+        this.initializeUI(); // This might be moved/refactored later
+        this.uiManager.setupSidebarTabs(); // Call UIManager method
     }
 
     setupUploadArea() {
@@ -501,8 +503,8 @@ class ComicCreator {
                         // Pass the selected panel from PanelManager to addTextToPanel
                         this.textManager.addTextToPanel(this.panelManager.currentPanel); // Use TextManager
                     } else {
-                        // If no panel selected in panels mode, show modal
-                        this.showSelectPanelModal();
+                        // If no panel selected in panels mode, show modal via UIManager
+                        this.uiManager.showSelectPanelModal(); 
                     }
                     break;
                 case 'backgrounds':
@@ -925,7 +927,7 @@ class ComicCreator {
         }
         
         // Update the sidebar content to show panel controls
-        this.updateRightSidebarView();
+        this.uiManager.updateRightSidebarView();
     }
 
     navigateToPage(pageIndex, saveCurrentState = true) {
@@ -952,6 +954,9 @@ class ComicCreator {
         // Update page indicator and navigation buttons
         this.updatePageIndicator();
         this.updateNavigationButtons();
+        
+        // This ensures the correct default message or empty state is shown.
+        this.uiManager.updateRightSidebarView(); 
     }
     
     loadPageState(pageIndex) {
@@ -1340,7 +1345,9 @@ class ComicCreator {
             console.log('Project loaded successfully');
         } catch (error) {
             console.error('Error loading project:', error);
-            alert('Error loading project file. Please make sure it is a valid comic project file.');
+            // Use UIManager to show notification
+            this.uiManager.showNotification('Error loading project file. Please make sure it is a valid comic project file.', 'error'); 
+            // alert('Error loading project file. Please make sure it is a valid comic project file.'); // Keep alert as backup?
         }
     }
 
@@ -1579,101 +1586,9 @@ class ComicCreator {
         console.log('Page reorder complete.');
     }
 
-    // --- NEW: Setup Sidebar Tab Switching --- 
-    setupSidebarTabs() {
-        const tabsContainer = document.querySelector('.sidebar-tabs');
-        if (!tabsContainer) return;
+   
 
-        tabsContainer.addEventListener('click', (e) => {
-            const clickedTab = e.target.closest('.tab-btn');
-            if (!clickedTab) return;
-
-            const newMode = clickedTab.dataset.tab;
-            if (newMode === this.currentSidebarMode) return; // Do nothing if clicking the active tab
-
-            // Update the active tab visually
-            tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            clickedTab.classList.add('active');
-
-            // Update the internal mode state
-            this.currentSidebarMode = newMode;
-            console.log('Switched sidebar mode to:', this.currentSidebarMode);
-
-            // Update the right sidebar based on the selected mode
-            this.updateRightSidebarView();
-
-            // Deselect any currently selected item when switching modes
-            this.deselectAll(); 
-        });
-    }
-
-    // --- NEW: Update Right Sidebar View --- 
-    updateRightSidebarView() {
-        const propertiesPanel = document.querySelector('.properties-panel');
-        if (!propertiesPanel) return;
-
-        // Clear previous content
-        propertiesPanel.innerHTML = '';
-
-        // Show the relevant section based on mode AND current selection
-        switch (this.currentSidebarMode) {
-            case 'panels':
-                console.log("Right sidebar: Panels tab active.");
-                // Create panel properties container if it doesn't exist
-                let panelProps = propertiesPanel.querySelector('#panel-properties');
-                if (!panelProps) {
-                    panelProps = document.createElement('div');
-                    panelProps.id = 'panel-properties';
-                    panelProps.className = 'properties-section';
-                    propertiesPanel.appendChild(panelProps);
-                }
-                
-                // Show panel controls ONLY if a panel is selected
-                if (this.currentPanel) {
-                    this.updatePanelControls(this.currentPanel);
-                } else {
-                    // Optional: Show a default message if no panel is selected
-                    panelProps.innerHTML = '<h4>Panel Settings</h4><div class="panel-controls"><p>Select a panel to see its properties.</p></div>';
-                    panelProps.style.display = 'block';
-                }
-                break;
-                
-            case 'backgrounds':
-                 console.log("Right sidebar: Backgrounds tab active.");
-                // Always show background controls when this tab is active
-                this.backgroundManager.updateBackgroundControls(); // Call manager method
-                // REMOVED: Direct call to this.updateBackgroundControls()
-                break;
-                
-            case 'stickers':
-                 console.log("Right sidebar: Stickers tab active.");
-                // Create sticker properties container if it doesn't exist
-                let stickerProps = propertiesPanel.querySelector('#sticker-properties');
-                if (!stickerProps) {
-                    stickerProps = document.createElement('div');
-                    stickerProps.id = 'sticker-properties';
-                    stickerProps.className = 'properties-section';
-                    propertiesPanel.appendChild(stickerProps);
-                }
-                
-                 // Show sticker controls ONLY if a sticker is selected
-                 if (this.currentSticker) {
-                     this.updateStickerControls(this.currentSticker);
-                 } else if (stickerProps) {
-                    // Optional: Show a default message if no sticker is selected
-                    stickerProps.innerHTML = '<h4>Sticker Settings</h4><div class="panel-controls"><p>Select a sticker to see its properties.</p></div>';
-                    stickerProps.style.display = 'block';
-                 } else {
-                    // Ensure sticker props div exists for the message
-                    this.stickerManager.updateStickerControls(); // Call StickerManager method
-                 }
-                break;
-            default:
-                 console.warn("Unknown sidebar mode:", this.currentSidebarMode);
-        }
-    }
+    
 
 
     // --- Update Sticker Controls ---
@@ -1783,43 +1698,12 @@ class ComicCreator {
                 });
                 
                 // Make size value editable
-                this.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
+                this.uiManager.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
             }
         }
     }
     
-    // --- Show Notification ---
-    showNotification(message, type = 'info') {
-        // Create notification element if it doesn't exist
-        let notification = document.querySelector('.notification');
-        if (!notification) {
-            notification = document.createElement('div');
-            notification.className = 'notification';
-            document.body.appendChild(notification);
-        }
-        
-        // Set type-specific styles
-        notification.className = 'notification'; // Reset
-        notification.classList.add(`notification-${type}`);
-        
-        // Set content
-        notification.textContent = message;
-        
-        // Show notification
-        notification.classList.add('show');
-        
-        // Hide after delay
-        setTimeout(() => {
-            notification.classList.remove('show');
-            
-            // Remove element after animation completes
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 500); // Match transition duration
-        }, 3000);
-    }
+
 
 
     // --- Deselect All Elements --- 
@@ -1871,7 +1755,7 @@ class ComicCreator {
         
          // After deselecting everything, update the sidebar based on the current mode
          // This ensures the correct default message or empty state is shown.
-         this.updateRightSidebarView(); 
+         this.uiManager.updateRightSidebarView(); 
     }
 
     loadPage(pageIndex) {
@@ -1918,94 +1802,6 @@ class ComicCreator {
             };
         }
     }
-
-    // --- Make Slider Value Editable ---
-    makeSliderValueEditable(slider, valueDisplay, unitSuffix = '', precision = 0) {
-        // Check if both slider and valueDisplay exist
-        if (!slider || !valueDisplay) {
-            console.warn('Missing required elements for makeSliderValueEditable');
-            return;
-        }
-
-        // Add editable class for styling
-        valueDisplay.classList.add('editable-slider-value');
-        valueDisplay.contentEditable = true;
-        
-        // Store the unit suffix and precision for formatting
-        valueDisplay.dataset.unitSuffix = unitSuffix;
-        valueDisplay.dataset.precision = precision;
-        
-        // Handle Enter key and Escape key
-        valueDisplay.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                
-                // Get the numeric value from the text (remove unit suffix)
-                let value = valueDisplay.textContent.replace(unitSuffix, '').trim();
-                value = parseFloat(value);
-                
-                // Validate the value
-                if (!isNaN(value)) {
-                    // Clamp value to slider's min/max
-                    const min = parseFloat(slider.min);
-                    const max = parseFloat(slider.max);
-                    value = Math.min(Math.max(value, min), max);
-                    
-                    // Update slider value
-                    slider.value = value;
-                    
-                    // Trigger input event on slider to activate its listeners
-                    slider.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    // Remove focus
-                    valueDisplay.blur();
-                } else {
-                    // Revert to current slider value
-                    const formattedValue = precision > 0 
-                        ? parseFloat(slider.value).toFixed(precision) 
-                        : Math.round(slider.value);
-                    valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
-                    valueDisplay.blur();
-                }
-            } else if (e.key === 'Escape') {
-                // Revert to current slider value
-                const formattedValue = precision > 0 
-                    ? parseFloat(slider.value).toFixed(precision) 
-                    : Math.round(slider.value);
-                valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
-                valueDisplay.blur();
-            }
-        });
-        
-        // Handle blur event (clicking away)
-        valueDisplay.addEventListener('blur', () => {
-            // Get the numeric value from the text
-            let value = valueDisplay.textContent.replace(unitSuffix, '').trim();
-            value = parseFloat(value);
-            
-            // Validate the value
-            if (!isNaN(value) && value !== parseFloat(slider.value)) {
-                // Clamp value to slider's min/max
-                const min = parseFloat(slider.min);
-                const max = parseFloat(slider.max);
-                value = Math.min(Math.max(value, min), max);
-                
-                // Update slider value
-                slider.value = value;
-                
-                // Trigger input event on slider to activate its listeners
-                slider.dispatchEvent(new Event('input', { bubbles: true }));
-            } else {
-                // Revert to current slider value or format correctly
-                const formattedValue = precision > 0 
-                    ? parseFloat(slider.value).toFixed(precision) 
-                    : Math.round(slider.value);
-                valueDisplay.textContent = `${formattedValue}${unitSuffix}`;
-            }
-        });
-    }
-
-
 
     // Helper methods for selection management
     clearSelection() {

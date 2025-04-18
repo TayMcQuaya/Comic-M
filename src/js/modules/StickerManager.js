@@ -255,8 +255,8 @@ export class StickerManager {
                 });
             }
 
-            // Make size value editable (using ComicCreator's helper)
-            this.comicCreator.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
+            // Make size value editable using UIManager
+            this.comicCreator.uiManager.makeSliderValueEditable(sizeControl, sizeValue, '%', 0);
         }
     }
 

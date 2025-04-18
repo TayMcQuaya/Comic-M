@@ -223,7 +223,7 @@ export class ExportManager {
                     }
                 } catch (captureError) {
                     console.error(`Error capturing page ${index + 1}:`, captureError);
-                    this.comicCreator.showNotification(`Error capturing page ${index + 1}. It might be missing from the PDF.`, 'error'); // Use comicCreator instance
+                    this.comicCreator.uiManager.showNotification(`Error capturing page ${index + 1}. It might be missing from the PDF.`, 'error'); // Use UIManager
                 } finally {
                     // Remove the export class
                     canvasElement.classList.remove('exporting');
@@ -240,8 +240,8 @@ export class ExportManager {
             
             if (pageImages.length === 0) {
                 console.error('Failed to generate any page images');
-                // Use comicCreator notification method
-                this.comicCreator.showNotification('Failed to generate the PDF. Please try again.', 'error'); 
+                // Use comicCreator notification method via UIManager
+                this.comicCreator.uiManager.showNotification('Failed to generate the PDF. Please try again.', 'error'); 
                 return;
             }
             
@@ -283,11 +283,11 @@ export class ExportManager {
             pdf.save(filename); // Use the user-provided filename
             
             console.log('PDF generated successfully with', pageImages.length, 'pages');
-            this.comicCreator.showNotification('Comic PDF downloaded successfully!', 'success'); // Use comicCreator instance
+            this.comicCreator.uiManager.showNotification('Comic PDF downloaded successfully!', 'success'); // Use UIManager
         } catch (error) {
             console.error('Error generating PDF:', error);
-            // Use comicCreator notification method
-            this.comicCreator.showNotification('An error occurred while generating the PDF: ' + error.message, 'error'); 
+            // Use comicCreator notification method via UIManager
+            this.comicCreator.uiManager.showNotification('An error occurred while generating the PDF: ' + error.message, 'error'); 
         } finally {
             // Remove loading indicator
             loadingIndicator.remove();
