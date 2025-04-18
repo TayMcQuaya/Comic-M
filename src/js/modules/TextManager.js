@@ -879,6 +879,7 @@ export class TextManager {
                         <div class="effect-control">
                             <label for="bubble-tail-position">Bubble Tail</label>
                             <select id="bubble-tail-position" ${textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box' ? 'disabled' : ''}>
+                                <option value="none" ${textBox.dataset.tailPosition === 'none' ? 'selected' : ''}>None</option>
                                 <option value="bottom-left" ${textBox.dataset.tailPosition === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
                                 <option value="bottom-center" ${textBox.dataset.tailPosition === 'bottom-center' ? 'selected' : ''}>Bottom Center</option>
                                 <option value="bottom-right" ${textBox.dataset.tailPosition === 'bottom-right' ? 'selected' : ''}>Bottom Right</option>
@@ -1455,10 +1456,12 @@ export class TextManager {
     updateBubbleTail(textBox, position) {
         textBox.className = textBox.className.replace(/(?:speech|thought)-tail-\S+/g, '').trim();
         const bubbleType = textBox.dataset.bubbleType;
-        if (bubbleType === 'speech-bubble') {
-            textBox.classList.add(`speech-tail-${position}`);
-        } else if (bubbleType === 'thought-bubble') {
-            textBox.classList.add(`thought-tail-${position}`);
+        if (position !== 'none') {
+            if (bubbleType === 'speech-bubble') {
+                textBox.classList.add(`speech-tail-${position}`);
+            } else if (bubbleType === 'thought-bubble') {
+                textBox.classList.add(`thought-tail-${position}`);
+            }
         }
         textBox.dataset.tailPosition = position;
     }
