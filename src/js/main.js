@@ -588,21 +588,31 @@ class ComicCreator {
         const customLayoutInput = document.getElementById('custom-layout-input');
         if (customLayoutInput) {
             customLayoutInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file && file.type === 'application/json') {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        try {
-                            const layoutData = JSON.parse(event.target.result);
-                            this.processCustomLayout(layoutData);
-                        } catch (error) {
-                            console.error('Error parsing custom layout JSON:', error);
-                            alert('Invalid JSON file. Please check the format.');
-                        }
-                    };
-                    reader.readAsText(file);
-                } else {
-                    alert('Please select a valid .json file.');
+                const files = e.target.files;
+                if (files.length === 0) return;
+                
+                // For multiple files
+                if (files.length > 1) {
+                    this.processBatchLayouts(files);
+                } 
+                // For single file
+                else {
+                    const file = files[0];
+                    if (file && file.type === 'application/json') {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const layoutData = JSON.parse(event.target.result);
+                                this.processCustomLayout(layoutData);
+                            } catch (error) {
+                                console.error('Error parsing custom layout JSON:', error);
+                                alert('Invalid JSON file. Please check the format.');
+                            }
+                        };
+                        reader.readAsText(file);
+                    } else {
+                        alert('Please select a valid .json file.');
+                    }
                 }
             });
         }
@@ -1865,6 +1875,68 @@ class ComicCreator {
             alert(`Custom layout "${layoutData.name}" has been added successfully!`);
         }
         
+        /**
+         * Process multiple layout files at once
+         * @param {FileList} files - List of JSON files to process
+         */
+        processBatchLayouts(files) {
+            let successCount = 0;
+            let failCount = 0;
+            let totalCount = files.length;
+            let processingCount = 0;
+            
+            // Show loading message
+            const loadingMessage = `Processing ${totalCount} layout files...`;
+            alert(loadingMessage);
+            
+            // Process each file
+            Array.from(files).forEach(file => {
+                if (file && file.type === 'application/json') {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const layoutData = JSON.parse(event.target.result);
+                            
+                            // Validate the layout structure
+                            if (this.validateCustomLayout(layoutData)) {
+                                // Generate a unique ID for this layout based on name
+                                const layoutId = 'custom-' + layoutData.name.toLowerCase().replace(/\s+/g, '-');
+                                
+                                // Add the layout to the available layouts
+                                this.layouts[layoutId] = layoutData;
+                                successCount++;
+                            } else {
+                                console.error(`Invalid layout format in file: ${file.name}`);
+                                failCount++;
+                            }
+                        } catch (error) {
+                            console.error(`Error parsing JSON file ${file.name}:`, error);
+                            failCount++;
+                        }
+                        
+                        processingCount++;
+                        
+                        // When all files have been processed
+                        if (processingCount === totalCount) {
+                            // Refresh the layout selection UI
+                            this.setupLayoutSelection();
+                            
+                            // Show completion message
+                            const resultMessage = `Batch processing complete:\n` +
+                                `✅ ${successCount} layouts added successfully\n` +
+                                `❌ ${failCount} layouts had errors`;
+                            alert(resultMessage);
+                        }
+                    };
+                    reader.readAsText(file);
+                } else {
+                    failCount++;
+                    processingCount++;
+                    console.error(`File ${file.name} is not a valid JSON file.`);
+                }
+            });
+        }
+
         /**
          * Validates that a custom layout has the required structure
          * @param {Object} layout - The parsed JSON object to validate
