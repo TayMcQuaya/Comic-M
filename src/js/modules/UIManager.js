@@ -166,6 +166,82 @@ export class UIManager {
         }, 3000);
     }
 
+    /**
+     * Shows a confirmation modal with customizable title, message, and buttons.
+     * @param {string} title - The modal title
+     * @param {string} message - The modal message
+     * @param {string[]} buttonLabels - Array of button labels
+     * @returns {Promise<string|null>} - Resolves with the selected button label or null if cancelled
+     */
+    showConfirmationModal(title, message, buttonLabels = ['OK', 'Cancel']) {
+        return new Promise((resolve) => {
+            // Create modal elements
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            
+            // Set content
+            modal.innerHTML = `
+                <h3>${title}</h3>
+                <p style="text-align: center; margin-bottom: 1.5rem; color: #555;">${message}</p>
+                <div class="modal-buttons"></div>
+            `;
+            
+            // Add buttons
+            const buttonsContainer = modal.querySelector('.modal-buttons');
+            buttonLabels.forEach((label, index) => {
+                const button = document.createElement('button');
+                button.textContent = label;
+                button.className = index === 0 ? 'primary-btn' : 'secondary-btn';
+                
+                button.addEventListener('click', () => {
+                    // Remove modal and resolve with the label
+                    modal.classList.remove('active');
+                    modalOverlay.classList.remove('active');
+                    
+                    // Wait for transition before removing
+                    setTimeout(() => {
+                        document.body.removeChild(modal);
+                        document.body.removeChild(modalOverlay);
+                        resolve(label);
+                    }, 300);
+                });
+                
+                buttonsContainer.appendChild(button);
+            });
+            
+            // Add to DOM
+            document.body.appendChild(modalOverlay);
+            document.body.appendChild(modal);
+            
+            // Trigger transition after a small delay
+            setTimeout(() => {
+                modalOverlay.style.display = 'block';
+                modal.style.display = 'block';
+                
+                setTimeout(() => {
+                    modal.classList.add('active');
+                    modalOverlay.classList.add('active');
+                }, 10);
+            }, 0);
+            
+            // Handle clicking on overlay (optional cancel)
+            modalOverlay.addEventListener('click', () => {
+                modal.classList.remove('active');
+                modalOverlay.classList.remove('active');
+                
+                // Wait for transition before removing
+                setTimeout(() => {
+                    document.body.removeChild(modal);
+                    document.body.removeChild(modalOverlay);
+                    resolve(null); // Return null if cancelled by clicking outside
+                }, 300);
+            });
+        });
+    }
+
     showSelectPanelModal() {
         const modal = document.getElementById('select-panel-modal');
         const overlay = document.getElementById('select-panel-modal-overlay');

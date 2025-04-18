@@ -548,6 +548,11 @@ class ComicCreator {
             }
         });
 
+        // New Project Button
+        document.querySelector('#new-project-btn')?.addEventListener('click', () => {
+            this.promptForNewProject();
+        });
+
         // Panel Controls
         const zoomControl = document.querySelector('.zoom-control');
         if (zoomControl) {
@@ -1631,13 +1636,13 @@ class ComicCreator {
         console.log('Applying page reorder...');
         const pageContentBeforeReorder = this.pages[this.currentPageIndex]; // Identify the content we are currently viewing
         const newOrderIndices = Array.from(listElement.children).map(li => parseInt(li.dataset.originalIndex));
-
+        
         // Create the new pages array based on the new order
         const reorderedPages = newOrderIndices.map(originalIndex => this.pages[originalIndex]);
 
         // Update the main pages array
         this.pages = reorderedPages;
-
+        
         // Find the new index of the page content we were viewing
         // We compare the actual page objects
         const newPageIndex = this.pages.findIndex(page => page === pageContentBeforeReorder);
@@ -1649,7 +1654,7 @@ class ComicCreator {
             console.warn('Could not find the current page content after reorder. Staying at index 0.');
             this.currentPageIndex = 0; // Fallback
         }
-
+        
         // Update the UI
         this.updatePageIndicator();
         this.updateNavigationButtons();
@@ -1659,10 +1664,72 @@ class ComicCreator {
         console.log('Page reorder complete.');
     }
 
-   
-
+    /**
+     * Prompts the user to confirm starting a new project and handles saving if requested.
+     */
+    async promptForNewProject() {
+        // Save current page state before showing prompt
+        this.saveCurrentPageState();
+        
+        // Show confirmation modal
+        const choice = await this.uiManager.showConfirmationModal(
+            "Create New Project?", 
+            "Do you want to save your current project first?", 
+            ["Save & New", "New (Discard)", "Cancel"]
+        );
+        
+        // Handle user's choice
+        switch (choice) {
+            case "Save & New":
+                await this.saveProject();
+                this.resetProject();
+                break;
+                
+            case "New (Discard)":
+                this.resetProject();
+                break;
+                
+            case "Cancel":
+            case null:
+                // User cancelled, do nothing
+                break;
+        }
+    }
     
-
+    /**
+     * Resets the application state to a blank project.
+     */
+    resetProject() {
+        // Reset pages
+        this.pages = [{
+            layout: null,
+            panelStates: [],
+            canvasBackgroundStyle: 'classic-white'
+        }];
+        
+        // Reset page state
+        this.currentPageIndex = 0;
+        this.selectedLayout = null;
+        
+        // Clear canvas
+        document.getElementById('comic-canvas').innerHTML = '';
+        
+        // Reset any other necessary state variables
+        this.imageLibrary.clearSelection();
+        
+        // Reset background style
+        this.backgroundManager.resetBackgroundStyle();
+        
+        // Update navigation UI
+        this.updatePageIndicator();
+        this.updateNavigationButtons();
+        
+        // Navigate to layout selection page
+        this.showLayoutSelection();
+        
+        // Show notification
+        this.uiManager.showNotification("New project created", "success");
+    }
 
     // --- Update Sticker Controls ---
     updateStickerControls(stickerElement) {
