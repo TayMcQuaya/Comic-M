@@ -583,6 +583,29 @@ class ComicCreator {
         document.querySelector('#download-btn')?.addEventListener('click', () => {
             this.exportManager.downloadComic(); // Call method on the manager instance
         });
+
+        // Custom Layout Upload - File input listener
+        const customLayoutInput = document.getElementById('custom-layout-input');
+        if (customLayoutInput) {
+            customLayoutInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file && file.type === 'application/json') {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const layoutData = JSON.parse(event.target.result);
+                            this.processCustomLayout(layoutData);
+                        } catch (error) {
+                            console.error('Error parsing custom layout JSON:', error);
+                            alert('Invalid JSON file. Please check the format.');
+                        }
+                    };
+                    reader.readAsText(file);
+                } else {
+                    alert('Please select a valid .json file.');
+                }
+            });
+        }
     }
 
     createComic(layout = null) {
@@ -1812,6 +1835,80 @@ class ComicCreator {
         });
     }
 
+        /**
+     * Validates and processes a custom layout from uploaded JSON
+     * @param {Object} layoutData - The parsed JSON object containing the layout data
+     */
+        processCustomLayout(layoutData) {
+            // Validate the layout structure
+            if (!this.validateCustomLayout(layoutData)) {
+                alert('Invalid layout format. The JSON file must include a name, description, and an array of panels with x, y, width, and height properties.');
+                return;
+            }
+            
+            // Generate a unique ID for this layout based on name
+            const layoutId = 'custom-' + layoutData.name.toLowerCase().replace(/\s+/g, '-');
+            
+            // Check if a layout with this ID already exists
+            if (this.layouts[layoutId]) {
+                const confirmReplace = confirm(`A layout named "${layoutData.name}" already exists. Do you want to replace it?`);
+                if (!confirmReplace) return;
+            }
+            
+            // Add the layout to the available layouts
+            this.layouts[layoutId] = layoutData;
+            
+            // Refresh the layout selection UI to include the new layout
+            this.setupLayoutSelection();
+            
+            // Show a success message
+            alert(`Custom layout "${layoutData.name}" has been added successfully!`);
+        }
+        
+        /**
+         * Validates that a custom layout has the required structure
+         * @param {Object} layout - The parsed JSON object to validate
+         * @returns {boolean} - True if valid, false otherwise
+         */
+        validateCustomLayout(layout) {
+            // Check for required properties
+            if (!layout.name || typeof layout.name !== 'string') {
+                console.error('Layout is missing a name property or it is not a string');
+                return false;
+            }
+            
+            if (!layout.description || typeof layout.description !== 'string') {
+                console.error('Layout is missing a description property or it is not a string');
+                return false;
+            }
+            
+            if (!Array.isArray(layout.panels)) {
+                console.error('Layout.panels is not an array');
+                return false;
+            }
+            
+            // Check each panel has the required properties
+            for (let i = 0; i < layout.panels.length; i++) {
+                const panel = layout.panels[i];
+                
+                // Check for required numeric properties
+                const requiredProps = ['x', 'y', 'width', 'height'];
+                for (const prop of requiredProps) {
+                    if (typeof panel[prop] !== 'number') {
+                        console.error(`Panel ${i} is missing ${prop} property or it is not a number`);
+                        return false;
+                    }
+                    
+                    // Ensure values are within percentage range (0-100)
+                    if (panel[prop] < 0 || panel[prop] > 100) {
+                        console.error(`Panel ${i} has invalid ${prop} value: ${panel[prop]}. Must be between 0 and 100.`);
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        }
     
 }
 
