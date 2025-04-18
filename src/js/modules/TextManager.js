@@ -612,7 +612,7 @@ export class TextManager {
         
         // Make rotation value editable (via ComicCreator)
         if (rotationSlider && rotationValueDisplay) { 
-            this.comicCreator.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
+            this.comicCreator.uiManager.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0); // Corrected path
         } else {
             console.error("Could not find rotation slider or value display element in text properties panel.");
         }
@@ -849,6 +849,24 @@ export class TextManager {
                                     <input type="color" id="shadow-color" value="${globalRgbToHex(this.getShadowColor(textElement))}" ${!textElement.style.textShadow ? 'disabled' : ''}>
                                     <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${globalRgbToHex(this.getShadowColor(textElement)).toUpperCase()}</div>
                                 </div>
+                                <!-- Add Shadow Offset and Blur Sliders -->
+                                <div class="shadow-sliders" ${!textElement.style.textShadow ? 'style="display: none;"' : ''}>
+                                    <div class="slider-group">
+                                        <label for="shadow-offset-x">X Offset</label>
+                                        <input type="range" id="shadow-offset-x" class="shadow-offset-x" min="-10" max="10" value="${this.getShadowOffset(textElement).x}" step="1">
+                                        <span class="shadow-offset-x-value">${this.getShadowOffset(textElement).x}px</span>
+                                    </div>
+                                    <div class="slider-group">
+                                        <label for="shadow-offset-y">Y Offset</label>
+                                        <input type="range" id="shadow-offset-y" class="shadow-offset-y" min="-10" max="10" value="${this.getShadowOffset(textElement).y}" step="1">
+                                        <span class="shadow-offset-y-value">${this.getShadowOffset(textElement).y}px</span>
+                                    </div>
+                                    <div class="slider-group">
+                                        <label for="shadow-blur">Blur</label>
+                                        <input type="range" id="shadow-blur" class="shadow-blur" min="0" max="10" value="${this.getShadowOffset(textElement).blur}" step="1">
+                                        <span class="shadow-blur-value">${this.getShadowOffset(textElement).blur}px</span>
+                                    </div>
+                                </div>
                             </div>
                             <div class="opacity-control">
                                 <label>
@@ -990,7 +1008,7 @@ export class TextManager {
         });
         
         // Make font size value editable (via ComicCreator)
-        this.comicCreator.makeSliderValueEditable(fontSizeSlider, fontSizeValue, 'px', 0);
+        this.comicCreator.uiManager.makeSliderValueEditable(fontSizeSlider, fontSizeValue, 'px', 0); // Corrected path
 
         // Text style buttons
         popup.querySelector('.bold-btn').addEventListener('click', () => {
@@ -1172,15 +1190,32 @@ export class TextManager {
         const textShadowCheckbox = popup.querySelector('#text-shadow');
         const shadowColorPicker = popup.querySelector('#shadow-color');
         const shadowColorHex = popup.querySelector('.shadow-color-hex');
+        const shadowSlidersContainer = popup.querySelector('.shadow-sliders'); // Get container
+        const shadowOffsetXSlider = popup.querySelector('#shadow-offset-x');
+        const shadowOffsetXValue = popup.querySelector('.shadow-offset-x-value');
+        const shadowOffsetYSlider = popup.querySelector('#shadow-offset-y');
+        const shadowOffsetYValue = popup.querySelector('.shadow-offset-y-value');
+        const shadowBlurSlider = popup.querySelector('#shadow-blur');
+        const shadowBlurValue = popup.querySelector('.shadow-blur-value');
         
         textShadowCheckbox.addEventListener('change', () => {
-            if (textShadowCheckbox.checked) {
-                shadowColorPicker.disabled = false;
-                shadowColorHex.removeAttribute('disabled');
-                this.applyTextShadow(textElement, shadowColorPicker.value); // Internal call
+            const isChecked = textShadowCheckbox.checked;
+            shadowColorPicker.disabled = !isChecked;
+            shadowColorHex.toggleAttribute('disabled', !isChecked);
+            // Also disable/enable sliders
+            shadowSlidersContainer.style.display = isChecked ? '' : 'none'; 
+            shadowOffsetXSlider.disabled = !isChecked;
+            shadowOffsetYSlider.disabled = !isChecked;
+            shadowBlurSlider.disabled = !isChecked;
+
+            if (isChecked) {
+                // Apply shadow with current slider values
+                this.applyTextShadow(textElement, 
+                                     shadowColorPicker.value, 
+                                     shadowOffsetXSlider.value, 
+                                     shadowOffsetYSlider.value, 
+                                     shadowBlurSlider.value); // Internal call
             } else {
-                shadowColorPicker.disabled = true;
-                shadowColorHex.setAttribute('disabled', true);
                 this.removeTextShadow(textElement); // Internal call
             }
             this.comicCreator.saveCurrentPageState(); // Use comicCreator
@@ -1188,7 +1223,11 @@ export class TextManager {
         // ... (listeners for shadow color input, calling internal helpers and comicCreator.saveCurrentPageState) ...
          shadowColorPicker.addEventListener('input', () => {
             if (textShadowCheckbox.checked) {
-                this.applyTextShadow(textElement, shadowColorPicker.value);
+                this.applyTextShadow(textElement, 
+                                     shadowColorPicker.value,
+                                     shadowOffsetXSlider.value, 
+                                     shadowOffsetYSlider.value, 
+                                     shadowBlurSlider.value);
                 shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
                 this.comicCreator.saveCurrentPageState();
             }
@@ -1200,11 +1239,16 @@ export class TextManager {
                 const hexValue = shadowColorHex.textContent.trim();
                 if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
                     shadowColorPicker.value = hexValue;
-                    this.applyTextShadow(textElement, hexValue);
+                    this.applyTextShadow(textElement, 
+                                         hexValue, 
+                                         shadowOffsetXSlider.value, 
+                                         shadowOffsetYSlider.value, 
+                                         shadowBlurSlider.value);
                     this.comicCreator.saveCurrentPageState();
                 } else {
                     shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
                 }
+                shadowColorHex.blur(); // Add blur after handling
             }
         });
         shadowColorHex.addEventListener('blur', () => {
@@ -1212,13 +1256,35 @@ export class TextManager {
                 const hexValue = shadowColorHex.textContent.trim();
                 if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
                     shadowColorPicker.value = hexValue;
-                    this.applyTextShadow(textElement, hexValue);
+                     this.applyTextShadow(textElement, 
+                                         hexValue, 
+                                         shadowOffsetXSlider.value, 
+                                         shadowOffsetYSlider.value, 
+                                         shadowBlurSlider.value);
                     this.comicCreator.saveCurrentPageState();
                 } else {
                     shadowColorHex.textContent = shadowColorPicker.value.toUpperCase();
                 }
             }
         });
+
+        // Add listeners for the shadow sliders
+        const shadowSliderHandler = () => {
+            if (textShadowCheckbox.checked) {
+                shadowOffsetXValue.textContent = `${shadowOffsetXSlider.value}px`;
+                shadowOffsetYValue.textContent = `${shadowOffsetYSlider.value}px`;
+                shadowBlurValue.textContent = `${shadowBlurSlider.value}px`;
+                this.applyTextShadow(textElement, 
+                                     shadowColorPicker.value, 
+                                     shadowOffsetXSlider.value, 
+                                     shadowOffsetYSlider.value, 
+                                     shadowBlurSlider.value);
+                this.comicCreator.saveCurrentPageState();
+            }
+        };
+        shadowOffsetXSlider.addEventListener('input', shadowSliderHandler);
+        shadowOffsetYSlider.addEventListener('input', shadowSliderHandler);
+        shadowBlurSlider.addEventListener('input', shadowSliderHandler);
 
         // Bubble tail position listener (calling internal helper)
         popup.querySelector('#bubble-tail-position').addEventListener('change', (e) => {
@@ -1251,7 +1317,7 @@ export class TextManager {
         });
         
         // Make rotation value editable (via ComicCreator)
-        this.comicCreator.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0);
+        this.comicCreator.uiManager.makeSliderValueEditable(rotationSlider, rotationValue, '°', 0); // Corrected path
 
         // Add text content change observer for outline update
         // ... (observer logic calling internal updateOutlineText) ...
@@ -1295,7 +1361,15 @@ export class TextManager {
         });
         
         // Make line height value editable (via ComicCreator)
-        this.comicCreator.makeSliderValueEditable(lineHeightSlider, lineHeightValue, '', 1);
+        this.comicCreator.uiManager.makeSliderValueEditable(lineHeightSlider, lineHeightValue, '', 1); // Corrected path
+
+        // Make outline thickness value editable (via ComicCreator)
+        this.comicCreator.uiManager.makeSliderValueEditable(outlineThicknessInput, outlineThicknessInput, 'px', 0); // Corrected path
+
+        // Make shadow offset values editable (via ComicCreator)
+        this.comicCreator.uiManager.makeSliderValueEditable(shadowOffsetXSlider, shadowOffsetXValue, 'px', 0); // Corrected call
+        this.comicCreator.uiManager.makeSliderValueEditable(shadowOffsetYSlider, shadowOffsetYValue, 'px', 0); // Corrected call
+        this.comicCreator.uiManager.makeSliderValueEditable(shadowBlurSlider, shadowBlurValue, 'px', 0); // Corrected call
     }
 
     // --- Helper methods for text formatting ---
@@ -1357,8 +1431,12 @@ export class TextManager {
         }
     }
     
-    applyTextShadow(textElement, color) {
-        textElement.style.textShadow = `2px 2px 2px ${color}`;
+    applyTextShadow(textElement, color, offsetX, offsetY, blur) {
+        // Use provided values, defaulting if necessary
+        const x = offsetX !== undefined ? offsetX : 2;
+        const y = offsetY !== undefined ? offsetY : 2;
+        const b = blur !== undefined ? blur : 2;
+        textElement.style.textShadow = `${x}px ${y}px ${b}px ${color}`;
     }
     
     removeTextShadow(textElement) {
@@ -1432,8 +1510,9 @@ export class TextManager {
 
     getShadowColor(textElement) {
         const shadow = textElement.style.textShadow || '';
-        const color = shadow.match(/[#][a-fA-F0-9]{6}/) || shadow.match(/rgba?\([^)]+\)/);
-        return color ? globalRgbToHex(color[0]) : '#666666'; // Use imported util
+        // Updated regex to better handle various color formats including hex
+        const colorMatch = shadow.match(/(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+)/);
+        return colorMatch ? globalRgbToHex(colorMatch[0]) : '#666666'; // Use imported util
     }
 
     updateOutlineText(textElement) {
@@ -1686,7 +1765,9 @@ export class TextManager {
         // Restore outline if present
         if (bubbleStyle.hasOutline) {
             textContent.dataset.hasOutline = 'true';
-            this.applyTextOutline(textContent, bubbleStyle.outlineColor || '#000000', bubbleStyle.outlineWidth || '2px');
+            // Pass saved values to applyTextOutline
+            const outlineThickness = (bubbleStyle.outlineWidth || '2px').replace('px', '');
+            this.applyTextOutline(textContent, bubbleStyle.outlineColor || '#000000', outlineThickness);
         }
 
         // Add handles and buttons
@@ -1778,5 +1859,21 @@ export class TextManager {
         this.currentTextBox = null;
         this.comicCreator.deselectAll(); // Ensure sidebar updates
         this.comicCreator.saveCurrentPageState();
+    }
+
+    // New helper to get shadow offset and blur
+    getShadowOffset(textElement) {
+        const shadow = textElement.style.textShadow || '';
+        const defaultOffset = { x: 2, y: 2, blur: 2 };
+        // Regex to capture numbers (potentially negative) followed by 'px'
+        const parts = shadow.match(/(-?\d+(\.\d+)?)px\s+(-?\d+(\.\d+)?)px\s+(-?\d+(\.\d+)?)px/);
+        if (parts && parts.length >= 6) {
+            return {
+                x: parseInt(parts[1]) || defaultOffset.x,
+                y: parseInt(parts[3]) || defaultOffset.y,
+                blur: parseInt(parts[5]) || defaultOffset.blur
+            };
+        }
+        return defaultOffset; // Return defaults if no match or incomplete
     }
 } 
