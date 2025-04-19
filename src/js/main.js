@@ -490,6 +490,11 @@ class ComicCreator {
             document.querySelector('#upload-page').classList.add('active');
         });
 
+        document.querySelector('#back-to-editor-btn').addEventListener('click', () => {
+            document.querySelector('#upload-page').classList.remove('active');
+            document.querySelector('#editor-page').classList.add('active');
+        });
+
         document.querySelector('#back-to-layout').addEventListener('click', () => {
             document.querySelector('#editor-page').classList.remove('active');
             document.querySelector('#layout-page').classList.add('active');
