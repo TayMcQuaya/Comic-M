@@ -4397,3 +4397,12 @@ input[type="color"] {
     color: white !important;
     border-color: var(--accent-color) !important;
 }
+
+/* Custom Layout Upload */
+.custom-layout-upload {
+    display: flex;
+    justify-content: center;
+    margin: 1rem auto 2rem;
+    width: 90%;
+    max-width: 1400px;
+}

@@ -13,7 +13,7 @@ export class StickerManager {
             console.error('StickerManager: Cannot add sticker - no image provided');
             return;
         }
-        
+
         const comicCanvas = document.querySelector('#comic-canvas');
         if (!comicCanvas) {
             console.error('StickerManager: Comic canvas not found');
@@ -77,17 +77,17 @@ export class StickerManager {
         });
         
         // Add click handler to select
-        stickerImg.addEventListener('click', (e) => {
+            stickerImg.addEventListener('click', (e) => {
             e.stopPropagation();
-            this.selectSticker(stickerImg);
-        });
-        
+                this.selectSticker(stickerImg);
+            });
+
         // Select the sticker after adding it
         this.selectSticker(stickerImg);
-        
+
         // Save the canvas state
         this.comicCreator.saveCurrentPageState();
-        
+
         return stickerImg;
     }
 
@@ -370,8 +370,8 @@ export class StickerManager {
                     <div class="transform-group" style="margin-top: 1rem;">
                         <div class="flip-group" style="margin-bottom: 0.5rem;">
                             <button class="flip-horizontal-btn">
-                                <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
-                            </button>
+                            <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
+                        </button>
                         </div>
                         <div class="rotation-group" style="margin-top: 1rem;">
                             <label>Rotation</label>
@@ -458,7 +458,7 @@ export class StickerManager {
                 this.comicCreator.saveCurrentPageState();
             });
 
-            // Reset Size Button
+             // Reset Size Button
             if (resetSizeBtn) {
                 resetSizeBtn.addEventListener('click', () => {
                     const defaultSize = 200; // Default size percentage
@@ -552,14 +552,14 @@ export class StickerManager {
             const position = sticker.dataset.positionGrid || this.getPositionFromSticker(sticker);
             
             return {
-                id: sticker.id,
-                imageId: sticker.dataset.imageId,
-                left: sticker.style.left,
-                top: sticker.style.top,
-                width: sticker.style.width,
+            id: sticker.id,
+            imageId: sticker.dataset.imageId,
+            left: sticker.style.left,
+            top: sticker.style.top,
+            width: sticker.style.width,
                 height: sticker.style.height,
-                transform: sticker.style.transform,
-                zIndex: sticker.style.zIndex,
+            transform: sticker.style.transform,
+            zIndex: sticker.style.zIndex,
                 size: sticker.dataset.size || '200',
                 isFlippedHorizontally: sticker.dataset.isFlippedHorizontally === 'true',
                 rotationAngle: parseInt(sticker.dataset.rotationAngle || '0'),
