@@ -243,7 +243,7 @@ export class PanelManager {
                         </button>
                     </div>
                     <div class="flip-group" style="margin-top: 1rem;">
-                        <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                        <button class="flip-horizontal-btn">
                             <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
                         </button>
                     </div>

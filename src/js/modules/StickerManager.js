@@ -369,7 +369,7 @@ export class StickerManager {
                     </div>
                     <div class="transform-group" style="margin-top: 1rem;">
                         <div class="flip-group" style="margin-bottom: 0.5rem;">
-                            <button class="flip-horizontal-btn" style="width: 100%; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--background-color); border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; ${isFlipped ? 'background: var(--primary-color); color: white;' : ''}">
+                            <button class="flip-horizontal-btn">
                                 <i class="fas fa-arrows-alt-h"></i> Flip Horizontal
                             </button>
                         </div>
