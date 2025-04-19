@@ -1497,6 +1497,20 @@ export class TextManager {
         const rotation = this.getRotationValue(textBox); // Internal call
         const rotateStyle = rotation !== 0 ? ` rotate(${rotation}deg)` : '';
         textBox.style.transform = `translate(${translateX}, ${translateY})${rotateStyle}`;
+        
+        // Store position information for state management
+        textBox.dataset.positionGrid = position;
+        
+        // Remove any previous positioning classes
+        const positionClasses = textBox.className.match(/positioned-[a-z]+-[a-z]+/g);
+        if (positionClasses && positionClasses.length) {
+            positionClasses.forEach(cls => {
+                textBox.classList.remove(cls);
+            });
+        }
+        
+        // Add the new positioning class
+        textBox.classList.add(`positioned-${position}`);
     }
 
     getOutlineThickness(textElement) {
@@ -1566,6 +1580,7 @@ export class TextManager {
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
                     previousBubbleType: textBubble.dataset.previousBubbleType || '',
                     tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                    positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                     content: textElement.innerHTML,
                     style: {
                         left: textBubble.style.left,
@@ -1617,6 +1632,7 @@ export class TextManager {
                         bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
                         previousBubbleType: textBubble.dataset.previousBubbleType || '',
                         tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                        positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                         content: textElement.innerHTML,
                         style: {
                             left: textBubble.style.left,
@@ -1700,6 +1716,15 @@ export class TextManager {
         textBubble.dataset.previousBubbleType = textState.previousBubbleType;
         textBubble.dataset.tailPosition = textState.tailPosition;
         
+        // Set grid position attribute if it exists in the state
+        if (textState.positionGrid) {
+            textBubble.dataset.positionGrid = textState.positionGrid;
+            textBubble.classList.add(`positioned-${textState.positionGrid}`);
+        } else {
+            textBubble.dataset.positionGrid = 'custom';
+            textBubble.classList.add('positioned-custom');
+        }
+        
         const textContent = document.createElement('div');
         textContent.className = 'text-content';
         textContent.contentEditable = true;
@@ -1718,29 +1743,37 @@ export class TextManager {
         
         // Apply styles (use helper for position?)
         const bubbleStyle = textState.style || {};
-        let leftValue = bubbleStyle.left || '10px';
-        let topValue = bubbleStyle.top || '10px';
-
-        // Convert percentage to pixels if needed (relative to parent)
-        if (leftValue.endsWith('%')) {
-            const parentWidth = parentElement.offsetWidth;
-            leftValue = `${(parseFloat(leftValue) / 100) * parentWidth}px`;
+        
+        // Decide whether to use predefined grid positioning or custom positioning
+        if (textState.positionGrid && textState.positionGrid !== 'custom') {
+            // Apply positioning via our positioning method instead of direct style application
+            this.positionTextBox(textBubble, textState.positionGrid);
+        } else {
+            // Apply custom positioning from saved state
+            let leftValue = bubbleStyle.left || '10px';
+            let topValue = bubbleStyle.top || '10px';
+    
+            // Convert percentage to pixels if needed (relative to parent)
+            if (leftValue.endsWith('%')) {
+                const parentWidth = parentElement.offsetWidth;
+                leftValue = `${(parseFloat(leftValue) / 100) * parentWidth}px`;
+            }
+            if (topValue.endsWith('%')) {
+                const parentHeight = parentElement.offsetHeight;
+                topValue = `${(parseFloat(topValue) / 100) * parentHeight}px`;
+            }
+    
+            Object.assign(textBubble.style, {
+                position: 'absolute',
+                left: leftValue,
+                top: topValue,
+                width: bubbleStyle.width || 'auto',
+                height: bubbleStyle.height || 'auto',
+                transform: bubbleStyle.transform || 'none',
+                zIndex: bubbleStyle.zIndex || (parentElement.id === 'comic-canvas' ? '10' : '10'), // Default zIndex
+                padding: bubbleStyle.padding || '10px' // Restore padding
+            });
         }
-        if (topValue.endsWith('%')) {
-            const parentHeight = parentElement.offsetHeight;
-            topValue = `${(parseFloat(topValue) / 100) * parentHeight}px`;
-        }
-
-        Object.assign(textBubble.style, {
-            position: 'absolute',
-            left: leftValue,
-            top: topValue,
-            width: bubbleStyle.width || 'auto',
-            height: bubbleStyle.height || 'auto',
-            transform: bubbleStyle.transform || 'none',
-            zIndex: bubbleStyle.zIndex || (parentElement.id === 'comic-canvas' ? '10' : '10'), // Default zIndex
-            padding: bubbleStyle.padding || '10px' // Restore padding
-        });
 
         // Apply text content styles
         Object.assign(textContent.style, {
@@ -1878,5 +1911,47 @@ export class TextManager {
             };
         }
         return defaultOffset; // Return defaults if no match or incomplete
+    }
+
+    /**
+     * Resets position grid value when a text bubble is manually moved
+     * This should be called by the DragAndDropManager after dragging ends
+     * @param {HTMLElement} textBox - The text bubble element that was moved
+     */
+    resetTextPositionGrid(textBox) {
+        if (!textBox) return;
+        
+        // If the textBox has a dataset.positionGrid attribute, clear it
+        if (textBox.dataset.positionGrid) {
+            textBox.dataset.positionGrid = 'custom';
+        }
+        
+        // If the textBox has a positioned-X-Y class, remove it
+        const positionClasses = textBox.className.match(/positioned-[a-z]+-[a-z]+/g);
+        if (positionClasses && positionClasses.length) {
+            positionClasses.forEach(cls => {
+                textBox.classList.remove(cls);
+            });
+            // Add a custom position class
+            textBox.classList.add('positioned-custom');
+        }
+        
+        // If there's a transform with translate but no rotation, clear it
+        if (textBox.style.transform && 
+            textBox.style.transform.includes('translate') && 
+            !textBox.style.transform.includes('rotate')) {
+            textBox.style.transform = '';
+        }
+        // If there's both translate and rotate, keep only the rotate part
+        else if (textBox.style.transform && 
+                textBox.style.transform.includes('translate') && 
+                textBox.style.transform.includes('rotate')) {
+            const rotation = this.getRotationValue(textBox);
+            if (rotation !== 0) {
+                textBox.style.transform = `rotate(${rotation}deg)`;
+            } else {
+                textBox.style.transform = '';
+            }
+        }
     }
 } 

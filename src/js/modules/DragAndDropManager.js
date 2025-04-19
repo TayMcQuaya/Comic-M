@@ -330,6 +330,7 @@ export class DragAndDropManager {
         let originalX, originalY; // Store initial style.left/top in pixels
         const canvas = document.querySelector('#comic-canvas');
         let canvasPaddingBoxWidth, canvasPaddingBoxHeight; // Store canvas client dimensions
+        let hasTransform;
 
         const onMouseDown = (e) => {
             // Check if canvas exists
@@ -353,9 +354,36 @@ export class DragAndDropManager {
             // Record initial positions and dimensions
             startX = e.clientX;
             startY = e.clientY;
-            // Use currentStyle values for origin, fallback if not set
-            originalX = parseFloat(element.style.left) || 0;
-            originalY = parseFloat(element.style.top) || 0;
+            
+            // Check if this element has transforms applied
+            hasTransform = element.style.transform && element.style.transform.includes('translate');
+            
+            if (hasTransform) {
+                // Get the element's VISUAL position using getBoundingClientRect, which accounts for transforms
+                const rect = element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                // Calculate the position relative to the container in pixels
+                const relativeLeft = rect.left - canvasRect.left;
+                const relativeTop = rect.top - canvasRect.top;
+                
+                // Store original transform and clear it
+                element.dataset.originalTransform = element.style.transform;
+                element.style.transform = '';
+                
+                // Apply pixel-based left/top that visually matches the previous transformed position
+                element.style.left = `${relativeLeft}px`;
+                element.style.top = `${relativeTop}px`;
+                
+                // Update original position values for drag calculation
+                originalX = relativeLeft;
+                originalY = relativeTop;
+            } else {
+                // Use current style values for origin, fallback if not set
+                originalX = parseFloat(element.style.left) || 0;
+                originalY = parseFloat(element.style.top) || 0;
+            }
+            
             // Get canvas client dimensions (includes padding, excludes border)
             canvasPaddingBoxWidth = canvas.clientWidth;
             canvasPaddingBoxHeight = canvas.clientHeight;
@@ -393,6 +421,12 @@ export class DragAndDropManager {
             // Apply the clamped, canvas-relative position
             element.style.left = `${clampedCanvasX}px`;
             element.style.top = `${clampedCanvasY}px`;
+            
+            // Update start position for continuous dragging
+            startX = e.clientX;
+            startY = e.clientY;
+            originalX = clampedCanvasX;
+            originalY = clampedCanvasY;
         };
 
         const onMouseUp = () => {
@@ -401,6 +435,16 @@ export class DragAndDropManager {
             element.style.cursor = 'grab';
             element.style.zIndex = element.dataset.originalZIndex || '100';
             document.removeEventListener('mousemove', onMouseMove);
+            
+            // Reset the grid position in TextManager
+            try {
+                if (this.comicCreator && this.comicCreator.textManager) {
+                    this.comicCreator.textManager.resetTextPositionGrid(element);
+                }
+            } catch (e) {
+                console.warn("Could not reset text position grid:", e);
+            }
+            
             this.comicCreator.saveCurrentPageState();
         };
 
@@ -419,6 +463,7 @@ export class DragAndDropManager {
         let panelOffsetX, panelOffsetY; // Panel offset relative to canvas padding box
         let canvasPaddingBoxWidth, canvasPaddingBoxHeight;
         const canvas = document.querySelector('#comic-canvas');
+        let hasTransform;
 
         const onMouseDown = (e) => {
             const panel = element.parentElement;
@@ -439,8 +484,35 @@ export class DragAndDropManager {
             // Record initial positions and dimensions
             startX = e.clientX;
             startY = e.clientY;
-            originalElementX_panel = parseFloat(element.style.left) || 0;
-            originalElementY_panel = parseFloat(element.style.top) || 0;
+            
+            // Check if this element has transforms applied
+            hasTransform = element.style.transform && element.style.transform.includes('translate');
+            
+            if (hasTransform) {
+                // Get the element's VISUAL position using getBoundingClientRect
+                const rect = element.getBoundingClientRect();
+                const panelRect = panel.getBoundingClientRect();
+                
+                // Calculate the position relative to the panel in pixels
+                const relativeLeft = rect.left - panelRect.left;
+                const relativeTop = rect.top - panelRect.top;
+                
+                // Store original transform and clear it
+                element.dataset.originalTransform = element.style.transform;
+                element.style.transform = '';
+                
+                // Apply pixel-based left/top that visually matches the previous transformed position
+                element.style.left = `${relativeLeft}px`;
+                element.style.top = `${relativeTop}px`;
+                
+                // Update original position values for drag calculation
+                originalElementX_panel = relativeLeft;
+                originalElementY_panel = relativeTop;
+            } else {
+                // Use current style values
+                originalElementX_panel = parseFloat(element.style.left) || 0;
+                originalElementY_panel = parseFloat(element.style.top) || 0;
+            }
             
             // Get panel offset relative to canvas padding box
             // Use getBoundingClientRect for robust calculation
@@ -494,6 +566,12 @@ export class DragAndDropManager {
             // Apply the clamped, PANEL-relative position
             element.style.left = `${finalPanelX}px`;
             element.style.top = `${finalPanelY}px`;
+            
+            // Update start position for continuous dragging
+            startX = e.clientX;
+            startY = e.clientY;
+            originalElementX_panel = finalPanelX;
+            originalElementY_panel = finalPanelY;
         };
 
         const onMouseUp = () => {
@@ -502,6 +580,16 @@ export class DragAndDropManager {
             element.style.cursor = 'grab';
             element.style.zIndex = element.dataset.originalZIndex || '10';
             document.removeEventListener('mousemove', onMouseMove);
+            
+            // Reset the grid position in TextManager
+            try {
+                if (this.comicCreator && this.comicCreator.textManager) {
+                    this.comicCreator.textManager.resetTextPositionGrid(element);
+                }
+            } catch (e) {
+                console.warn("Could not reset text position grid:", e);
+            }
+            
             this.comicCreator.saveCurrentPageState();
         };
 
