@@ -513,10 +513,12 @@ export class DragAndDropManager {
     }
     
     // --- Sticker Dragging --- 
-    makeStickerDraggable(element) {
+    makeStickerDraggable(element, options = {}) {
         let isDragging = false;
         let startX, startY;
-        let originalX, originalY;
+        let startElementX, startElementY; // Visual coordinates of the element
+        let originalLeft, originalTop;
+        let hasTransform;
 
         const onMouseDown = (e) => {
             if (e.button !== 0) return; // Only handle left mouse button
@@ -529,8 +531,40 @@ export class DragAndDropManager {
 
             startX = e.clientX;
             startY = e.clientY;
-            originalX = parseFloat(element.style.left) || 0;
-            originalY = parseFloat(element.style.top) || 0;
+            
+            // Get the element's VISUAL position using getBoundingClientRect, which accounts for transforms
+            const rect = element.getBoundingClientRect();
+            startElementX = rect.left;
+            startElementY = rect.top;
+            
+            // Store the original style values (these might be percentages or pixels)
+            originalLeft = element.style.left;
+            originalTop = element.style.top;
+            
+            // Check if this element has transforms applied
+            hasTransform = element.style.transform && element.style.transform.includes('translate');
+            
+            // When there's a transform applied, we need to switch the element to absolute pixel positioning
+            // for accurate dragging, and will restore the previous styling on drag end
+            if (hasTransform) {
+                // Get the canvas to calculate relative position
+                const canvas = document.querySelector('#comic-canvas');
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    
+                    // Calculate the position relative to the container in pixels
+                    const relativeLeft = rect.left - canvasRect.left;
+                    const relativeTop = rect.top - canvasRect.top;
+                    
+                    // Store original transform and clear it
+                    element.dataset.originalTransform = element.style.transform;
+                    element.style.transform = '';
+                    
+                    // Apply pixel-based left/top that visually matches the previous transformed position
+                    element.style.left = `${relativeLeft}px`;
+                    element.style.top = `${relativeTop}px`;
+                }
+            }
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp, { once: true });
@@ -549,23 +583,30 @@ export class DragAndDropManager {
                 return;
             }
             
+            // Calculate new position based on mouse movement
             const canvasRect = canvas.getBoundingClientRect();
-            const stickerRect = element.getBoundingClientRect(); // Use getBoundingClientRect for accurate size
+            const stickerRect = element.getBoundingClientRect();
             
-            let newX = originalX + dx;
-            let newY = originalY + dy;
+            // Move based on the current element position plus delta
+            let newLeft = (parseFloat(element.style.left) || 0) + dx;
+            let newTop = (parseFloat(element.style.top) || 0) + dy;
             
-            // Boundary checks against canvas padding box
+            // Boundary checks
             const canvasClientWidth = canvas.clientWidth;
             const canvasClientHeight = canvas.clientHeight;
             const elementWidth = stickerRect.width;
             const elementHeight = stickerRect.height;
 
-            newX = Math.max(0, Math.min(newX, canvasClientWidth - elementWidth));
-            newY = Math.max(0, Math.min(newY, canvasClientHeight - elementHeight));
+            newLeft = Math.max(0, Math.min(newLeft, canvasClientWidth - elementWidth));
+            newTop = Math.max(0, Math.min(newTop, canvasClientHeight - elementHeight));
             
-            element.style.left = `${newX}px`;
-            element.style.top = `${newY}px`;
+            // Apply the new position
+            element.style.left = `${newLeft}px`;
+            element.style.top = `${newTop}px`;
+            
+            // Update the start position for the next movement
+            startX = e.clientX;
+            startY = e.clientY;
         };
 
         const onMouseUp = () => {
@@ -576,24 +617,37 @@ export class DragAndDropManager {
             element.style.zIndex = '100'; // Reset z-index or use saved state
 
             document.removeEventListener('mousemove', onMouseMove);
-
-            // Update state (using comicCreator reference)
-            const pageState = this.comicCreator.pages[this.comicCreator.currentPageIndex];
-            if (pageState?.stickerStates) {
-                const stickerState = pageState.stickerStates.find(s => s.id === element.id);
-                if (stickerState) {
-                    Object.assign(stickerState, {
-                        left: element.style.left,
-                        top: element.style.top,
-                        width: element.style.width,
-                        height: element.style.height,
-                        transform: element.style.transform,
-                        rotation: element.dataset.rotation || '0',
-                        zIndex: element.style.zIndex,
-                        size: element.dataset.size
-                    });
-                    this.comicCreator.saveCurrentPageState();
+            
+            // If we modified a transform during drag, reset the positioning method
+            // to percentage-based without transforms for clean state
+            if (hasTransform) {
+                // Convert current pixel position to percentage of parent
+                const canvas = document.querySelector('#comic-canvas');
+                if (canvas) {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const elementRect = element.getBoundingClientRect();
+                    
+                    // Calculate center position of the element
+                    const centerX = elementRect.left + (elementRect.width / 2) - canvasRect.left;
+                    const centerY = elementRect.top + (elementRect.height / 2) - canvasRect.top;
+                    
+                    // Convert to percentage
+                    const percentX = (centerX / canvas.clientWidth) * 100;
+                    const percentY = (centerY / canvas.clientHeight) * 100;
+                    
+                    // Apply the center position without transforms
+                    element.style.transform = '';
+                    element.style.left = `${percentX}%`;
+                    element.style.top = `${percentY}%`;
                 }
+            }
+            
+            // Call the onDragEnd callback if provided
+            if (options.onDragEnd && typeof options.onDragEnd === 'function') {
+                options.onDragEnd(element);
+            } else {
+                // Update state (using comicCreator reference) if no callback provided
+                this.comicCreator.saveCurrentPageState();
             }
         };
 
