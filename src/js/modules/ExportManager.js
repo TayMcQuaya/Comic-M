@@ -153,6 +153,35 @@ export class ExportManager {
                     textBox.classList.remove('selected-text');
                 });
                 
+                // Pre-load background image dimensions if it exists
+                const backgroundImg = canvasElement.querySelector('.canvas-background-image');
+                if (backgroundImg) {
+                    try {
+                        // Ensure the image dimensions are fully loaded before proceeding with html2canvas
+                        await new Promise(resolve => {
+                            if (backgroundImg.complete && backgroundImg.naturalWidth > 0) {
+                                console.log(`Background image already loaded: ${backgroundImg.naturalWidth}x${backgroundImg.naturalHeight}`);
+                                resolve();
+                            } else {
+                                backgroundImg.onload = () => {
+                                    console.log(`Background image loaded: ${backgroundImg.naturalWidth}x${backgroundImg.naturalHeight}`);
+                                    resolve();
+                                };
+                                backgroundImg.onerror = () => {
+                                    console.error('Failed to load background image');
+                                    resolve(); // Resolve anyway to continue export
+                                };
+                                // Trigger reload if needed
+                                const currentSrc = backgroundImg.src;
+                                backgroundImg.src = '';
+                                backgroundImg.src = currentSrc;
+                            }
+                        });
+                    } catch (imgError) {
+                        console.warn('Error pre-loading background image:', imgError);
+                    }
+                }
+                
                 // Process elements for export and get restoration function
                 const restoreStyles = this.processElementsForExport(canvasElement);
                 
@@ -177,6 +206,30 @@ export class ExportManager {
                                 x: 0,
                                 y: 0,
                                 imageTimeout: 0,
+                                // Ensure proper clone processing
+                                onBeforeClone: (originalDocument) => {
+                                    console.log('Preparing document for cloning');
+                                    // Mark elements to track potential duplicates
+                                    const bgImage = originalDocument.querySelector('.canvas-background-image');
+                                    if (bgImage) {
+                                        bgImage.setAttribute('data-export-id', 'background-image');
+                                    }
+                                    return originalDocument;
+                                },
+                                // Ensure background images render properly with object-fit
+                                // This is critical for maintaining the aspect ratio without distortion
+                                oncloneNode: (node) => {
+                                    if (node.nodeType === 1) { // Element node
+                                        const element = node;
+                                        if (element.classList && element.classList.contains('canvas-background-image')) {
+                                            // Force object-fit: none to prevent browser from applying its own scaling
+                                            element.style.objectFit = 'none';
+                                            element.setAttribute('data-processed-by', 'oncloneNode');
+                                            return element;
+                                        }
+                                    }
+                                    return node;
+                                },
                                 ignoreElements: (element) => {
                                     // Ignore any helper elements that shouldn't be in the export
                                     return element.classList && 
@@ -199,6 +252,74 @@ export class ExportManager {
                                             el.style.border = '2px solid #000';
                                         }
                                     });
+                                    
+                                    // Fix background image objectFit to ensure it maintains correct cropping
+                                    // First, check if multiple background images exist due to cloning issues
+                                    const bgImages = clonedElement.querySelectorAll('.canvas-background-image');
+                                    
+                                    if (bgImages.length > 0) {
+                                        console.log(`Found ${bgImages.length} background images in cloned document`);
+                                        
+                                        // Remove all but the first background image to prevent duplication
+                                        if (bgImages.length > 1) {
+                                            for (let i = 1; i < bgImages.length; i++) {
+                                                if (bgImages[i].parentNode) {
+                                                    bgImages[i].parentNode.removeChild(bgImages[i]);
+                                                }
+                                            }
+                                            console.log(`Removed ${bgImages.length - 1} duplicate background images`);
+                                        }
+                                        
+                                        // Now work with just the first image
+                                        const bgImage = bgImages[0];
+                                        
+                                        // Get the original image's dimensions from the actual DOM
+                                        const originalImage = document.querySelector('.canvas-background-image');
+                                        
+                                        // Get the natural dimensions of the image
+                                        const imgNaturalWidth = originalImage?.naturalWidth || bgImage.naturalWidth || 1024;
+                                        const imgNaturalHeight = originalImage?.naturalHeight || bgImage.naturalHeight || 1024;
+                                        
+                                        console.log(`Using background dimensions: ${imgNaturalWidth}x${imgNaturalHeight}`);
+                                        
+                                        const containerWidth = clonedElement.offsetWidth;
+                                        const containerHeight = clonedElement.offsetHeight;
+                                        
+                                        // Calculate scale to fill container while maintaining aspect ratio
+                                        const scaleX = containerWidth / imgNaturalWidth;
+                                        const scaleY = containerHeight / imgNaturalHeight;
+                                        const scale = Math.max(scaleX, scaleY);
+                                        
+                                        // Calculate dimensions at this scale
+                                        const scaledWidth = imgNaturalWidth * scale;
+                                        const scaledHeight = imgNaturalHeight * scale;
+                                        
+                                        // Calculate positioning to center the image
+                                        const left = (containerWidth - scaledWidth) / 2;
+                                        const top = (containerHeight - scaledHeight) / 2;
+                                        
+                                        // First clear all existing styling to prevent conflicts
+                                        bgImage.removeAttribute('style');
+                                        
+                                        // Apply the calculated dimensions and position to create the "cover" effect
+                                        Object.assign(bgImage.style, {
+                                            position: 'absolute',
+                                            left: left + 'px',
+                                            top: top + 'px',
+                                            width: scaledWidth + 'px',
+                                            height: scaledHeight + 'px',
+                                            objectFit: 'none', // Prevent browser from applying its own object-fit
+                                            zIndex: '0'
+                                        });
+                                        
+                                        // Add extra attributes to help with debugging
+                                        bgImage.setAttribute('data-natural-width', imgNaturalWidth);
+                                        bgImage.setAttribute('data-natural-height', imgNaturalHeight);
+                                        bgImage.setAttribute('data-scaled-width', scaledWidth);
+                                        bgImage.setAttribute('data-scaled-height', scaledHeight);
+                                        
+                                        console.log(`Applied manual crop for background: natural ${imgNaturalWidth}x${imgNaturalHeight}, scaled to ${scaledWidth}x${scaledHeight}`);
+                                    }
                                     
                                     // Process stickers to ensure outlines are properly handled in the export
                                     Array.from(clonedElement.querySelectorAll('.canvas-sticker-image')).forEach(sticker => {
@@ -421,6 +542,43 @@ export class ExportManager {
             }
         });
         
+        // Process background image if present to ensure object-fit is maintained
+        // Check for multiple background images (should not happen, but just in case)
+        const backgroundImages = rootElement.querySelectorAll('.canvas-background-image');
+        if (backgroundImages.length > 1) {
+            console.log(`Warning: Found ${backgroundImages.length} background images, should only be 1`);
+            // Keep only the first one
+            for (let i = 1; i < backgroundImages.length; i++) {
+                if (backgroundImages[i].parentNode) {
+                    backgroundImages[i].parentNode.removeChild(backgroundImages[i]);
+                }
+            }
+        }
+        
+        // Now work with just the first/only background image
+        const backgroundImage = rootElement.querySelector('.canvas-background-image');
+        if (backgroundImage) {
+            // Store original style for restoration but include all properties
+            const computedStyle = window.getComputedStyle(backgroundImage);
+            const storedStyle = {
+                element: backgroundImage,
+                cssText: backgroundImage.style.cssText, // Store the entire CSS text
+                allStyles: {} // We'll store all computed properties
+            };
+            
+            // Store all relevant CSS properties for restoration
+            for (let i = 0; i < computedStyle.length; i++) {
+                const prop = computedStyle[i];
+                storedStyle.allStyles[prop] = backgroundImage.style[prop];
+            }
+            
+            originalStyles.push(storedStyle);
+            
+            // Important: We don't modify the backgroundImage style here anymore
+            // That will be done in the onclone handler to ensure consistent manual positioning
+            console.log('Stored original background image style for later restoration');
+        }
+        
         // Process stickers to ensure outlines are properly applied during export
         const stickers = rootElement.querySelectorAll('.canvas-sticker-image');
         stickers.forEach(sticker => {
@@ -466,6 +624,27 @@ export class ExportManager {
         return function restoreOriginalStyles() {
             originalStyles.forEach(item => {
                 const element = item.element;
+                
+                // Check if we stored the full cssText
+                if (item.cssText !== undefined) {
+                    // Restore full original styling
+                    element.style.cssText = item.cssText;
+                    return; // Skip the individual property handling below
+                }
+                
+                // Handle stored allStyles object
+                if (item.allStyles) {
+                    // Clear all current styles first
+                    element.removeAttribute('style');
+                    
+                    // Restore all original styles
+                    for (const prop in item.allStyles) {
+                        if (item.allStyles[prop]) {
+                            element.style[prop] = item.allStyles[prop];
+                        }
+                    }
+                    return; // Skip the individual property handling below
+                }
                 
                 // Only restore properties that were originally set
                 if (item.backgroundColor) {
@@ -532,6 +711,17 @@ export class ExportManager {
                     element.style.outlineOffset = item.outlineOffset;
                 } else {
                     element.style.removeProperty('outline-offset');
+                }
+                
+                // Handle background image specific properties
+                if (element.classList.contains('canvas-background-image')) {
+                    ['position', 'top', 'left', 'width', 'height', 'objectFit', 'zIndex'].forEach(prop => {
+                        if (item[prop]) {
+                            element.style[prop] = item[prop];
+                        } else {
+                            element.style.removeProperty(prop);
+                        }
+                    });
                 }
                 
                 // Also restore padding and box-sizing if they were modified
