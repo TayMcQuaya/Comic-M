@@ -1636,13 +1636,13 @@ class ComicCreator {
         console.log('Applying page reorder...');
         const pageContentBeforeReorder = this.pages[this.currentPageIndex]; // Identify the content we are currently viewing
         const newOrderIndices = Array.from(listElement.children).map(li => parseInt(li.dataset.originalIndex));
-        
+
         // Create the new pages array based on the new order
         const reorderedPages = newOrderIndices.map(originalIndex => this.pages[originalIndex]);
 
         // Update the main pages array
         this.pages = reorderedPages;
-        
+
         // Find the new index of the page content we were viewing
         // We compare the actual page objects
         const newPageIndex = this.pages.findIndex(page => page === pageContentBeforeReorder);
@@ -1654,7 +1654,7 @@ class ComicCreator {
             console.warn('Could not find the current page content after reorder. Staying at index 0.');
             this.currentPageIndex = 0; // Fallback
         }
-        
+
         // Update the UI
         this.updatePageIndicator();
         this.updateNavigationButtons();
@@ -1802,11 +1802,11 @@ class ComicCreator {
             this.stickerManager.deselectCurrentSticker();
             this.currentSticker = null;
             
-            // Hide sticker props if they exist
-            if (propertiesPanel) {
-                const stickerProps = propertiesPanel.querySelector('#sticker-properties');
-                if (stickerProps) stickerProps.style.display = 'none';
-            }
+             // Hide sticker props if they exist
+             if (propertiesPanel) {
+                 const stickerProps = propertiesPanel.querySelector('#sticker-properties');
+                 if (stickerProps) stickerProps.style.display = 'none';
+             }
         }
         
          // After deselecting everything, update the sidebar based on the current mode

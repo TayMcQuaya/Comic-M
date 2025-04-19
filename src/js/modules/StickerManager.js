@@ -147,6 +147,9 @@ export class StickerManager {
         const isFlipped = stickerElement.dataset.isFlippedHorizontally === 'true';
         const rotationAngle = parseInt(stickerElement.dataset.rotationAngle || '0');
         
+        // Set transform-origin to center for consistent rotation behavior
+        stickerElement.style.transformOrigin = 'center center';
+        
         // Get current transform that might contain translate() set by positionSticker
         const currentTransform = stickerElement.style.transform || '';
         let translatePart = '';

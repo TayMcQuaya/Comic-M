@@ -3464,7 +3464,7 @@ select.font-family option {
 /* Thought Bubble */
 .thought-bubble {
     border-radius: 50%;
-    background-color: white;
+    background-color: var(--bubble-background-color, white);
     position: relative;
 }
 
@@ -3475,15 +3475,10 @@ select.font-family option {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: white;
+    background-color: var(--bubble-background-color, white);
     border-radius: inherit;
     z-index: 1;
     opacity: var(--bubble-opacity);
-}
-
-/* Specific padding for thought bubbles */
-.thought-bubble .text-content {
-    padding: 10px; /* Increased padding for thought bubbles */
 }
 
 /* Thought bubble tails */
@@ -3496,7 +3491,7 @@ select.font-family option {
 .thought-tail-top-left,
 .thought-tail-top-center,
 .thought-tail-top-right {
-    --bubble-trail-color: white;
+    --bubble-trail-color: var(--bubble-background-color, white);
 }
 
 /* Bottom tails */
@@ -4086,12 +4081,15 @@ input[type="color"] {
 /* Add specific rules for stickers during export */
 .exporting .canvas-sticker-image {
     box-shadow: none !important;
-    /* Border will be applied via JavaScript */
+    outline: none !important; /* Ensure no outlines are used during export, only borders */
     box-sizing: border-box !important; /* Ensure the border is flush with the image */
 }
 
 .exporting .canvas-sticker-image[data-outline-enabled="true"] {
-    /* Border will be applied via JavaScript for better HTML2Canvas compatibility */
+    /* Use border instead of outline for better HTML2Canvas compatibility */
+    /* Border will be applied via JavaScript in the ExportManager.js file */
+    /* This ensures the border rotates with the image for better PDF rendering */
+    transform-origin: center center !important; /* Ensure rotation happens from center */
 }
 
 .exporting .text-bubble {

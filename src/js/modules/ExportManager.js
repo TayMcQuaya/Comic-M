@@ -204,40 +204,27 @@ export class ExportManager {
                                     Array.from(clonedElement.querySelectorAll('.canvas-sticker-image')).forEach(sticker => {
                                         // Handle sticker outlines for export
                                         const outlineEnabled = sticker.dataset.outlineEnabled === 'true';
+                                        const rotationAngle = parseInt(sticker.dataset.rotationAngle || '0');
+                                        
+                                        // Ensure proper rotation handling
+                                        if (rotationAngle !== 0) {
+                                            // Set transform-origin to center for proper rotation behavior
+                                            sticker.style.transformOrigin = 'center center';
+                                        }
+                                        
                                         if (outlineEnabled) {
                                             const outlineWidth = sticker.dataset.outlineWidth || '2';
                                             const outlineColor = sticker.dataset.outlineColor || '#000000';
                                             const outlineStyle = sticker.dataset.outlineStyle || 'solid';
                                             
-                                            // Create a wrapper div for the sticker with a border instead of outline
-                                            const wrapper = document.createElement('div');
-                                            wrapper.style.position = 'absolute';
-                                            wrapper.style.left = sticker.style.left;
-                                            wrapper.style.top = sticker.style.top;
-                                            wrapper.style.width = sticker.style.width;
-                                            wrapper.style.height = sticker.style.height;
-                                            wrapper.style.transform = sticker.style.transform;
-                                            wrapper.style.padding = '0';  // Remove padding - border should touch the image
-                                            wrapper.style.boxSizing = 'border-box'; // Use border-box to ensure border is included in dimensions
-                                            wrapper.style.border = `${outlineWidth}px ${outlineStyle} ${outlineColor}`;
-                                            wrapper.style.background = 'transparent';
-                                            wrapper.style.zIndex = sticker.style.zIndex;
+                                            // FIXED: Instead of creating a wrapper div, directly apply border to the sticker
+                                            // This ensures the outline stays with the image when transformations are applied
+                                            sticker.style.border = `${outlineWidth}px ${outlineStyle} ${outlineColor}`;
+                                            sticker.style.outline = 'none';
+                                            sticker.style.boxSizing = 'border-box';
                                             
-                                            // Clone the sticker and append to wrapper
-                                            const stickerClone = sticker.cloneNode(true);
-                                            stickerClone.style.position = 'relative';
-                                            stickerClone.style.left = '0';
-                                            stickerClone.style.top = '0';
-                                            stickerClone.style.width = '100%';
-                                            stickerClone.style.height = '100%';
-                                            stickerClone.style.border = 'none';
-                                            stickerClone.style.outline = 'none';
-                                            stickerClone.style.zIndex = '1';
-                                            wrapper.appendChild(stickerClone);
-                                            
-                                            // Replace the original sticker with the wrapper
-                                            sticker.parentNode.insertBefore(wrapper, sticker);
-                                            sticker.parentNode.removeChild(sticker);
+                                            // Remove selection styling for clean export
+                                            sticker.classList.remove('selected-sticker');
                                         }
                                         else {
                                             // Remove selection styling during export
