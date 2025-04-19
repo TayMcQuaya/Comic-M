@@ -138,6 +138,55 @@ export class ImageLibrary {
 
             const currentFolderId = this.comicCreator.currentFolderId;
             const folderStructure = this.comicCreator.folderStructure;
+            
+            // Add folder breadcrumb navigation
+            const breadcrumbNav = document.createElement('div');
+            breadcrumbNav.className = 'folder-breadcrumb';
+            
+            // Build the breadcrumb path by traversing up from current folder to root
+            const breadcrumbPath = [];
+            let folderInfo = folderStructure[currentFolderId];
+            
+            // Add current folder first
+            if (folderInfo) {
+                breadcrumbPath.unshift({
+                    id: currentFolderId,
+                    name: folderInfo.name || 'Current Folder'
+                });
+                
+                // Then traverse up to get all ancestors
+                let parentId = folderInfo.parent;
+                while (parentId && folderStructure[parentId]) {
+                    const parent = folderStructure[parentId];
+                    breadcrumbPath.unshift({
+                        id: parentId,
+                        name: parent.name || (parentId === 'root' ? 'Root' : 'Folder')
+                    });
+                    parentId = parent.parent;
+                }
+            }
+            
+            // Create the breadcrumb HTML
+            breadcrumbNav.innerHTML = `
+                <div class="breadcrumb-path">
+                    ${breadcrumbPath.map((folder, index) => `
+                        <span class="breadcrumb-item" data-folder-id="${folder.id}">
+                            ${index === 0 ? '' : ' > '}
+                            ${folder.name}
+                        </span>
+                    `).join('')}
+                </div>
+            `;
+            
+            // Add click listeners to breadcrumb items
+            breadcrumbNav.querySelectorAll('.breadcrumb-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const folderId = item.dataset.folderId;
+                    this.comicCreator.folderSystem.navigateToFolder(folderId);
+                });
+            });
+            
+            grid.appendChild(breadcrumbNav);
 
             // Add back button if not in root folder
             if (currentFolderId !== 'root') {
@@ -163,6 +212,61 @@ export class ImageLibrary {
                 // Call FolderSystem method via comicCreator reference
                 createFolderBtn.addEventListener('click', () => this.comicCreator.folderSystem.createFolder());
                 grid.appendChild(createFolderBtn);
+            }
+
+            // Display root folders quick access if not in root folder
+            if (currentFolderId !== 'root') {
+                const rootFoldersAccess = document.createElement('div');
+                rootFoldersAccess.className = 'root-folders-access';
+                
+                // Get all root-level folders
+                const rootFolder = folderStructure['root'];
+                if (rootFolder && rootFolder.items) {
+                    // Filter out only folder items
+                    const rootFolders = rootFolder.items
+                        .filter(id => String(id).startsWith('folder_'))
+                        .map(id => ({
+                            id: id,
+                            folder: folderStructure[id]
+                        }))
+                        .filter(item => item.folder); // Ensure folder exists
+                    
+                    if (rootFolders.length > 0) {
+                        rootFoldersAccess.innerHTML = `
+                            <div class="root-folders-header">
+                                <i class="fas fa-sitemap"></i>
+                                <span>Root Folders (Drag here to move)</span>
+                            </div>
+                            <div class="root-folders-grid"></div>
+                        `;
+                        
+                        const rootFoldersGrid = rootFoldersAccess.querySelector('.root-folders-grid');
+                        
+                        // Add folder containers for each root folder
+                        rootFolders.forEach(item => {
+                            const container = document.createElement('div');
+                            container.className = 'folder-container root-quick-access';
+                            container.dataset.folderId = item.id;
+                            
+                            container.innerHTML = `
+                                <i class="fas fa-folder"></i>
+                                <div class="folder-name">${item.folder.name}</div>
+                            `;
+                            
+                            // Setup click to navigate to that folder
+                            container.addEventListener('click', () => {
+                                this.comicCreator.folderSystem.navigateToFolder(item.id);
+                            });
+                            
+                            // Setup drag and drop functionality
+                            this.comicCreator.dragAndDropManager.setupFolderDragAndDrop(container);
+                            
+                            rootFoldersGrid.appendChild(container);
+                        });
+                        
+                        grid.appendChild(rootFoldersAccess);
+                    }
+                }
             }
 
             // Get current folder's items
@@ -197,6 +301,7 @@ export class ImageLibrary {
                         container.innerHTML = `
                             <i class="fas fa-folder"></i>
                             <div class="folder-name" contenteditable="true">${folder.name}</div>
+                            <button class="delete-btn" data-folder-id="${itemIdStr}">×</button>
                         `;
 
                         // Setup folder name editing
@@ -217,6 +322,16 @@ export class ImageLibrary {
                             // Call FolderSystem method via comicCreator reference
                             this.comicCreator.folderSystem.navigateToFolder(itemIdStr);
                         });
+                        
+                        // Setup delete button if it exists
+                        const deleteBtn = container.querySelector('.delete-btn');
+                        if (deleteBtn) {
+                            deleteBtn.addEventListener('click', (e) => {
+                                e.stopPropagation(); // Prevent selection when deleting
+                                // Call deleteFolder method on the FolderSystem instance
+                                this.comicCreator.folderSystem.deleteFolder(itemIdStr);
+                            });
+                        }
                         
                         // Add selection click handler (similar to image selection)
                         // TODO: Implement setupFolderSelection if needed, or integrate with setupAssetSelection

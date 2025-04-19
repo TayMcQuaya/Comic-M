@@ -122,4 +122,59 @@ export class FolderSystem {
             this.comicCreator.imageLibrary.updateThumbnails(); // Call updated method
         }
     }
+    
+    // Deletes the specified folder if it is empty.
+    deleteFolder(folderId) {
+        // 1. Safety Check: Cannot delete the root folder
+        if (folderId === 'root') {
+            console.error("Cannot delete the root folder.");
+            return;
+        }
+
+        // 2. Find the folder to delete
+        const folderToDelete = this.comicCreator.folderStructure[folderId];
+        if (!folderToDelete) {
+            console.error(`Folder with ID ${folderId} not found.`);
+            return;
+        }
+
+        // 3. Check if the folder is empty
+        if (folderToDelete.items && folderToDelete.items.length > 0) {
+            console.warn(`Folder "${folderToDelete.name}" is not empty. Cannot delete.`);
+            alert(`Folder "${folderToDelete.name}" must be empty before it can be deleted.`);
+            return;
+        }
+
+        // 4. Find the parent folder
+        const parentId = folderToDelete.parent;
+        const parentFolder = this.comicCreator.folderStructure[parentId];
+        if (!parentFolder || !parentFolder.items) {
+            console.error(`Parent folder (ID: ${parentId}) not found or invalid for folder ${folderId}.`);
+            // This case might indicate data corruption, but attempt cleanup anyway.
+            delete this.comicCreator.folderStructure[folderId]; // Remove the orphaned folder
+            this.comicCreator.imageLibrary.updateThumbnails();
+            return;
+        }
+
+        // 5. Remove folderId from parent's items array
+        const indexInParent = parentFolder.items.indexOf(folderId);
+        if (indexInParent > -1) {
+            parentFolder.items.splice(indexInParent, 1);
+        } else {
+            console.warn(`Folder ID ${folderId} not found in parent's (${parentId}) items list.`);
+            // Proceed with deletion anyway
+        }
+
+        // 6. Delete the folder entry itself
+        delete this.comicCreator.folderStructure[folderId];
+        console.log(`Deleted empty folder "${folderToDelete.name}" (ID: ${folderId})`);
+
+        // 7. Update UI
+        // Important: If the user is currently viewing the deleted folder, navigate back first.
+        if (this.comicCreator.currentFolderId === folderId) {
+            this.navigateBack(); // Navigate out before updating thumbnails
+        } else {
+            this.comicCreator.imageLibrary.updateThumbnails(); // Otherwise, just update
+        }
+    }
 } 

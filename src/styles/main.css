@@ -4200,402 +4200,152 @@ input[type="color"] {
 /* Folder System Styles */
 .folder-container {
     position: relative;
-    width: 100%;
-    background: var(--card-bg);
-    border-radius: 6px;
-    padding: 1rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
+    padding: 1rem;
+    background: var(--card-bg);
     border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 
 .folder-container:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: scale(1.02);
     border-color: var(--accent-color);
+    box-shadow: 4px 4px 0 var(--shadow-color);
 }
 
 .folder-container i {
-    font-size: 2rem;
-    color: var(--accent-color);
-}
-
-.folder-name {
-    flex: 1;
-    font-size: 1rem;
-    color: var(--text-color);
-    padding: 0.25rem;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-}
-
-.folder-name:focus {
-    background-color: var(--input-bg);
-    outline: none;
-    box-shadow: 0 0 0 2px var(--accent-color);
-}
-
-.back-to-parent-folder {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--card-bg);
-    border: 2px solid var(--border-color);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.back-to-parent-folder:hover {
-    background: var(--hover-color);
-    transform: translateX(-2px);
-}
-
-.back-to-parent-folder i {
-    font-size: 1.2rem;
-    color: var(--accent-color);
-}
-
-.create-folder-btn {
-    width: 100%;
-    padding: 0.75rem;
-    background: var(--card-bg);
-    border: 2px dashed var(--border-color);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    cursor: pointer;
-    margin-bottom: 0.5rem;
-    transition: all 0.3s ease;
-}
-
-.create-folder-btn:hover {
-    background: var(--hover-color);
-    border-color: var(--accent-color);
-}
-
-.create-folder-btn i {
-    font-size: 1.2rem;
-    color: var(--accent-color);
-}
-
-.folder-container.dragging {
-    opacity: 0.8;
-    transform: scale(0.95);
-}
-
-.folder-container.drag-over {
-    border-style: dashed;
-    background-color: var(--hover-color);
-}
-
-/* Control Group Styles */
-.control-group {
-    background: var(--input-bg);
-    padding: 0.3rem;
-    border-radius: 6px;
-    margin-bottom: 0.2rem;
-    border: 2px solid var(--border-color);
-}
-
-.control-group h4 {
-    margin-bottom: 0.2rem;
-    color: var(--text-color);
-    font-size: 0.85rem;
-}
-
-/* Flip Button Styles */
-.flip-horizontal-btn {
-    transition: all 0.2s ease;
-}
-
-.flip-horizontal-btn.active {
-    background: var(--accent-color) !important;
-    color: var(--text-color-light) !important;
-    border-color: var(--accent-color) !important;
-}
-
-.flip-horizontal-btn:hover {
-    background: var(--hover-color);
-    border-color: var(--hover-color);
-}
-
-.custom-layout-upload {
-    width: 90%;
-    max-width: 1400px;
-    margin: 0 auto 2rem auto;
-    text-align: center;
-    padding: 1rem;
-    background: var(--card-bg);
-    border-radius: 10px;
-    border: 2px solid var(--border-color);
-}
-
-.custom-layout-upload label {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    cursor: pointer;
-    font-size: 1rem;
-}
-
-/* Position Controls */
-.canvas-sticker-image.selected-sticker {
-    box-shadow: 0 0 0 2px var(--accent-color);
-    z-index: 100 !important;
-}
-
-/* Sticker with outline */
-.canvas-sticker-image[data-outline-enabled="true"] {
-    outline-offset: -2px; /* No offset for better visibility */
-}
-
-.canvas-sticker-image.selected-sticker[data-outline-enabled="true"] {
-    /* Ensure outline is visible even when selected */
-    outline-offset: 0px;
-}
-
-/* Rotation and transform controls */
-.rotation-group {
-    margin-bottom: 1rem;
-    width: 100%;
-}
-
-.rotation-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-.rotation-control {
-    width: 100%;
-    height: 8px;
-    -webkit-appearance: none;
-    appearance: none;
-    background: var(--border-color);
-    outline: none;
-    border-radius: 4px;
+    font-size: 3rem;
+    color: var(--secondary-color);
     margin-bottom: 0.5rem;
 }
 
-.rotation-control::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.rotation-control::-moz-range-thumb {
-    width: 18px;
-    height: 18px;
+.folder-container .delete-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(255, 68, 68, 0.9);
     border: none;
     border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.rotation-value {
-    display: inline-block;
-    min-width: 40px;
-    padding: 0 5px;
-    text-align: right;
-    font-weight: bold;
-    color: var(--text-color);
-}
-
-.reset-rotation-btn {
-    margin-top: 0.5rem;
-    width: 100%;
-    background: var(--background-color);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
+    width: 30px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    transition: all 0.2s ease;
-}
-
-.reset-rotation-btn:hover {
-    background: var(--hover-color);
-}
-
-/* Outline controls */
-.outline-group {
-    margin-bottom: 1rem;
-    padding: 10px;
-    border-radius: 5px;
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.outline-toggle {
-    margin-right: 5px;
-}
-
-.outline-controls input[type="number"] {
-    background: var(--input-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 4px 6px;
-}
-
-.outline-controls input[type="color"] {
-    -webkit-appearance: none;
-    border: none;
-    width: 32px;
-    height: 32px;
     cursor: pointer;
-    background: none;
-    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: #FFFF00;
+    z-index: 5;
 }
 
-.outline-controls input[type="color"]::-webkit-color-swatch-wrapper {
-    padding: 0;
+.folder-container:hover .delete-btn {
+    opacity: 1;
 }
 
-.outline-controls input[type="color"]::-webkit-color-swatch {
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-
-.outline-controls select {
-    background: var(--input-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 4px 6px;
-    width: 100%;
-    cursor: pointer;
-}
-
-.transform-group {
-    margin-bottom: 1rem;
-}
-
-.color-control {
-}
-
-/* Sticker Position Grid Styles */
-.position-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-gap: 5px;
-    margin: 10px 0;
-    background-color: var(--card-background);
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-}
-
-.position-btn {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    background-color: var(--background-color);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    position: relative;
-    transition: all 0.2s ease;
-}
-
-.position-btn:hover {
-    background-color: var(--hover-background);
+.folder-container .delete-btn:hover {
+    background: rgba(255, 0, 0, 1);
     transform: scale(1.1);
 }
 
-.position-btn:active {
-    background-color: var(--active-background);
-    transform: scale(0.95);
-}
-
-.position-btn .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: var(--primary-color);
-    position: absolute;
-    box-shadow: 0 0 2px rgba(0,0,0,0.3);
-}
-
-/* Position Grid Title */
-.position-group label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 5px;
-}
-
-/* Dot Positions */
-.position-btn .dot.top-left { top: 2px; left: 2px; }
-.position-btn .dot.top-center { top: 2px; left: 50%; transform: translateX(-50%); }
-.position-btn .dot.top-right { top: 2px; right: 2px; }
-.position-btn .dot.middle-left { top: 50%; left: 2px; transform: translateY(-50%); }
-.position-btn .dot.middle-center { top: 50%; left: 50%; transform: translate(-50%, -50%); }
-.position-btn .dot.middle-right { top: 50%; right: 2px; transform: translateY(-50%); }
-.position-btn .dot.bottom-left { bottom: 2px; left: 2px; }
-.position-btn .dot.bottom-center { bottom: 2px; left: 50%; transform: translateX(-50%); }
-.position-btn .dot.bottom-right { bottom: 2px; right: 2px; }
-
-/* Sticker Position Grid Styles */
-.position-control-container {
-    margin: 10px 0;
-}
-
-.position-description {
-    margin-bottom: 8px;
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    line-height: 1.4;
-}
-
-.position-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-gap: 5px;
-    background-color: var(--card-background);
-    padding: 10px;
+/* Folder Breadcrumb Navigation */
+.folder-breadcrumb {
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    background-color: var(--card-bg);
     border-radius: 6px;
     border: 1px solid var(--border-color);
 }
 
-#upload-page .primary-btn {
-    margin: 0 0.5rem;
+.breadcrumb-path {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
 }
 
-#upload-page .secondary-btn {
-    margin: 0 0.5rem;
-    background-color: #6c757d;
-    color: white;
-    padding: 0.7rem 1.2rem;
-    border: none;
-    border-radius: 4px;
+.breadcrumb-item {
+    display: inline-block;
+    color: var(--text-color);
     cursor: pointer;
-    font-size: 0.9rem;
-    transition: background-color 0.2s ease;
+    padding: 2px 5px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
 }
 
-#upload-page .secondary-btn:hover {
-    background-color: #5a6268;
+.breadcrumb-item:hover {
+    background-color: var(--hover-color);
+    color: var(--accent-color);
+}
+
+.breadcrumb-item:first-child {
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+/* Root Folders Quick Access */
+.root-folders-access {
+    width: 100%;
+    margin-bottom: 15px;
+    background-color: rgba(0, 0, 0, 0.15);
+    border-radius: 6px;
+    border: 1px dashed var(--accent-color);
+    padding: 8px;
+}
+
+.root-folders-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--accent-color);
+    font-weight: bold;
+}
+
+.root-folders-header i {
+    font-size: 1.1rem;
+}
+
+.root-folders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    max-height: 140px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.folder-container.root-quick-access {
+    padding: 8px 5px;
+    min-height: auto;
+    flex-direction: column;
+    justify-content: center;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.folder-container.root-quick-access:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+}
+
+.folder-container.root-quick-access i {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+}
+
+.folder-container.root-quick-access .folder-name {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
 }
