@@ -509,6 +509,9 @@ body {
     margin-bottom: 0.5rem;
     border-bottom: 3px solid var(--border-color);
     box-shadow: 0 4px 0 var(--shadow-color);
+    position: sticky; /* Make header stick to top */
+    top: 0;
+    z-index: 100; /* Ensure it appears above other content */
 }
 
 .editor-tools {
@@ -523,10 +526,10 @@ body {
     padding: 0.5rem;
     height: calc(100vh - 80px);
     align-items: start;
-    overflow: hidden;
     min-height: 900px;
     position: relative;
     padding-bottom: 0.5rem;
+    overflow-y: auto; /* Allow scrolling in the container */
 }
 
 .editor-sidebar {
@@ -557,12 +560,13 @@ body {
     padding: 2rem;
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
     display: flex;
     justify-content: center;
     align-items: flex-start;
     height: 100%;
     padding-top: 0;
+    overflow-y: auto; /* Allow scrolling when content overflows */
+    min-height: 0; /* Fix for Grid layout to allow proper overflow scrolling */
 }
 
 #comic-canvas {
@@ -1729,9 +1733,11 @@ label {
     user-select: none;
     transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
     overflow: visible;
-    transform-origin: center center; /* ADD THIS LINE */
+    transform-origin: center center;
     --bubble-opacity: 1;
     --bubble-background-color: white;
+    max-height: 80vh; /* Prevent bubbles from becoming too tall */
+    max-width: 80vw; /* Prevent bubbles from becoming too wide */
 }
 
 .text-bubble:hover {
@@ -1769,6 +1775,21 @@ label {
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     padding: 2.5px 2px 5px 2px; /* Reduced padding - 25% less on top/sides, kept bottom */
+    overflow-y: auto; /* Add scrollbar when content exceeds height */
+    max-height: 100%; /* Ensure content doesn't exceed container height */
+    word-wrap: break-word; /* Ensure long words break properly */
+    word-break: break-word; /* Additional word breaking for better text containment */
+    
+    /* Hide scrollbars while maintaining functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide WebKit scrollbars */
+.text-content::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 /* Specific padding for thought bubbles */
