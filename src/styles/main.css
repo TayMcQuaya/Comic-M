@@ -221,13 +221,16 @@ body {
 }
 
 .thumbnail-container .image-name {
-    padding: 0.5rem;
-    font-size: 0.9rem;
     text-align: center;
-    border-top: 1px solid var(--border-color);
-    white-space: nowrap;
+    font-size: 11px;
+    color: #eee;
+    margin-top: 4px;
+    word-break: break-all;
     overflow: hidden;
     text-overflow: ellipsis;
+    width: 100%;
+    white-space: nowrap;
+    padding: 0 2px;
 }
 
 .thumbnail-container .delete-btn {
