@@ -266,16 +266,23 @@ class ComicCreator {
         canvas.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'copy';
+            
+            // Find the panel under the cursor (if any)
             const panel = e.target.closest('.comic-panel');
-            if (panel) {
+            if (panel && this.currentSidebarMode === 'panels') {
                 panel.classList.add('drop-target');
+                // Add data attribute to identify panel mode for custom drop message
+                panel.setAttribute('data-panel-mode', 'true');
             }
         });
 
         canvas.addEventListener('dragleave', (e) => {
+            // Find the panel that was being dragged over (if any)
             const panel = e.target.closest('.comic-panel');
             if (panel) {
                 panel.classList.remove('drop-target');
+                // Remove the data attribute when leaving
+                panel.removeAttribute('data-panel-mode');
             }
         });
 
@@ -341,6 +348,15 @@ class ComicCreator {
                 default:
                     console.warn('Unknown sidebar mode:', this.currentSidebarMode);
             }
+
+            // Clear any lingering drop-target classes
+            document.querySelectorAll('.drop-target').forEach(el => {
+                el.classList.remove('drop-target');
+                // Remove any panel mode data attributes
+                if (el.hasAttribute('data-panel-mode')) {
+                    el.removeAttribute('data-panel-mode');
+                }
+            });
         });
 
         canvas.addEventListener('click', (e) => {

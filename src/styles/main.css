@@ -869,7 +869,8 @@ img[draggable="false"] {
 
 .editor-sidebar .thumbnail-container.dragging {
     transform: scale(0.95);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: grabbing;
 }
 
 .editor-sidebar .thumbnail-container img {
@@ -1000,24 +1001,186 @@ input:focus, select:focus, textarea:focus {
 /* Drag and Drop Styles */
 .dragging {
     transform: scale(0.95);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+    cursor: grabbing;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    z-index: 100;
+    position: relative;
 }
 
 .drop-target {
     border: 2px dashed var(--primary-color) !important;
     background: rgba(74, 144, 226, 0.1) !important;
+    animation: pulse 1.5s infinite;
+    box-shadow: 0 0 8px rgba(74, 144, 226, 0.3);
+    position: relative;
+}
+
+.drop-target::before {
+    content: "Drop Here";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(74, 144, 226, 0.9);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    pointer-events: none;
+    opacity: 0.9;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+.comic-panel.drop-target[data-panel-mode="true"]::before {
+    content: "Drop to Replace Image";
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(74, 144, 226, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(74, 144, 226, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(74, 144, 226, 0);
+    }
 }
 
 /* Update editor sidebar thumbnail container dragging state */
 .editor-sidebar .thumbnail-container.dragging {
     transform: scale(0.95);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: grabbing;
 }
 
 /* Ensure images remain fully opaque during drag */
 .dragging img,
 .thumbnail-container.dragging img {
     opacity: 1 !important;
+}
+
+/* Add draggable indicators */
+.thumbnail-container {
+    position: relative;
+    cursor: grab;
+}
+
+.thumbnail-container::after {
+    content: "\f0b2";
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 3px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.thumbnail-container:hover::after {
+    opacity: 1;
+}
+
+/* Style for upload area when dragging over */
+.editor-sidebar .upload-area.drop-target {
+    border-color: var(--primary-color);
+    background-color: rgba(74, 144, 226, 0.1);
+    transform: scale(1.02);
+    animation: pulse 1.5s infinite;
+}
+
+.editor-sidebar .upload-area.drop-target::before {
+    content: "Release to Upload";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(74, 144, 226, 0.9);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 10;
+}
+
+/* Reorder list drag styles */
+.reorder-list li {
+    cursor: grab;
+}
+
+.reorder-list li.dragging {
+    background-color: rgba(74, 144, 226, 0.1);
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: grabbing;
+}
+
+/* Style for the drop target area */
+.reorder-list li.drag-over {
+    padding-top: 18px;
+    border-top: 2px solid #007bff;
+    position: relative;
+}
+
+.reorder-list li.drag-over::before {
+    content: "Drop Here";
+    position: absolute;
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(74, 144, 226, 0.9);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    pointer-events: none;
+}
+
+/* Global drag instruction overlay */
+.drag-instruction-overlay {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    z-index: 9999;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.dragging ~ .drag-instruction-overlay,
+body.dragging-active .drag-instruction-overlay {
+    display: block;
+    animation: fadeInUp 0.3s forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate(-50%, 10px);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0);
+    }
 }
 
 /* Responsive Design */

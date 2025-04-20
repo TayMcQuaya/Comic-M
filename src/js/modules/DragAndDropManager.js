@@ -4,6 +4,36 @@ export class DragAndDropManager {
         // This allows the DragAndDropManager to access properties (like pages, uploadedImages)
         // and methods (like showNotification, selectPanel) from the main application.
         this.comicCreator = comicCreator;
+        
+        // Create references to methods that will be used as event handlers
+        this.handleDragStart = this.handleDragStart.bind(this);
+        this.handleDragEnd = this.handleDragEnd.bind(this);
+        
+        // Initialize global drag message templates
+        this.initDragMessages();
+        
+        // Add global dragend listener to ensure cleanup
+        document.addEventListener('dragend', this.handleDragEnd);
+        document.addEventListener('drop', this.handleDragEnd);
+    }
+
+    // Initialize the drag instruction messages
+    initDragMessages() {
+        this.dragMessages = {
+            panels: "Drag onto a panel to add an image",
+            backgrounds: "Drag onto the canvas to set as background",
+            stickers: "Drag onto the canvas to add as a sticker",
+            folder: "Drag onto a folder to move item",
+            default: "Drag item to a valid drop target"
+        };
+    }
+    
+    // Update the global drag instruction message based on the current mode
+    updateDragMessage(mode) {
+        const overlay = document.querySelector('.drag-instruction-overlay');
+        if (!overlay) return;
+        
+        overlay.textContent = this.dragMessages[mode] || this.dragMessages.default;
     }
 
     // Methods related to drag and drop will be moved here
@@ -14,6 +44,22 @@ export class DragAndDropManager {
         e.dataTransfer.setData('image/id', image.id.toString());
         e.target.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'copy';
+        
+        // Add dragging class to body
+        document.body.classList.add('dragging-active');
+        
+        // Update drag message based on current sidebar mode
+        this.updateDragMessage(this.comicCreator.currentSidebarMode);
+    }
+    
+    handleDragEnd() {
+        // Remove dragging class from body
+        document.body.classList.remove('dragging-active');
+        
+        // Clear all drop targets
+        document.querySelectorAll('.drop-target').forEach(el => {
+            el.classList.remove('drop-target');
+        });
     }
     
     // --- Image Dragging within a Panel --- 
@@ -110,6 +156,9 @@ export class DragAndDropManager {
             // Use the imageLibrary instance to get selected assets
             const selectedAssets = this.comicCreator.imageLibrary.getSelectedAssets();
             
+            // Add dragging class to body
+            document.body.classList.add('dragging-active');
+            
             // If this is a selected item and we have multiple items selected
             if (selectedAssets.includes(itemId) && selectedAssets.length > 1) {
                 console.log('Starting multi-item drag with', selectedAssets.length, 'items');
@@ -142,12 +191,18 @@ export class DragAndDropManager {
                     const element = document.querySelector(`.thumbnail-container[data-image-id="${id}"]`);
                     if (element) element.classList.add('dragging');
                 });
+                
+                // Update drag message
+                this.updateDragMessage(this.comicCreator.currentSidebarMode);
             } else {
                 // Single item drag
                 console.log('Starting single item drag:', itemId);
                 e.dataTransfer.setData('text/plain', itemId);
                 e.dataTransfer.setData('type', 'image');
                 container.classList.add('dragging'); // Add dragging class only to the source element for single drag
+                
+                // Update drag message
+                this.updateDragMessage(this.comicCreator.currentSidebarMode);
             }
         });
         
@@ -156,6 +211,9 @@ export class DragAndDropManager {
             document.querySelectorAll('.dragging').forEach(el => {
                 el.classList.remove('dragging');
             });
+            
+            // Remove dragging class from body
+            document.body.classList.remove('dragging-active');
         });
     }
     
@@ -168,21 +226,30 @@ export class DragAndDropManager {
             e.dataTransfer.setData('text/plain', folderId);
             e.dataTransfer.setData('type', 'folder');
             container.classList.add('dragging');
+            
+            // Add dragging class to body
+            document.body.classList.add('dragging-active');
+            
+            // Update drag message
+            this.updateDragMessage('folder');
         });
 
         container.addEventListener('dragend', () => {
             container.classList.remove('dragging');
+            
+            // Remove dragging class from body
+            document.body.classList.remove('dragging-active');
         });
         
         // Make folder droppable
         container.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
-            container.classList.add('drag-over');
+            container.classList.add('drop-target');
         });
         
         container.addEventListener('dragleave', () => {
-            container.classList.remove('drag-over');
+            container.classList.remove('drop-target');
         });
         
         container.addEventListener('drop', (e) => {
