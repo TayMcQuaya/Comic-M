@@ -2,13 +2,31 @@ import { globalRgbToHex, getTextWithLineBreaks } from './Utils.js'; // Import Ut
 
 export class TextManager {
     constructor(comicCreator) {
-        // Store the reference to the main ComicCreator instance
-        // This allows access to other managers (like DragAndDropManager), 
-        // shared state (like pages), and UI update methods.
+        // Store a reference to the main ComicCreator instance
+        // This allows the TextManager to access properties (like pages, uploadedImages)
+        // and methods (like showNotification, selectPanel) from the main application.
         this.comicCreator = comicCreator;
 
         // Track the currently selected text box element within the editor
         this.currentTextBox = null;
+        
+        // Default font settings
+        this.defaultTextSettings = {
+            fontFamily: 'Arial',
+            fontSize: '16px',
+            fontWeight: 'normal',
+            fontStyle: 'normal',
+            textDecoration: 'none',
+            textAlign: 'center',
+            color: '#000000',
+            bubbleType: 'speech-bubble'
+        };
+        
+        // Array to store custom text styles
+        this.customTextStyles = [];
+        
+        // Load saved settings
+        this.loadTextSettings();
 
         console.log("TextManager initialized");
     }
@@ -20,9 +38,9 @@ export class TextManager {
         // Create text container with default speech bubble
         const textId = `text_${Date.now()}`;
         const textContainer = document.createElement('div');
-        textContainer.className = 'text-bubble speech-bubble';
+        textContainer.className = `text-bubble ${this.defaultTextSettings.bubbleType}`;
         textContainer.id = textId;
-        textContainer.dataset.bubbleType = 'speech-bubble';
+        textContainer.dataset.bubbleType = this.defaultTextSettings.bubbleType;
         textContainer.style.position = 'absolute';
         // Use pixels, position near panel center initially
         const panelRect = panel.getBoundingClientRect(); 
@@ -44,7 +62,15 @@ export class TextManager {
         textElement.innerHTML = 'Click to edit text';
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
-        textElement.style.color = '#000000'; // Set default text color to black
+        
+        // Apply default text settings
+        textElement.style.fontFamily = this.defaultTextSettings.fontFamily;
+        textElement.style.fontSize = this.defaultTextSettings.fontSize;
+        textElement.style.fontWeight = this.defaultTextSettings.fontWeight;
+        textElement.style.fontStyle = this.defaultTextSettings.fontStyle;
+        textElement.style.textDecoration = this.defaultTextSettings.textDecoration;
+        textElement.style.textAlign = this.defaultTextSettings.textAlign;
+        textElement.style.color = this.defaultTextSettings.color;
         textElement.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
         
         // Add drag handle for better usability
@@ -161,9 +187,9 @@ export class TextManager {
         // Create text container
         const textId = `canvas_text_${Date.now()}`;
         const textContainer = document.createElement('div');
-        textContainer.className = 'text-bubble speech-bubble'; // Default style
+        textContainer.className = `text-bubble ${this.defaultTextSettings.bubbleType}`;
         textContainer.id = textId;
-        textContainer.dataset.bubbleType = 'speech-bubble';
+        textContainer.dataset.bubbleType = this.defaultTextSettings.bubbleType;
         textContainer.style.position = 'absolute';
         // Center position based on canvas, not panel
         const canvasRect = canvas.getBoundingClientRect();
@@ -184,7 +210,15 @@ export class TextManager {
         textElement.innerHTML = 'Click to edit text';
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
-        textElement.style.color = '#000000';
+        
+        // Apply default text settings
+        textElement.style.fontFamily = this.defaultTextSettings.fontFamily;
+        textElement.style.fontSize = this.defaultTextSettings.fontSize;
+        textElement.style.fontWeight = this.defaultTextSettings.fontWeight;
+        textElement.style.fontStyle = this.defaultTextSettings.fontStyle;
+        textElement.style.textDecoration = this.defaultTextSettings.textDecoration;
+        textElement.style.textAlign = this.defaultTextSettings.textAlign;
+        textElement.style.color = this.defaultTextSettings.color;
         textElement.style.padding = '2.5px 2px 5px 2px'; // Reduced top padding by 50%
 
         // Add control handles (same as addTextToPanel)
@@ -645,14 +679,31 @@ export class TextManager {
         
         const textElement = textBox.querySelector('.text-content');
         
-        // (Keep the innerHTML generation from main.js - too long to paste here)
-        popup.innerHTML = `...`; // Placeholder for brevity
-         popup.innerHTML = `
+        // Build the innerHTML for the popup
+        popup.innerHTML = `
             <div class="popup-header">
                 <h3>Text Formatting</h3>
                 <button class="close-popup"><i class="fas fa-times"></i></button>
             </div>
             <div class="popup-content">
+                <!-- Custom Text Styles Section -->
+                <div class="popup-section">
+                    <h4>Custom Styles</h4>
+                    <div class="custom-styles-container">
+                        <div class="custom-styles-grid">
+                            ${this.generateCustomStylesHTML()}
+                        </div>
+                        <div class="custom-styles-actions">
+                            <button class="save-as-style-btn primary-btn">
+                                <i class="fas fa-save"></i> Save Current Style
+                            </button>
+                            <button class="set-as-default-btn primary-btn">
+                                <i class="fas fa-thumbtack"></i> Set as Default
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div class="popup-section">
                     <h4>Bubble Style</h4>
                     <div class="bubble-toggle">
@@ -924,6 +975,7 @@ export class TextManager {
         
         // Set up event listeners for the popup (calls internal method)
         this.setupPopupEventListeners(popup, textBox); 
+        this.setupCustomStylesListeners(popup, textBox);
     }
     
     setupPopupEventListeners(popup, textBox) {
@@ -1952,6 +2004,403 @@ export class TextManager {
             } else {
                 textBox.style.transform = '';
             }
+        }
+    }
+
+    // New methods for handling default font settings and custom text styles
+
+    /**
+     * Sets the current text element's style as the default for new text elements
+     * @param {HTMLElement} textBox - The text bubble element to use as a template
+     */
+    setDefaultTextSettings(textBox) {
+        const textElement = textBox.querySelector('.text-content');
+        if (!textElement) return;
+        
+        // Update default settings from the current text element
+        this.defaultTextSettings = {
+            fontFamily: textElement.style.fontFamily || 'Arial',
+            fontSize: textElement.style.fontSize || '16px',
+            fontWeight: textElement.style.fontWeight || 'normal',
+            fontStyle: textElement.style.fontStyle || 'normal',
+            textDecoration: textElement.style.textDecoration || 'none',
+            textAlign: textElement.style.textAlign || 'center',
+            color: textElement.style.color || '#000000',
+            bubbleType: textBox.dataset.bubbleType || 'speech-bubble'
+        };
+        
+        // Save the default settings in the application state
+        this.saveTextSettings();
+        
+        // Show notification to the user
+        this.comicCreator.uiManager.showNotification('Default text style set', 'success');
+    }
+
+    /**
+     * Saves the current text settings to local storage
+     */
+    saveTextSettings() {
+        try {
+            localStorage.setItem('comicCreator_defaultTextSettings', JSON.stringify(this.defaultTextSettings));
+            localStorage.setItem('comicCreator_customTextStyles', JSON.stringify(this.customTextStyles));
+        } catch (e) {
+            console.error('Failed to save text settings to localStorage:', e);
+        }
+    }
+
+    /**
+     * Loads saved text settings from local storage
+     */
+    loadTextSettings() {
+        try {
+            const savedDefaultSettings = localStorage.getItem('comicCreator_defaultTextSettings');
+            const savedCustomStyles = localStorage.getItem('comicCreator_customTextStyles');
+            
+            if (savedDefaultSettings) {
+                this.defaultTextSettings = JSON.parse(savedDefaultSettings);
+            }
+            
+            if (savedCustomStyles) {
+                this.customTextStyles = JSON.parse(savedCustomStyles);
+            }
+        } catch (e) {
+            console.error('Failed to load text settings from localStorage:', e);
+        }
+    }
+
+    /**
+     * Creates a new custom text style from the current text element
+     * @param {HTMLElement} textBox - The text bubble element to create a style from
+     * @param {string} styleName - The name for the new custom style
+     */
+    createCustomTextStyle(textBox, styleName) {
+        const textElement = textBox.querySelector('.text-content');
+        if (!textElement) return;
+        
+        // Extract all relevant styles from the text element
+        const bubbleClasses = Array.from(textBox.classList)
+            .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
+                          'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
+                          'no-bubble'].includes(cls));
+        
+        const tailPositionClass = Array.from(textBox.classList)
+            .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
+        
+        // Create the style object
+        const newStyle = {
+            id: `style_${Date.now()}`,
+            name: styleName,
+            bubbleType: textBox.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
+            tailPosition: textBox.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+            style: {
+                fontFamily: textElement.style.fontFamily || 'Arial',
+                fontSize: textElement.style.fontSize || '16px',
+                fontWeight: textElement.style.fontWeight || 'normal',
+                fontStyle: textElement.style.fontStyle || 'normal',
+                textDecoration: textElement.style.textDecoration || 'none',
+                textTransform: textElement.style.textTransform || 'none',
+                textAlign: textElement.style.textAlign || 'center',
+                color: textElement.style.color || '#000000',
+                backgroundColor: textBox.style.backgroundColor || 'white',
+                bubbleBackgroundColor: textBox.style.getPropertyValue('--bubble-background-color') || 'white',
+                bubbleOpacity: textBox.style.getPropertyValue('--bubble-opacity') || '1',
+                hasOutline: textElement.dataset.hasOutline === 'true',
+                outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
+                outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
+                lineHeight: textElement.style.lineHeight || 'normal'
+            }
+        };
+        
+        // Add the new style to the array
+        this.customTextStyles.push(newStyle);
+        
+        // Save the updated styles
+        this.saveTextSettings();
+        
+        // Show notification to the user
+        this.comicCreator.uiManager.showNotification(`Style "${styleName}" created`, 'success');
+        
+        return newStyle;
+    }
+
+    /**
+     * Applies a custom text style to the given text element
+     * @param {HTMLElement} textBox - The text bubble element to apply the style to
+     * @param {string} styleId - The ID of the custom style to apply
+     */
+    applyCustomTextStyle(textBox, styleId) {
+        const style = this.customTextStyles.find(s => s.id === styleId);
+        if (!style) return;
+        
+        const textElement = textBox.querySelector('.text-content');
+        if (!textElement) return;
+        
+        // Remove existing bubble classes
+        textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 
+                               'shout-bubble', 'whisper-bubble', 'jagged-bubble', 'no-bubble');
+        
+        // Remove existing tail classes
+        Array.from(textBox.classList)
+            .filter(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'))
+            .forEach(cls => textBox.classList.remove(cls));
+        
+        // Apply bubble type
+        textBox.classList.add(style.bubbleType);
+        textBox.dataset.bubbleType = style.bubbleType;
+        
+        // Apply tail position if present
+        if (style.tailPosition) {
+            const tailClass = `${style.bubbleType.split('-')[0]}-tail-${style.tailPosition}`;
+            textBox.classList.add(tailClass);
+            textBox.dataset.tailPosition = style.tailPosition;
+        }
+        
+        // Apply text styles
+        textElement.style.fontFamily = style.style.fontFamily;
+        textElement.style.fontSize = style.style.fontSize;
+        textElement.style.fontWeight = style.style.fontWeight;
+        textElement.style.fontStyle = style.style.fontStyle;
+        textElement.style.textDecoration = style.style.textDecoration;
+        textElement.style.textTransform = style.style.textTransform;
+        textElement.style.textAlign = style.style.textAlign;
+        textElement.style.color = style.style.color;
+        textElement.style.lineHeight = style.style.lineHeight;
+        
+        // Apply bubble styles
+        textBox.style.backgroundColor = style.style.backgroundColor;
+        textBox.style.setProperty('--bubble-background-color', style.style.bubbleBackgroundColor);
+        textBox.style.setProperty('--bubble-opacity', style.style.bubbleOpacity);
+        
+        // Apply outline if present
+        if (style.style.hasOutline) {
+            textElement.dataset.hasOutline = 'true';
+            textElement.style.setProperty('--outline-width', style.style.outlineWidth);
+            textElement.style.setProperty('--outline-color', style.style.outlineColor);
+            this.applyTextOutline(textElement, style.style.outlineColor, parseFloat(style.style.outlineWidth));
+        } else {
+            textElement.dataset.hasOutline = 'false';
+            this.removeTextOutline(textElement);
+        }
+        
+        // Save the state after applying the style
+        this.comicCreator.saveCurrentPageState();
+    }
+
+    /**
+     * Deletes a custom text style
+     * @param {string} styleId - The ID of the custom style to delete
+     */
+    deleteCustomTextStyle(styleId) {
+        const styleIndex = this.customTextStyles.findIndex(s => s.id === styleId);
+        if (styleIndex === -1) return;
+        
+        // Remove the style
+        const styleName = this.customTextStyles[styleIndex].name;
+        this.customTextStyles.splice(styleIndex, 1);
+        
+        // Save the updated styles
+        this.saveTextSettings();
+        
+        // Show notification to the user
+        this.comicCreator.uiManager.showNotification(`Style "${styleName}" deleted`, 'success');
+    }
+
+    /**
+     * Generates HTML for the custom styles grid
+     * @returns {string} HTML for custom styles
+     */
+    generateCustomStylesHTML() {
+        if (this.customTextStyles.length === 0) {
+            return `<div class="no-styles-message">No custom styles yet. Create one by clicking "Save Current Style".</div>`;
+        }
+        
+        return this.customTextStyles.map(style => {
+            return `
+                <div class="style-preview" data-style-id="${style.id}">
+                    <div class="style-preview-bubble ${style.bubbleType}">
+                        <div class="style-preview-text" 
+                             style="font-family: ${style.style.fontFamily}; 
+                                    font-size: ${style.style.fontSize}; 
+                                    color: ${style.style.color};">
+                            ${style.name}
+                        </div>
+                    </div>
+                    <button class="delete-style-btn" data-style-id="${style.id}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Sets up event listeners for the custom styles section
+     * @param {HTMLElement} popup - The popup element
+     * @param {HTMLElement} textBox - The text bubble element
+     */
+    setupCustomStylesListeners(popup, textBox) {
+        // Set as default button
+        const setAsDefaultBtn = popup.querySelector('.set-as-default-btn');
+        setAsDefaultBtn.addEventListener('click', () => {
+            this.setDefaultTextSettings(textBox);
+        });
+        
+        // Save as style button
+        const saveAsStyleBtn = popup.querySelector('.save-as-style-btn');
+        saveAsStyleBtn.addEventListener('click', () => {
+            // Prompt for style name
+            const styleName = prompt('Enter a name for this style:', 'My Custom Style');
+            if (styleName) {
+                this.createCustomTextStyle(textBox, styleName);
+                
+                // Update the custom styles grid
+                const stylesGrid = popup.querySelector('.custom-styles-grid');
+                if (stylesGrid) {
+                    stylesGrid.innerHTML = this.generateCustomStylesHTML();
+                    
+                    // Re-attach event listeners for the new elements
+                    this.setupStylePreviewListeners(popup, textBox);
+                }
+            }
+        });
+        
+        // Set up listeners for existing style previews
+        this.setupStylePreviewListeners(popup, textBox);
+    }
+
+    /**
+     * Sets up event listeners for style preview elements
+     * @param {HTMLElement} popup - The popup element
+     * @param {HTMLElement} textBox - The text bubble element
+     */
+    setupStylePreviewListeners(popup, textBox) {
+        // Apply style on click
+        popup.querySelectorAll('.style-preview').forEach(preview => {
+            preview.addEventListener('click', (e) => {
+                // Don't trigger if clicking the delete button
+                if (e.target.closest('.delete-style-btn')) return;
+                
+                const styleId = preview.dataset.styleId;
+                this.applyCustomTextStyle(textBox, styleId);
+                
+                // Update the popup controls to reflect the applied style
+                this.updatePopupControls(popup, textBox);
+            });
+        });
+        
+        // Delete style button
+        popup.querySelectorAll('.delete-style-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering the parent's click event
+                
+                const styleId = btn.dataset.styleId;
+                if (confirm('Are you sure you want to delete this style?')) {
+                    this.deleteCustomTextStyle(styleId);
+                    
+                    // Update the custom styles grid
+                    const stylesGrid = popup.querySelector('.custom-styles-grid');
+                    if (stylesGrid) {
+                        stylesGrid.innerHTML = this.generateCustomStylesHTML();
+                        
+                        // Re-attach event listeners for the new elements
+                        this.setupStylePreviewListeners(popup, textBox);
+                    }
+                }
+            });
+        });
+    }
+
+    /**
+     * Updates the popup controls to reflect the current text element's style
+     * @param {HTMLElement} popup - The popup element
+     * @param {HTMLElement} textBox - The text bubble element
+     */
+    updatePopupControls(popup, textBox) {
+        const textElement = textBox.querySelector('.text-content');
+        if (!textElement) return;
+        
+        // Update font family select
+        const fontSelect = popup.querySelector('#font-family');
+        if (fontSelect && textElement.style.fontFamily) {
+            fontSelect.value = textElement.style.fontFamily;
+        }
+        
+        // Update font size
+        const fontSizeSlider = popup.querySelector('#font-size');
+        const fontSizeValue = popup.querySelector('.font-size-value');
+        if (fontSizeSlider && textElement.style.fontSize) {
+            const fontSize = parseInt(textElement.style.fontSize);
+            fontSizeSlider.value = fontSize;
+            if (fontSizeValue) fontSizeValue.textContent = `${fontSize}px`;
+        }
+        
+        // Update text color
+        const textColorPicker = popup.querySelector('#text-color');
+        const textColorHex = popup.querySelector('.text-color-hex');
+        if (textColorPicker && textElement.style.color) {
+            textColorPicker.value = this.comicCreator.uiManager.rgbToHex(textElement.style.color);
+            if (textColorHex) textColorHex.textContent = textColorPicker.value.toUpperCase();
+        }
+        
+        // Update bubble color
+        const bubbleColorPicker = popup.querySelector('#bubble-color');
+        const bubbleColorHex = popup.querySelector('.bubble-color-hex');
+        if (bubbleColorPicker) {
+            const bubbleColor = this.getBubbleBackgroundColor(textBox);
+            bubbleColorPicker.value = this.comicCreator.uiManager.rgbToHex(bubbleColor);
+            if (bubbleColorHex) bubbleColorHex.textContent = bubbleColorPicker.value.toUpperCase();
+        }
+        
+        // Update style buttons (bold, italic, etc.)
+        if (textElement.style.fontWeight === 'bold') {
+            popup.querySelector('.bold-btn')?.classList.add('active');
+        } else {
+            popup.querySelector('.bold-btn')?.classList.remove('active');
+        }
+        
+        if (textElement.style.fontStyle === 'italic') {
+            popup.querySelector('.italic-btn')?.classList.add('active');
+        } else {
+            popup.querySelector('.italic-btn')?.classList.remove('active');
+        }
+        
+        if (textElement.style.textDecoration === 'underline') {
+            popup.querySelector('.underline-btn')?.classList.add('active');
+        } else {
+            popup.querySelector('.underline-btn')?.classList.remove('active');
+        }
+        
+        if (textElement.style.textTransform === 'uppercase') {
+            popup.querySelector('.all-caps-btn')?.classList.add('active');
+        } else {
+            popup.querySelector('.all-caps-btn')?.classList.remove('active');
+        }
+        
+        // Update alignment buttons
+        popup.querySelectorAll('.align-btn').forEach(btn => btn.classList.remove('active'));
+        switch (textElement.style.textAlign) {
+            case 'left':
+                popup.querySelector('.align-left')?.classList.add('active');
+                break;
+            case 'center':
+                popup.querySelector('.align-center')?.classList.add('active');
+                break;
+            case 'right':
+                popup.querySelector('.align-right')?.classList.add('active');
+                break;
+            default:
+                popup.querySelector('.align-center')?.classList.add('active');
+        }
+        
+        // Update bubble options
+        popup.querySelectorAll('.bubble-option').forEach(option => option.classList.remove('selected'));
+        const bubbleType = textBox.dataset.bubbleType;
+        popup.querySelector(`.bubble-option[data-type="${bubbleType}"]`)?.classList.add('selected');
+        
+        // Update bubble toggle
+        const bubbleToggle = popup.querySelector('#show-bubble');
+        if (bubbleToggle) {
+            bubbleToggle.checked = bubbleType !== 'no-bubble';
         }
     }
 } 
