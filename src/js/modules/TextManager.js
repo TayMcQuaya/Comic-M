@@ -886,7 +886,7 @@ export class TextManager {
                             <label>Text Effects</label>
                             <div class="outline-control">
                                 <input type="checkbox" id="text-outline" ${textElement.style.webkitTextStroke ? 'checked' : ''}>
-                                <input type="number" id="outline-thickness" class="outline-thickness" value="${this.getOutlineThickness(textElement)}" min="1" max="5" step="0.5" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
+                                <input type="number" id="outline-thickness" class="outline-thickness" value="${this.getOutlineThickness(textElement)}" min="1" max="10" step="1" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
                                 <div class="color-picker-container">
                                     <!-- Use imported function directly -->
                                     <input type="color" id="outline-color" value="${globalRgbToHex(this.getOutlineColor(textElement))}" ${!textElement.style.webkitTextStroke ? 'disabled' : ''}>
