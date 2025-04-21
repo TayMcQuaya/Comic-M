@@ -998,20 +998,54 @@ export class TextManager {
         // Bubble toggle
         const bubbleToggle = popup.querySelector('#show-bubble');
         bubbleToggle.addEventListener('change', () => {
-            // ... (logic for bubble toggle) ...
             if (bubbleToggle.checked) {
+                // Show bubble
                 const previousType = textBox.dataset.previousBubbleType || 'speech-bubble';
                 textBox.classList.remove('no-bubble');
                 textBox.classList.add(previousType);
                 textBox.dataset.bubbleType = previousType;
                 popup.querySelector('#bubble-tail-position').disabled = (previousType === 'caption-box');
+                
+                // Restore previous background color if stored
+                const storedBackgroundColor = textBox.dataset.previousBackgroundColor;
+                if (storedBackgroundColor) {
+                    textBox.style.backgroundColor = storedBackgroundColor;
+                    textBox.style.setProperty('--bubble-background-color', storedBackgroundColor);
+                    // Delete the stored value as we've restored it
+                    delete textBox.dataset.previousBackgroundColor;
+                } else {
+                    // Default to white if no previous color
+                    textBox.style.backgroundColor = 'white';
+                    textBox.style.setProperty('--bubble-background-color', 'white');
+                }
             } else {
+                // Hide bubble
+                // Store current background color to restore it later if bubble is toggled back on
+                if (textBox.style.backgroundColor && textBox.style.backgroundColor !== 'transparent') {
+                    textBox.dataset.previousBackgroundColor = textBox.style.backgroundColor;
+                }
+                
                 textBox.dataset.previousBubbleType = textBox.dataset.bubbleType;
-                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble');
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble');
                 textBox.classList.add('no-bubble');
                 textBox.dataset.bubbleType = 'no-bubble';
                 popup.querySelector('#bubble-tail-position').disabled = true;
+                
+                // Clear background color
+                textBox.style.backgroundColor = 'transparent';
+                textBox.style.setProperty('--bubble-background-color', 'transparent');
             }
+            
+            // Show/hide padding section based on bubble visibility
+            const paddingSection = popup.querySelector('.bubble-padding-section');
+            if (paddingSection) {
+                if (bubbleToggle.checked) {
+                    paddingSection.classList.remove('hidden');
+                } else {
+                    paddingSection.classList.add('hidden');
+                }
+            }
+            
             this.comicCreator.saveCurrentPageState(); // Use comicCreator
         });
         
@@ -2121,6 +2155,9 @@ export class TextManager {
         const tailPositionClass = Array.from(textBox.classList)
             .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
         
+        // Check if bubble is visible
+        const isBubbleVisible = textBox.dataset.bubbleType !== 'no-bubble';
+        
         // Create the style object
         const newStyle = {
             id: `style_${Date.now()}`,
@@ -2136,9 +2173,10 @@ export class TextManager {
                 textTransform: textElement.style.textTransform || 'none',
                 textAlign: textElement.style.textAlign || 'center',
                 color: textElement.style.color || '#000000',
-                backgroundColor: textBox.style.backgroundColor || 'white',
-                bubbleBackgroundColor: textBox.style.getPropertyValue('--bubble-background-color') || 'white',
-                bubbleOpacity: textBox.style.getPropertyValue('--bubble-opacity') || '1',
+                // Only save background colors if bubble is visible
+                backgroundColor: isBubbleVisible ? (textBox.style.backgroundColor || 'white') : 'transparent',
+                bubbleBackgroundColor: isBubbleVisible ? (textBox.style.getPropertyValue('--bubble-background-color') || 'white') : 'transparent',
+                bubbleOpacity: isBubbleVisible ? (textBox.style.getPropertyValue('--bubble-opacity') || '1') : '1',
                 hasOutline: textElement.dataset.hasOutline === 'true',
                 outlineColor: textElement.style.getPropertyValue('--outline-color') || '#000000',
                 outlineWidth: textElement.style.getPropertyValue('--outline-width') || '2px',
@@ -2183,8 +2221,11 @@ export class TextManager {
         textBox.classList.add(style.bubbleType);
         textBox.dataset.bubbleType = style.bubbleType;
         
-        // Apply tail position if present
-        if (style.tailPosition) {
+        // Check if bubble is visible
+        const isBubbleVisible = style.bubbleType !== 'no-bubble';
+        
+        // Apply tail position if present and bubble is visible
+        if (style.tailPosition && isBubbleVisible) {
             const tailClass = `${style.bubbleType.split('-')[0]}-tail-${style.tailPosition}`;
             textBox.classList.add(tailClass);
             textBox.dataset.tailPosition = style.tailPosition;
@@ -2201,10 +2242,16 @@ export class TextManager {
         textElement.style.color = style.style.color;
         textElement.style.lineHeight = style.style.lineHeight;
         
-        // Apply bubble styles
-        textBox.style.backgroundColor = style.style.backgroundColor;
-        textBox.style.setProperty('--bubble-background-color', style.style.bubbleBackgroundColor);
-        textBox.style.setProperty('--bubble-opacity', style.style.bubbleOpacity);
+        // Apply bubble styles only if bubble is visible
+        if (isBubbleVisible) {
+            textBox.style.backgroundColor = style.style.backgroundColor;
+            textBox.style.setProperty('--bubble-background-color', style.style.bubbleBackgroundColor);
+            textBox.style.setProperty('--bubble-opacity', style.style.bubbleOpacity);
+        } else {
+            // Clear background styles if bubble is not visible
+            textBox.style.backgroundColor = 'transparent';
+            textBox.style.setProperty('--bubble-background-color', 'transparent');
+        }
         
         // Apply outline if present
         if (style.style.hasOutline) {
@@ -2250,9 +2297,15 @@ export class TextManager {
         }
         
         return this.customTextStyles.map(style => {
+            // Set preview background to transparent for no-bubble styles
+            const isBubbleVisible = style.bubbleType !== 'no-bubble';
+            const backgroundStyle = isBubbleVisible 
+                ? `background-color: ${style.style.backgroundColor || 'white'};` 
+                : `background-color: transparent;`;
+            
             return `
                 <div class="style-preview" data-style-id="${style.id}">
-                    <div class="style-preview-bubble ${style.bubbleType}">
+                    <div class="style-preview-bubble ${style.bubbleType}" style="${backgroundStyle}">
                         <div class="style-preview-text" 
                              style="font-family: ${style.style.fontFamily}; 
                                     font-size: ${style.style.fontSize}; 

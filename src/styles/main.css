@@ -4705,3 +4705,23 @@ input[type="color"] {
 .color-picker-container.hidden {
     display: none;
 }
+
+.style-preview-bubble.no-bubble {
+    background-color: transparent !important;
+    border: 1px dashed #ccc;
+    box-shadow: none;
+}
+
+.style-preview-bubble.no-bubble::before,
+.style-preview-bubble.no-bubble::after {
+    display: none;
+}
+
+.style-preview-text {
+    font-size: 12px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-height: 40px;
+    word-break: break-word;
+}
