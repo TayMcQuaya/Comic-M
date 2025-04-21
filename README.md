@@ -1,253 +1,89 @@
 # Comic Book Maker
 
-A powerful, browser-based comic creation tool that lets you design professional-looking comics using your own images. All processing happens client-side in your browser - no server required!
+A web-based tool for creating digital comic books with a drag-and-drop interface, text bubbles, and export capabilities.
 
 ## Features
 
-- **Rich Panel Layout Library**: Over 35 different panel layouts including single-panel, standard grids (2x1, 1x2, 2x2, 3x1, 1x3, 3x2, 3x3), manga-inspired styles, and numerous creative and dynamic layouts like spirals, diagonals, insets, and cinematic arrangements.
-- **Image Management**: Upload and organize your own images with drag-and-drop functionality. Create folders to organize assets, and reorder images in the library.
-- **Multi-Selection Support**: Select multiple assets using Shift+Click or Ctrl/Cmd+Click for batch operations like moving to folders.
-- **Folder System**: Create nested folders to organize your assets, with drag-and-drop management and folder navigation.
-- **Advanced Image Controls**: Adjust images within panels with zoom and pan functionality. Fine-tune zoom using direct numerical input.
-- **Stickers**: Add sticker images to panels. Stickers stay within panel boundaries and automatically layer behind text.
-- **Backgrounds**: Add custom background images to the entire canvas or apply predefined style patterns (vintage paper, halftone, etc.). Apply custom images or styles to all pages.
-- **Text Customization**: Add speech bubbles (including standard, whisper, and jagged styles), thought bubbles, and captions with customizable fonts, sizes, colors, and effects.
-- **Advanced Text Effects**: Includes smooth text outlines positioned behind the text, shadow effects, adjustable line spacing, and 50% opacity control for text elements.
-- **Precise Control**: Sliders for zoom, size, rotation, and line height now support direct numerical input for precise adjustments.
-- **Save & Load Projects**: Save your entire comic project (pages, images, text, styles, backgrounds, stickers, folders) to a JSON file and load it later to continue working.
-- **Multi-page Support**: Create multi-page comics with different layouts per page. Reorder pages easily via a drag-and-drop interface.
-- **PDF Export**: Download your finished comic as a high-quality PDF, prompting for a custom filename.
-- **Responsive Design**: Works on various screen sizes and devices.
-- **Modern UI**: Includes tabbed sidebars, clear controls, and user feedback notifications.
+- **Panel Layouts**: Choose from over 35 predefined panel layouts or create custom layouts
+- **Image Management**: Upload, organize, and place images in panels
+- **Text System**: 
+  - Add text bubbles with 5 different styles (speech, thought, caption, shout, whisper)
+  - Format text with various fonts, sizes, colors, and styles
+  - Apply effects like outlines and shadows
+  - Adjust bubble padding (vertical and horizontal) for perfect text fit
+  - Save and reuse custom text styles
+- **Stickers**: Add and position decorative elements on your pages
+- **Backgrounds**: Apply custom images or predefined styles to pages
+- **Organization**: Group assets with a folder system
+- **Project Management**: Save, load, and export your comic book projects
+- **Export**: Generate PDF files of your completed comics
 
-## Getting Started
+## Installation
 
-### Prerequisites
-
-- Node.js (v14+)
-- npm (v6+)
-
-### Installation
-
-1. Clone the repository or download the source code
-   ```bash
-   git clone https://github.com/yourusername/Comic-Book-Maker.git
-   cd Comic-Book-Maker
+1. Clone the repository:
+   ```
+   git clone https://github.com/yourusername/comic-book-maker.git
    ```
 
-2. Install dependencies
-   ```bash
-   npm install
+2. Open the project directory:
+   ```
+   cd comic-book-maker
    ```
 
-3. Start the development server
-   ```bash
-   npm start
-   ```
+3. Open `index.html` in your web browser or set up a local server.
 
-4. Open your browser and navigate to `http://localhost:5173`
+## Usage
 
-### Building for Production
+1. **Getting Started**:
+   - Click "New Project" to begin
+   - Select a panel layout for your first page
+   - Upload images to the image library
 
-To create an optimized production build:
+2. **Adding Content**:
+   - Drag images from the library to panels
+   - Click on a panel to adjust the image position and zoom
+   - Add text bubbles using the text tool
+   - Place stickers to enhance your comic
 
-```bash
-npm run build
-```
+3. **Formatting Text**:
+   - Select a text bubble to open the formatting popup
+   - Change the bubble type, font, size, color, and alignment
+   - Add effects like outlines and shadows
+   - Adjust bubble padding (vertical and horizontal) for optimal text spacing
+   - Save custom styles for reuse
 
-The built files will be in the `dist` directory and can be served from any static file server.
+4. **Managing Pages**:
+   - Add new pages with the "+" button in the page navigator
+   - Navigate between pages using the page thumbnails
+   - Set backgrounds per page or globally
 
-## How to Use
-
-### Creating a Comic
-
-1. **Upload Images or Load Project**:
-   - Click the upload area or drag and drop images to import them.
-   - Alternatively, click "Load Project" to load a previously saved `.json` file.
-   - All uploaded images appear in your library for easy access.
-   - Create folders to organize your assets by clicking the "Create Folder" button.
-   - Use multi-selection (Ctrl/Cmd+Click or Shift+Click) to select multiple assets at once.
-   - Drag and drop assets to move them between folders.
-
-2. **Choose a Layout**:
-   - Browse through the extensive list of available panel layouts.
-   - Each layout shows a preview and description.
-   - Click on your preferred layout to select it for the current page.
-
-3. **Add Images / Backgrounds / Stickers**:
-   - Use the sidebar tabs to switch between adding Panel Images, Backgrounds, or Stickers.
-   - **Panel Images**: Drag images from your library to panels.
-   - **Backgrounds**: Drag images from your library onto the canvas (outside panels) or select a predefined style. Use the "Apply This Image to All Pages" button if needed.
-   - **Stickers**: Drag images from your library onto a specific panel. (Note: Stickers must be dropped *on* a panel).
-
-4. **Adjust Elements**:
-   - **Panel Images**: Use the zoom slider/input and position controls in the right sidebar.
-   - **Stickers**: Select a sticker, then use the size slider/input and position controls in the right sidebar.
-   - Images and stickers automatically maintain their aspect ratio.
-
-5. **Add Text and Bubbles**:
-   - Select a panel, then click the "Add Text" button.
-   - Click the palette icon on a text bubble to open the formatting popup.
-   - Choose fonts, adjust size/color/line-height (using slider or direct input), apply styles (bold, italic, etc.).
-   - Select bubble styles (speech, thought, caption, shout, whisper, jagged, or no bubble).
-   - Position the bubble tail.
-   - Apply effects like outlines (with thickness/color control), shadows, and opacity.
-   - Drag to position text anywhere within the panel; use the rotation slider/input for angles.
-
-6. **Manage Pages**:
-   - Add new pages to create longer comics.
-   - Each page can have a different layout and background.
-   - Navigate between pages using the page controls.
-   - Click "Reorder Pages" to open a modal where you can drag-and-drop pages into a new sequence.
-
-7. **Folder Management**:
-   - Create folders by clicking the "Create Folder" button in the image library.
-   - Double-click folder names to rename them.
-   - Navigate into folders by clicking on them.
-   - Use the "Back" button to return to the parent folder.
-   - Drag images or other folders into folders to organize your assets.
-   - Folder structure is saved with your project.
-
-8. **Save Your Project**:
-   - Click the "Save Project" button in the editor toolbar to download your current work as a `.json` file (you'll be prompted for a filename).
-   - The save includes all your folder structure and organization.
-
-9. **Export Your Comic**:
-   - Click the "Download Comic" button to save your finished creation as a PDF (you'll be prompted for a filename).
-   - All pages are combined into a single PDF document.
-
-## Panel Layouts
-
-The Comic Book Maker offers a wide variety of panel layouts (over 35 options), including:
-
-### Basic & Grid Layouts
-- Single Panel
-- Two Vertical Panels
-- Two Horizontal Panels
-- Three Horizontal Panels
-- Three Panel Stack
-- Classic 2×2 Grid
-- Six Panel Grid (3x2)
-- Nine Panel Grid (3x3)
-- Four Panel Strip (Horizontal and Vertical)
-
-### Manga-inspired Layouts
-- Manga Style (asymmetrical)
-- Manga Action Layout
-- Dramatic Manga Layout
-
-### Advanced & Creative Layouts
-- **Emphasis & Focus**: L-Shape, Diagonal Focus, Inset Panel, Asymmetrical Three, Diamond Focus, Triangular Focus, Spiral Focus, Cross Layout, Pyramid, Windmill, Radial Burst, Golden Ratio, Pillarbox
-- **Story Flow**: Five Panel Dynamic, Zigzag Flow, Panoramic Focus, Storyboard, Circular Narrative, Split Screen, Cascade, Mosaic, Double Spread, Cinematic Widescreen, Dynamic Diagonal, Three-Tiered, Staggered Panels, Widescreen Trio
-
-All layouts fit perfectly within a 700 x 700 pixel square canvas. Each layout includes proper gutters between panels and margins around the edges.
-
-## Text Features
-
-- **Font Selection**: Choose from comic-specific fonts including:
-  - Common fonts (Arial, Comic Sans MS, Times New Roman)
-  - Sound effect fonts (Impact, Bangers, Anton, Russo One, Fredoka One)
-  - Handwriting styles (Comic Neue, Permanent Marker, Gloria Hallelujah, etc.)
-  - Title/Header fonts (Luckiest Guy, Boogaloo, Acme, Press Start 2P)
-
-- **Text Styling**: Control size, color, line height, bold, italic, underline, alignment.
-- **Advanced Effects**: Apply shadows, smooth outlines (with thickness/color control), and 50% opacity.
-- **Bubble Styles**: Choose from standard speech, thought, caption, shout, whisper, jagged, or no bubble.
-- **Positioning & Rotation**: Drag text elements freely and rotate them using a slider or direct input.
-- **Precise Control**: Use sliders or type exact values for font size, line height, and rotation.
-
-## Asset Organization
-
-The Comic Book Maker now includes a robust folder system for organizing your assets:
-
-- **Create Folders**: Organize your images and stickers into nested folders.
-- **Rename Folders**: Double-click on a folder name to edit it.
-- **Navigate Folders**: Click on folders to open them, use the back button to return to parent folders.
-- **Drag & Drop**: Move assets between folders with simple drag and drop.
-- **Multi-Selection**: Select multiple assets at once using Ctrl/Cmd+Click or Shift+Click for batch operations.
-- **Persistence**: Folder structure is saved with your project for continuity between sessions.
+5. **Saving & Exporting**:
+   - Save your project regularly with the Save button
+   - Export as PDF when your comic is complete
 
 ## Technical Details
 
-### Project Structure
-
-```
-Comic-Book-Maker/
-├── index.html            # Main HTML file
-├── package.json          # Project dependencies and scripts
-├── src/
-│   ├── js/
-│   │   ├── main.js       # Main application logic, event handling, UI updates
-│   │   ├── layouts.js    # Panel layout definitions
-│   │   ├── main.js.fixed # Backup version of main.js
-│   │   └── ComicCreator.js # Core class managing state and functionality (Deprecated/Refactored into main.js)
-│   └── styles/
-│       └── main.css      # Application styling
-└── README.md             # This documentation
-```
-
-*Note: Functionality previously in `ComicCreator.js` has been integrated into `main.js`.*
-
-### Technologies Used
-
-- **Frontend Framework**: Vanilla JavaScript (no framework dependencies)
-- **Bundler**: Vite for fast development and optimized builds
-- **PDF Generation**: jsPDF & html2canvas for creating downloadable comics
-- **UI Components**: Font Awesome for icons
-- **Styling**: Custom CSS with CSS variables for theming
-
-### Layout System
-
-Layouts are defined in `layouts.js` as a collection of panels with percentage-based coordinates:
-
-```javascript
-{
-  name: "Layout Name",
-  description: "Layout description",
-  panels: [
-    { x: 0, y: 0, width: 49, height: 49 },
-    { x: 51, y: 0, width: 49, height: 49 },
-    // Additional panels...
-  ]
-}
-```
-
-- `x` and `y`: Position coordinates as percentages (0-100)
-- `width` and `height`: Size as percentages (0-100)
-- A default gap (controlled via CSS) is automatically maintained between panels.
+The application uses a modular JavaScript architecture with specialized manager classes for different features. For more technical information, see [TECHNICAL.md](TECHNICAL.md).
 
 ## Browser Compatibility
 
-The Comic Book Maker works best in modern browsers that support:
-
-- HTML5 Canvas
-- CSS Grid
-- ES6+ JavaScript
-- File API
-
-Tested on:
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## Contributing
-
-Contributions are welcome! Feel free to submit issues or pull requests for new features, bug fixes, or improvements.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+The Comic Book Maker works best in modern browsers:
+- Chrome (recommended)
+- Firefox
+- Edge
+- Safari
 
 ## License
 
-MIT License - feel free to use and modify for your own projects!
+[MIT License](LICENSE)
 
-## Acknowledgments
+## Acknowledgements
 
-- Font Awesome for the icon library
-- Google Fonts for the text font options
-- jsPDF & html2canvas for the PDF export functionality
-- The comic book community for inspiration 
+- Font Awesome for icons
+- Google Fonts for text options
+- jsPDF for PDF generation
+- All contributors to this project
+
+## Support
+
+For issues, feature requests, or questions, please open an issue on the GitHub repository. 

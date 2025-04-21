@@ -398,11 +398,7 @@ export class TextManager {
                             <option value="Anton" class="font-option">
                                 <span class="font-preview font-anton">Anton - CRASH!</span>
                             </option>
-                            <option value="Russo One" class="font-option">
-                                <span class="font-preview font-russo-one">Russo One - WHAM!</span>
                             </option>
-                            <option value="Fredoka One" class="font-option">
-                                <span class="font-preview font-fredoka-one">Fredoka One - SPLASH!</span>
                             </option>
                             
                             <option disabled class="font-category">Handwriting Styles</option>
@@ -412,18 +408,12 @@ export class TextManager {
                             <option value="Permanent Marker" class="font-option">
                                 <span class="font-preview font-permanent-marker">Permanent Marker</span>
                             </option>
-                            <option value="Gloria Hallelujah" class="font-option">
+                            <option value="Gloria Hallelujah" class="font-option" ${textElement.style.fontFamily === 'Gloria Hallelujah' ? 'selected' : ''}>
                                 <span class="font-preview font-gloria-hallelujah">Gloria Hallelujah</span>
-                            </option>
-                            <option value="Architects Daughter" class="font-option">
-                                <span class="font-preview font-architects-daughter">Architects Daughter</span>
-                            </option>
-                            <option value="Shadows Into Light" class="font-option">
-                                <span class="font-preview font-shadows-into-light">Shadows Into Light</span>
                             </option>
                             
                             <option disabled class="font-category">Title/Header Fonts</option>
-                            <option value="Luckiest Guy" class="font-option">
+                            <option value="Luckiest Guy" class="font-option" ${textElement.style.fontFamily === 'Luckiest Guy' ? 'selected' : ''}>
                                 <span class="font-preview font-luckiest-guy">Luckiest Guy</span>
                             </option>
                             <option value="Boogaloo" class="font-option">
@@ -432,8 +422,6 @@ export class TextManager {
                             <option value="Acme" class="font-option">
                                 <span class="font-preview font-acme">Acme</span>
                             </option>
-                            <option value="Press Start 2P" class="font-option">
-                                <span class="font-preview font-press-start-2p">Press Start 2P</span>
                             </option>
                     </select>
                     </div>
@@ -744,62 +732,50 @@ export class TextManager {
                         <label for="font-family">Font</label>
                         <select id="font-family" class="font-family">
                             <option disabled class="font-category">Common Fonts</option>
-                            <option value="Arial" class="font-option" ${textElement.style.fontFamily === 'Arial' ? 'selected' : ''}>
+                            <option value="Arial" class="font-option">
                                 <span class="font-preview font-arial">Arial - Comic Text</span>
                             </option>
-                            <option value="Comic Sans MS" class="font-option" ${textElement.style.fontFamily === 'Comic Sans MS' ? 'selected' : ''}>
+                            <option value="Comic Sans MS" class="font-option">
                                 <span class="font-preview font-comic-sans">Comic Sans MS - Comic Text</span>
                             </option>
-                            <option value="Times New Roman" class="font-option" ${textElement.style.fontFamily === 'Times New Roman' ? 'selected' : ''}>
+                            <option value="Times New Roman" class="font-option">
                                 <span class="font-preview font-times">Times New Roman - Comic Text</span>
                             </option>
                             
                             <option disabled class="font-category">Sound Effects</option>
-                            <option value="Impact" class="font-option" ${textElement.style.fontFamily === 'Impact' ? 'selected' : ''}>
+                            <option value="Impact" class="font-option">
                                 <span class="font-preview font-impact">Impact - BOOM!</span>
                             </option>
-                            <option value="Bangers" class="font-option" ${textElement.style.fontFamily === 'Bangers' ? 'selected' : ''}>
+                            <option value="Bangers" class="font-option">
                                 <span class="font-preview font-bangers">Bangers - POW!</span>
                             </option>
-                            <option value="Anton" class="font-option" ${textElement.style.fontFamily === 'Anton' ? 'selected' : ''}>
+                            <option value="Anton" class="font-option">
                                 <span class="font-preview font-anton">Anton - CRASH!</span>
                             </option>
-                            <option value="Russo One" class="font-option" ${textElement.style.fontFamily === 'Russo One' ? 'selected' : ''}>
-                                <span class="font-preview font-russo-one">Russo One - WHAM!</span>
                             </option>
-                            <option value="Fredoka One" class="font-option" ${textElement.style.fontFamily === 'Fredoka One' ? 'selected' : ''}>
-                                <span class="font-preview font-fredoka-one">Fredoka One - SPLASH!</span>
                             </option>
                             
                             <option disabled class="font-category">Handwriting Styles</option>
-                            <option value="Comic Neue" class="font-option" ${textElement.style.fontFamily === 'Comic Neue' ? 'selected' : ''}>
+                            <option value="Comic Neue" class="font-option">
                                 <span class="font-preview font-comic-neue">Comic Neue - Casual</span>
                             </option>
-                            <option value="Permanent Marker" class="font-option" ${textElement.style.fontFamily === 'Permanent Marker' ? 'selected' : ''}>
+                            <option value="Permanent Marker" class="font-option">
                                 <span class="font-preview font-permanent-marker">Permanent Marker</span>
                             </option>
                             <option value="Gloria Hallelujah" class="font-option" ${textElement.style.fontFamily === 'Gloria Hallelujah' ? 'selected' : ''}>
                                 <span class="font-preview font-gloria-hallelujah">Gloria Hallelujah</span>
-                            </option>
-                            <option value="Architects Daughter" class="font-option" ${textElement.style.fontFamily === 'Architects Daughter' ? 'selected' : ''}>
-                                <span class="font-preview font-architects-daughter">Architects Daughter</span>
-                            </option>
-                            <option value="Shadows Into Light" class="font-option" ${textElement.style.fontFamily === 'Shadows Into Light' ? 'selected' : ''}>
-                                <span class="font-preview font-shadows-into-light">Shadows Into Light</span>
                             </option>
                             
                             <option disabled class="font-category">Title/Header Fonts</option>
                             <option value="Luckiest Guy" class="font-option" ${textElement.style.fontFamily === 'Luckiest Guy' ? 'selected' : ''}>
                                 <span class="font-preview font-luckiest-guy">Luckiest Guy</span>
                             </option>
-                            <option value="Boogaloo" class="font-option" ${textElement.style.fontFamily === 'Boogaloo' ? 'selected' : ''}>
+                            <option value="Boogaloo" class="font-option">
                                 <span class="font-preview font-boogaloo">Boogaloo</span>
                             </option>
-                            <option value="Acme" class="font-option" ${textElement.style.fontFamily === 'Acme' ? 'selected' : ''}>
+                            <option value="Acme" class="font-option">
                                 <span class="font-preview font-acme">Acme</span>
                             </option>
-                            <option value="Press Start 2P" class="font-option" ${textElement.style.fontFamily === 'Press Start 2P' ? 'selected' : ''}>
-                                <span class="font-preview font-press-start-2p">Press Start 2P</span>
                             </option>
                         </select>
                     </div>

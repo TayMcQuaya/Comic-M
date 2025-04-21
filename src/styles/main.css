@@ -1983,14 +1983,14 @@ label {
 
 .selected-text {
     border: 3px solid #ffcc00 !important; /* Bright yellow, thicker border */
-    z-index: 150 !important; /* Increase z-index when selected, but keep below stickers */
+    z-index: 100;
     box-shadow: 0 0 10px rgba(255, 204, 0, 0.5), 0 0 0 2px rgba(255, 204, 0, 0.3); /* Yellow glow */
     outline: 1px dashed rgba(255, 204, 0, 0.7); /* Dashed outline for better visibility on various backgrounds */
     outline-offset: 1px;
 }
 
 .dragging-text {
-    z-index: 150 !important; /* Ensure consistent z-index when dragging, but below stickers */
+    z-index: 101;
 }
 
 /* Bubble types */
@@ -3955,17 +3955,15 @@ select.font-family option {
 .canvas-sticker-image {
     position: absolute; /* Ensure positioning context */
     display: block; /* Ensure it's displayed */
-    z-index: 200; /* Always above text elements */
+    z-index: 100 !important; /* Force high z-index */
     cursor: grab;
     border: 2px dashed transparent; /* Add transparent border for spacing */
     transition: border-color 0.2s ease;
 }
 
 .canvas-sticker-image.selected-sticker {
-    z-index: 201 !important; /* Selected stickers should be at the top */
-    outline: 2px solid #ffcc00;
-    outline-offset: 2px;
-    box-shadow: 0 0 15px rgba(255, 204, 0, 0.6);
+    border-color: var(--primary-color); /* Highlight selected sticker */
+    box-shadow: 0 0 5px var(--primary-color);
 }
 
 .color-control {
@@ -4706,22 +4704,6 @@ input[type="color"] {
     display: none;
 }
 
-.style-preview-bubble.no-bubble {
-    background-color: transparent !important;
-    border: 1px dashed #ccc;
-    box-shadow: none;
-}
+/* Additional fonts and customizations can be added below */
 
-.style-preview-bubble.no-bubble::before,
-.style-preview-bubble.no-bubble::after {
-    display: none;
-}
-
-.style-preview-text {
-    font-size: 12px;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-height: 40px;
-    word-break: break-word;
-}
+/* End of stylesheet */
