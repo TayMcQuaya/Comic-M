@@ -1904,6 +1904,7 @@ label {
     --bubble-background-color: white;
     max-height: 80vh; /* Prevent bubbles from becoming too tall */
     max-width: 80vw; /* Prevent bubbles from becoming too wide */
+    box-sizing: border-box;
 }
 
 .text-bubble:hover {
@@ -1942,13 +1943,14 @@ label {
     text-rendering: optimizeLegibility;
 
     padding: 2.5px 2px 5px 2px; /* Reduced padding - 25% less on top/sides, kept bottom */
-    overflow-y: auto; /* Add scrollbar when content exceeds height */
-    max-height: 100%; /* Ensure content doesn't exceed container height */
+    /*  overflow-y: auto; Add scrollbar when content exceeds height */
+    max-height: 110%; /* Ensure content doesn't exceed container height */
+    box-sizing: border-box;
     word-wrap: break-word; /* Ensure long words break properly */
     word-break: break-word; /* Additional word breaking for better text containment */
     
     /* Hide scrollbars while maintaining functionality */
-    scrollbar-width: none; /* Firefox */
+     /*   scrollbar-width: none;Firefox */
     -ms-overflow-style: none; /* IE and Edge */
 
 }
