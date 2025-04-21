@@ -9,6 +9,7 @@ import { TextManager } from './modules/TextManager.js'; // Import TextManager
 import { StickerManager } from './modules/StickerManager.js'; // Import StickerManager
 import { BackgroundManager } from './modules/BackgroundManager.js'; // Import BackgroundManager
 import { UIManager } from './modules/UIManager.js'; // Import UIManager
+import { LayoutBuilderManager } from './modules/LayoutBuilderManager.js'; // Import LayoutBuilderManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -40,6 +41,7 @@ class ComicCreator {
         this.folderSystem = new FolderSystem(this); // Instantiate FolderSystem
         this.dragAndDropManager = new DragAndDropManager(this); // Instantiate DragAndDropManager
         this.imageLibrary = new ImageLibrary(this); // Instantiate ImageLibrary
+        this.layoutBuilderManager = new LayoutBuilderManager(this); // Instantiate LayoutBuilderManager
         this.panelManager = new PanelManager(this); // Instantiate PanelManager
         this.textManager = new TextManager(this); // Instantiate TextManager
         this.stickerManager = new StickerManager(this); // Instantiate StickerManager
@@ -62,6 +64,9 @@ class ComicCreator {
                 this.imageLibrary.clearSelection(); // Ensure call uses imageLibrary instance
             }
         });
+        
+        // Load custom layouts from localStorage to make them available globally
+        this.loadCustomLayouts();
         
         this.setupUploadArea();
         this.setupLayoutSelection();
@@ -1091,6 +1096,13 @@ class ComicCreator {
         let layoutConfig;
         if (typeof page.layout === 'string') {
             layoutConfig = this.layouts[page.layout];
+            
+            // If layout not found, try to reload custom layouts from localStorage
+            if (!layoutConfig && page.layout.startsWith('custom-')) {
+                console.warn(`Custom layout not found: ${page.layout}. Attempting to load from localStorage.`);
+                this.loadCustomLayouts();
+                layoutConfig = this.layouts[page.layout];
+            }
         } else if (typeof page.layout === 'object') {
             layoutConfig = page.layout;
             try {
@@ -1107,8 +1119,22 @@ class ComicCreator {
         }
         
         if (!layoutConfig) {
-            console.error(`Failed to find layout configuration for page ${pageIndex}`);
-            return false;
+            console.error(`Failed to find layout configuration for page ${pageIndex}. Using fallback layout.`);
+            // Use the first available layout as fallback
+            const firstLayout = Object.values(this.layouts)[0];
+            if (firstLayout) {
+                layoutConfig = firstLayout;
+                const layoutId = Object.keys(this.layouts)[0];
+                page.layout = layoutId; // Update the page's layout reference
+                console.warn(`Using fallback layout: ${layoutId}`);
+                this.uiManager.showNotification(
+                    `Could not find layout "${page.layout}" for page ${pageIndex + 1}. Using "${layoutId}" instead.`, 
+                    "warning"
+                );
+            } else {
+                console.error('No layouts available as fallback!');
+                return false;
+            }
         }
 
         // Create comic structure first (calls PanelManager.createPanels)
@@ -1265,9 +1291,28 @@ class ComicCreator {
         // Save current page state before exporting
         this.saveCurrentPageState();
         
+        // Identify custom layouts used in this project
+        const customLayoutIds = new Set();
+        this.pages.forEach(page => {
+            const layoutId = page.layout;
+            if (layoutId && typeof layoutId === 'string' && layoutId.startsWith('custom-')) {
+                customLayoutIds.add(layoutId);
+            }
+        });
+        
+        // Create a map of custom layouts that are used in this project
+        const customLayouts = {};
+        customLayoutIds.forEach(layoutId => {
+            if (this.layouts[layoutId]) {
+                const layoutName = this.layouts[layoutId].name;
+                customLayouts[layoutId] = this.layouts[layoutId];
+                console.log(`Including custom layout in project: ${layoutName} (${layoutId})`);
+            }
+        });
+        
         // Create project state object
         const projectState = {
-            version: '1.1', // Increment version to indicate folder structure support
+            version: '1.2', // Increment version to indicate custom layouts support
             useGlobalBackgroundStyle: this.useGlobalBackgroundStyle,
             globalBackgroundStyle: this.globalBackgroundStyle,
             pages: this.pages.map(page => ({
@@ -1288,7 +1333,9 @@ class ComicCreator {
             currentPageIndex: this.currentPageIndex,
             // Add folder structure and current folder ID
             folderStructure: this.folderStructure,
-            currentFolderId: this.currentFolderId
+            currentFolderId: this.currentFolderId,
+            // Add custom layouts to ensure portability across devices
+            customLayouts: customLayouts
         };
         
         // Create and trigger download
@@ -1305,12 +1352,39 @@ class ComicCreator {
 
     async loadProject(file) {
         try {
+            // Load custom layouts first to ensure they're available when restoring pages
+            this.loadCustomLayouts();
+            
             const text = await file.text();
             const projectState = JSON.parse(text);
             
             // Version check
             if (!projectState.version) {
                 throw new Error('Invalid project file format');
+            }
+            
+            // Load custom layouts from the project file if they exist (v1.2+)
+            if (projectState.customLayouts) {
+                console.log('Found custom layouts in project file. Importing...');
+                
+                // Import each custom layout
+                Object.entries(projectState.customLayouts).forEach(([layoutId, layout]) => {
+                    // Add layout to this.layouts
+                    this.layouts[layoutId] = layout;
+                    
+                    // Extract the name from the layout
+                    const layoutName = layout.name;
+                    
+                    // Save to localStorage as well
+                    this.layoutBuilderManager.saveLayoutToStorage(layoutName, layout);
+                    
+                    console.log(`Imported custom layout: ${layoutName} (${layoutId})`);
+                });
+                
+                // Refresh the layout selection UI
+                this.setupLayoutSelection();
+            } else {
+                console.log('No custom layouts found in project file.');
             }
             
             // Save the previous uploadedImages and folderStructure for potential recovery
@@ -1940,6 +2014,9 @@ class ComicCreator {
             // Add the layout to the available layouts
             this.layouts[layoutId] = layoutData;
             
+            // Save to localStorage for persistence between sessions
+            this.layoutBuilderManager.saveLayoutToStorage(layoutData.name, layoutData);
+            
             // Refresh the layout selection UI to include the new layout
             this.setupLayoutSelection();
             
@@ -1976,6 +2053,10 @@ class ComicCreator {
                                 
                                 // Add the layout to the available layouts
                                 this.layouts[layoutId] = layoutData;
+                                
+                                // Save to localStorage for persistence between sessions
+                                this.layoutBuilderManager.saveLayoutToStorage(layoutData.name, layoutData);
+                                
                                 successCount++;
                             } else {
                                 console.error(`Invalid layout format in file: ${file.name}`);
@@ -2054,6 +2135,33 @@ class ComicCreator {
             return true;
         }
     
+    /**
+     * Loads custom layouts from localStorage and merges them into the layouts object
+     * Ensures custom layouts are always available for project loading
+     */
+    loadCustomLayouts() {
+        try {
+            // Use the LayoutBuilderManager's method to load custom layouts from localStorage
+            const customLayouts = this.layoutBuilderManager?.loadCustomLayouts() || {};
+            
+            // Log the custom layouts found
+            console.log(`Loading ${Object.keys(customLayouts).length} custom layouts from localStorage`);
+            
+            // Convert the custom layouts to the format used by the ComicCreator
+            // Create a layoutId for each custom layout based on its name
+            Object.entries(customLayouts).forEach(([name, layout]) => {
+                const layoutId = `custom-${name.toLowerCase().replace(/\s+/g, '-')}`;
+                
+                // Only add if not already present, or update if it has changed
+                if (!this.layouts[layoutId] || JSON.stringify(this.layouts[layoutId]) !== JSON.stringify(layout)) {
+                    this.layouts[layoutId] = layout;
+                    console.log(`Added/updated custom layout: ${name} with ID: ${layoutId}`);
+                }
+            });
+        } catch (error) {
+            console.error('Error loading custom layouts from localStorage:', error);
+        }
+    }
 }
 
 // Initialize the comic creator when the DOM is loaded

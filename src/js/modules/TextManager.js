@@ -1013,7 +1013,7 @@ export class TextManager {
                     textBox.style.setProperty('--bubble-background-color', storedBackgroundColor);
                     // Delete the stored value as we've restored it
                     delete textBox.dataset.previousBackgroundColor;
-                } else {
+            } else {
                     // Default to white if no previous color
                     textBox.style.backgroundColor = 'white';
                     textBox.style.setProperty('--bubble-background-color', 'white');
