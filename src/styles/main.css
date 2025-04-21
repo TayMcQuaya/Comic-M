@@ -1950,6 +1950,7 @@ label {
     /* Hide scrollbars while maintaining functionality */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
+
 }
 
 /* Hide WebKit scrollbars */
