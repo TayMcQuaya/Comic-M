@@ -1942,17 +1942,20 @@ label {
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
 
-    padding: 2.5px 2px 5px 2px; /* Reduced padding - 25% less on top/sides, kept bottom */
-    /*  overflow-y: auto; Add scrollbar when content exceeds height */
-    max-height: 110%; /* Ensure content doesn't exceed container height */
+    /* Increased bottom padding to prevent text from overlapping border */
+    padding: 2.5px 2px 9px 2px;
+    line-height: 1.3; /* Consistent line height */
+    max-height: 110%;
     box-sizing: border-box;
-    word-wrap: break-word; /* Ensure long words break properly */
-    word-break: break-word; /* Additional word breaking for better text containment */
+    word-wrap: break-word;
+    word-break: break-word;
+    
+    /* Ensure text sits slightly higher in the bubble */
+    transform: translateY(-2px);
     
     /* Hide scrollbars while maintaining functionality */
-     /*   scrollbar-width: none;Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
-
+    -ms-overflow-style: none;
+    scrollbar-width: none; /* Firefox */
 }
 
 /* Hide WebKit scrollbars */
