@@ -1412,6 +1412,9 @@ export class TextManager {
         
         // Make line height value editable (via ComicCreator)
         this.comicCreator.uiManager.makeSliderValueEditable(lineHeightSlider, lineHeightValue, '', 1); // Corrected path
+
+        // Make outline thickness value editable (via ComicCreator)
+
         // Make shadow offset values editable (via ComicCreator)
         this.comicCreator.uiManager.makeSliderValueEditable(shadowOffsetXSlider, shadowOffsetXValue, 'px', 0); // Corrected call
         this.comicCreator.uiManager.makeSliderValueEditable(shadowOffsetYSlider, shadowOffsetYValue, 'px', 0); // Corrected call
@@ -2439,4 +2442,3 @@ export class TextManager {
         }
     }
 } 
-
