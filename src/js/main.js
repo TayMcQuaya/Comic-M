@@ -1071,9 +1071,18 @@ class ComicCreator {
             return false;
         }
 
-        // Clear existing elements
-        comicCanvas.querySelectorAll('.canvas-sticker-image').forEach(sticker => sticker.remove());
-        comicCanvas.querySelectorAll('.canvas-background-image').forEach(bg => bg.remove());
+        // Clear existing elements with logging
+        const stickersBefore = comicCanvas.querySelectorAll('.canvas-sticker-image').length;
+        const backgroundsBefore = comicCanvas.querySelectorAll('.canvas-background-image').length;
+        const textBubblesBefore = comicCanvas.querySelectorAll('.text-bubble').length;
+        const panelsBefore = comicCanvas.querySelectorAll('.comic-panel').length;
+        
+        console.log(`Before clearing canvas - Stickers: ${stickersBefore}, Backgrounds: ${backgroundsBefore}, Text bubbles: ${textBubblesBefore}, Panels: ${panelsBefore}`);
+        
+        // Completely clear the canvas to avoid any element inheritance
+        comicCanvas.innerHTML = '';
+        console.log('Canvas cleared completely - All elements removed');
+        console.log(`After clearing canvas - Elements remaining: ${comicCanvas.children.length}`);
 
         // Set the current layout and create the comic structure
         this.selectedLayout = page.layout;
@@ -1104,10 +1113,13 @@ class ComicCreator {
 
         // Create comic structure first (calls PanelManager.createPanels)
         this.createComic(layoutConfig);
+        
+        // Log panels created
+        const panelsAfterCreation = comicCanvas.querySelectorAll('.comic-panel').length;
+        console.log(`After createComic - Panels created: ${panelsAfterCreation}`);
 
         // Set canvas background style using BackgroundManager
-        this.backgroundManager.loadCurrentPageBackground(); 
-        // REMOVED: Direct manipulation of canvas classList for background
+        this.backgroundManager.loadCurrentPageBackground();
 
         // Store the states we need to restore
         const panelStates = page.panelStates || [];
@@ -1321,6 +1333,13 @@ class ComicCreator {
             };
             this.currentFolderId = 'root';
             
+            // Ensure the comic canvas is completely cleared
+            const canvasElement = document.querySelector('#comic-canvas');
+            if (canvasElement) {
+                console.log('Clearing comic canvas before loading new project');
+                canvasElement.innerHTML = '';
+            }
+            
             // Load global background settings if present
             if (projectState.hasOwnProperty('useGlobalBackgroundStyle')) {
                 this.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle;
@@ -1433,6 +1452,15 @@ class ComicCreator {
             
             // Update UI - after both images and folder structure are fully loaded
             this.imageLibrary.updateThumbnails(); // Corrected call
+            
+            // Ensure we clear the canvas completely before loading the new project state
+            if (canvasElement) {
+                console.log('Clearing all elements from canvas before loading project...');
+                // Remove all text bubbles, stickers, and backgrounds
+                canvasElement.querySelectorAll('.text-bubble').forEach(textBubble => textBubble.remove());
+                canvasElement.querySelectorAll('.canvas-sticker-image').forEach(sticker => sticker.remove());
+                canvasElement.querySelectorAll('.canvas-background-image').forEach(bg => bg.remove());
+            }
             
             // Load the current page
             await this.loadPageState(this.currentPageIndex);

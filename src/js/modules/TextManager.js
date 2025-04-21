@@ -182,7 +182,7 @@ export class TextManager {
         }
 
         // Determine z-index based on current mode (via ComicCreator)
-        const zIndex = this.comicCreator.currentSidebarMode === 'backgrounds' ? '5' : '100'; // Below panels for bg, same level as stickers otherwise
+        const zIndex = this.comicCreator.currentSidebarMode === 'backgrounds' ? '5' : '100'; // Keep backgrounds at z-index 5, text at 100 (below stickers at 200)
 
         // Create text container
         const textId = `canvas_text_${Date.now()}`;
@@ -201,7 +201,7 @@ export class TextManager {
         // textContainer.style.transform = 'translate(-50%, -50%)'; // REMOVE this centering transform
         textContainer.style.minWidth = '100px';
         textContainer.style.padding = '10px';
-        textContainer.style.zIndex = zIndex; // Set z-index based on mode
+        textContainer.style.zIndex = zIndex; // Leave text elements at their default z-index
 
         // Create editable text element
         const textElement = document.createElement('div');
@@ -680,7 +680,7 @@ export class TextManager {
         const textElement = textBox.querySelector('.text-content');
         
         // Build the innerHTML for the popup
-        popup.innerHTML = `
+         popup.innerHTML = `
             <div class="popup-header">
                 <h3>Text Formatting</h3>
                 <button class="close-popup"><i class="fas fa-times"></i></button>
@@ -1192,7 +1192,7 @@ export class TextManager {
                 outlineColorHex.setAttribute('disabled', true);
                 this.removeTextOutline(textElement);
             }
-            this.comicCreator.saveCurrentPageState();
+                this.comicCreator.saveCurrentPageState();
         });
 
         outlineColorPicker.addEventListener('input', () => {
@@ -1219,7 +1219,7 @@ export class TextManager {
             }
         });
 
-        outlineColorHex.addEventListener('blur', () => {
+         outlineColorHex.addEventListener('blur', () => {
             if (!outlineColorHex.hasAttribute('disabled')) {
                 const hexValue = outlineColorHex.textContent.trim();
                 if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
@@ -1724,6 +1724,34 @@ export class TextManager {
         const panels = document.querySelectorAll('.comic-panel');
         const comicCanvas = document.querySelector('#comic-canvas');
 
+        // Ensure canvas exists
+        if (!comicCanvas) {
+            console.error("TextManager.loadTextStates - Comic canvas element not found");
+            return;
+        }
+
+        // Debug: Log the page state and existing text elements
+        console.log(`TextManager.loadTextStates - Page index: ${this.comicCreator.currentPageIndex}`);
+        console.log(`TextManager.loadTextStates - Existing text bubbles on canvas: ${comicCanvas.querySelectorAll('.text-bubble').length}`);
+        console.log(`TextManager.loadTextStates - Total panels found: ${panels.length}`);
+
+        if (pageState.panelStates) {
+            console.log(`TextManager.loadTextStates - Panel states in page data: ${pageState.panelStates.length}`);
+            
+            // Verify we have the same number of panels as states or log the mismatch
+            if (panels.length !== pageState.panelStates.length) {
+                console.warn(`TextManager.loadTextStates - Panel count mismatch: ${panels.length} panels found vs ${pageState.panelStates.length} panel states`);
+            }
+        } else {
+            console.warn(`TextManager.loadTextStates - No panel states found in page data`);
+        }
+
+        if (pageState.canvasTextElements) {
+            console.log(`TextManager.loadTextStates - Canvas text elements in page data: ${pageState.canvasTextElements.length}`);
+        } else {
+            console.warn(`TextManager.loadTextStates - No canvas text elements found in page data`);
+        }
+
         // Restore panel text elements
         if (pageState.panelStates && panels.length > 0) {
             const processablePanels = Math.min(panels.length, pageState.panelStates.length);
@@ -1731,9 +1759,17 @@ export class TextManager {
             
             for (let index = 0; index < processablePanels; index++) {
                 const panel = panels[index];
+                
+                // Verify panel exists
+                if (!panel) {
+                    console.warn(`TextManager: Panel at index ${index} not found in DOM`);
+                    continue;
+                }
+                
                 const state = pageState.panelStates[index];
                 
                 if (state && state.textElements) { 
+                    console.log(`TextManager: Panel ${index} has ${state.textElements.length} text elements`);
                     state.textElements.forEach(textState => {
                         this.restoreTextBubble(textState, panel); // Use helper
                     });
@@ -1746,10 +1782,14 @@ export class TextManager {
         // Restore canvas text elements
         if (pageState.canvasTextElements && comicCanvas) {
             console.log(`TextManager: Restoring ${pageState.canvasTextElements.length} canvas text elements`);
-            pageState.canvasTextElements.forEach(textState => {
+            pageState.canvasTextElements.forEach((textState, idx) => {
+                console.log(`TextManager: Restoring canvas text element ${idx} with id ${textState.id}`);
                 this.restoreTextBubble(textState, comicCanvas); // Use helper, pass canvas as parent
             });
         }
+
+        // Debug: Log the final state after restoration
+        console.log(`TextManager.loadTextStates - Final text bubbles on canvas: ${comicCanvas.querySelectorAll('.text-bubble').length}`);
     }
 
     /**
@@ -1819,7 +1859,7 @@ export class TextManager {
                 width: bubbleStyle.width || 'auto',
                 height: bubbleStyle.height || 'auto',
                 transform: bubbleStyle.transform || 'none',
-                zIndex: bubbleStyle.zIndex || (parentElement.id === 'comic-canvas' ? '10' : '10'), // Default zIndex
+                zIndex: bubbleStyle.zIndex || (parentElement.id === 'comic-canvas' ? '100' : '10'), // Update canvas text bubbles to z-index 100
                 padding: bubbleStyle.padding || '10px' // Restore padding
             });
         }

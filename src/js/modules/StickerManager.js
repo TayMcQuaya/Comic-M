@@ -60,7 +60,7 @@ export class StickerManager {
             top: `${top}%`,
             width: '100px', // Initial width, will be adjusted by size control
             height: 'auto',  // Maintain aspect ratio
-            zIndex: '100',
+            zIndex: '200', // Increased from 100 to 200 to ensure it's above text elements
             cursor: 'grab'
         });
         
@@ -104,7 +104,7 @@ export class StickerManager {
 
         this.currentSticker = stickerElement;
         stickerElement.classList.add('selected-sticker'); // Add a specific class for styling
-        stickerElement.style.zIndex = '101'; // Bring selected sticker to front temporarily
+        stickerElement.style.zIndex = '201'; // Increased from 101 to 201 for selected stickers
 
         // Update the right sidebar with sticker controls
         this.updateStickerControls();
@@ -115,7 +115,7 @@ export class StickerManager {
         if (this.currentSticker) {
             console.log('StickerManager: Deselecting sticker:', this.currentSticker.id);
             this.currentSticker.classList.remove('selected-sticker');
-            this.currentSticker.style.zIndex = '100'; // Reset z-index on deselect
+            this.currentSticker.style.zIndex = '200'; // Increased from 100 to 200 when deselected
             this.currentSticker = null;
         }
     }
@@ -652,7 +652,7 @@ export class StickerManager {
                         top: state.top || '0px',
                         width: state.width || '100px',
                         height: state.height || 'auto',
-                        zIndex: state.zIndex || '100',
+                        zIndex: '200', // Always set to 200 regardless of saved state to ensure consistency
                         cursor: 'grab'
                     });
                     

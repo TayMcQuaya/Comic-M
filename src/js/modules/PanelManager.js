@@ -568,6 +568,13 @@ export class PanelManager {
             return;
         }
 
+        console.log(`PanelManager.loadPanelStates - Found ${panels.length} panels and ${panelStates.length} panel states`);
+        
+        // Verify we have the same number of panels as states or handle the mismatch
+        if (panels.length !== panelStates.length) {
+            console.warn(`PanelManager.loadPanelStates - Panel count mismatch: ${panels.length} panels vs ${panelStates.length} states`);
+        }
+        
         const processablePanels = Math.min(panels.length, panelStates.length);
         console.log(`PanelManager: Restoring ${processablePanels} panel image states`);
             
@@ -626,6 +633,8 @@ export class PanelManager {
                 console.warn(`PanelManager: Panel state at index ${index} is null or undefined. Skipping image restoration.`);
             }
         } // End for loop
+        
+        console.log(`PanelManager.loadPanelStates - Completed restoration of ${processablePanels} panels`);
     }
 
     // Other methods will follow
