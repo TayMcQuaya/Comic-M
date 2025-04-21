@@ -24,8 +24,16 @@ export class BackgroundManager {
             return;
         }
 
-        // Remove existing background image for this page if any
-        this.removeBackgroundImage(false); // Don't save state yet
+        // Make sure any existing background images are removed first
+        // Use the specific removeBackgroundImage method which handles state properly
+        this.removeBackgroundImage(false); // Don't save state yet, we'll do it after adding the new image
+        
+        // Double-check for any remaining background images (just to be safe)
+        const remainingBgs = canvas.querySelectorAll('.canvas-background-image');
+        if (remainingBgs.length > 0) {
+            console.warn(`[BackgroundManager.addBackgroundImage] There are still ${remainingBgs.length} background images after removal. Forcibly removing them.`);
+            remainingBgs.forEach(bg => bg.remove());
+        }
 
         // Create the new background image element
         const bgImg = document.createElement('img');
@@ -51,6 +59,11 @@ export class BackgroundManager {
         if (currentPage) {
             currentPage.backgroundState = { imageId: image.id };
             currentPage.canvasBackgroundStyle = null; // Clear style when image is added
+            
+            // Remove any background style classes from the canvas
+            if (this.backgroundClasses) {
+                canvas.classList.remove(...this.backgroundClasses);
+            }
         }
 
         // Save the overall page state
@@ -63,21 +76,38 @@ export class BackgroundManager {
     removeBackgroundImage(saveState = true) {
         console.log("[BackgroundManager.removeBackgroundImage] Removing background image.");
         const canvas = document.querySelector('#comic-canvas');
-        const existingBg = canvas?.querySelector('.canvas-background-image');
-        if (existingBg) {
-            existingBg.remove();
+        
+        if (!canvas) {
+            console.error("[BackgroundManager.removeBackgroundImage] Canvas element not found!");
+            return false;
+        }
+        
+        // Find ALL existing background images, not just one
+        const existingBgs = canvas.querySelectorAll('.canvas-background-image');
+        let removed = false;
+        
+        if (existingBgs.length > 0) {
+            console.log(`[BackgroundManager.removeBackgroundImage] Found ${existingBgs.length} background images to remove.`);
+            existingBgs.forEach(bg => {
+                bg.remove();
+                removed = true;
+            });
+            
             // Clear state
             const currentPage = this.comicCreator.pages[this.comicCreator.currentPageIndex];
             if (currentPage) {
                 currentPage.backgroundState = null;
             }
+            
             if (saveState) {
                 this.comicCreator.saveCurrentPageState();
                 this.updateBackgroundControls(); // Update sidebar
             }
-            return true; // Indicate removal happened
+        } else {
+            console.log("[BackgroundManager.removeBackgroundImage] No background images found to remove.");
         }
-        return false; // Indicate nothing was removed
+        
+        return removed; // Indicate if something was removed
     }
 
     // --- Apply Predefined Background Style ---
@@ -89,13 +119,22 @@ export class BackgroundManager {
             return;
         }
 
-        // Remove custom background image if present
-        this.removeBackgroundImage(false); // Don't save state yet
+        // Remove all existing background images
+        const existingBgs = canvas.querySelectorAll('.canvas-background-image');
+        if (existingBgs.length > 0) {
+            console.log(`[BackgroundManager.applyBackgroundStyle] Removing ${existingBgs.length} existing background images`);
+            existingBgs.forEach(bg => bg.remove());
+        } else {
+            // If no backgrounds found by direct query, try the formal method which has additional logic
+            this.removeBackgroundImage(false); // Don't save state yet
+        }
 
         // Remove any existing background classes
         canvas.classList.remove(...this.backgroundClasses);
+        
         // Add the new style class
         canvas.classList.add(style);
+        console.log(`[BackgroundManager.applyBackgroundStyle] Added style class: ${style}`);
 
         // Update manager state if global is active
         if (this.useGlobalBackgroundStyle) {
@@ -105,17 +144,22 @@ export class BackgroundManager {
                 page.canvasBackgroundStyle = style;
                 page.backgroundState = null; // Ensure image is cleared for all pages
             });
+            console.log(`[BackgroundManager.applyBackgroundStyle] Updated all pages with global style: ${style}`);
         } else {
             // Update only the current page state
             const currentPage = this.comicCreator.pages[this.comicCreator.currentPageIndex];
             if (currentPage) {
                 currentPage.canvasBackgroundStyle = style;
                 currentPage.backgroundState = null; // Ensure image is cleared
+                console.log(`[BackgroundManager.applyBackgroundStyle] Updated current page with style: ${style}`);
             }
         }
 
         // Save the current page state
         this.comicCreator.saveCurrentPageState();
+        
+        // Update the UI controls to reflect the change
+        this.updateBackgroundControls();
     }
 
     // --- Toggle Global Background Style ---
@@ -286,9 +330,16 @@ export class BackgroundManager {
             return;
         }
 
-        // Clear existing visuals first
-        this.removeBackgroundImage(false); // Remove image without saving
-        canvas.classList.remove(...this.backgroundClasses); // Remove styles
+        // Thoroughly clear existing backgrounds
+        // Remove any existing background images
+        const existingBgs = canvas.querySelectorAll('.canvas-background-image');
+        if (existingBgs.length > 0) {
+            console.log(`[BackgroundManager.loadCurrentPageBackground] Removing ${existingBgs.length} existing background images`);
+            existingBgs.forEach(bg => bg.remove());
+        }
+        
+        // Remove all background style classes
+        canvas.classList.remove(...this.backgroundClasses);
 
         // Determine what to apply
         let styleToApply = 'classic-white'; // Default
@@ -296,14 +347,16 @@ export class BackgroundManager {
 
         if (this.useGlobalBackgroundStyle) {
             styleToApply = this.globalBackgroundStyle;
-             console.log(`[BackgroundManager.loadCurrentPageBackground] Applying global style: ${styleToApply}`);
+            console.log(`[BackgroundManager.loadCurrentPageBackground] Applying global style: ${styleToApply}`);
         } else {
             if (page.backgroundState?.imageId) {
                 imageToApply = this.comicCreator.imageLibrary.getImageById(String(page.backgroundState.imageId));
                 if (imageToApply) {
-                     console.log(`[BackgroundManager.loadCurrentPageBackground] Applying page image: ${imageToApply.id}`);
+                    console.log(`[BackgroundManager.loadCurrentPageBackground] Applying page image: ${imageToApply.id}`);
                 } else {
-                     console.warn(`[BackgroundManager.loadCurrentPageBackground] Page background image ID ${page.backgroundState.imageId} not found.`);
+                    console.warn(`[BackgroundManager.loadCurrentPageBackground] Page background image ID ${page.backgroundState.imageId} not found.`);
+                    // Clear the invalid image ID from state to avoid future issues
+                    page.backgroundState = null;
                 }
             } else if (page.canvasBackgroundStyle && this.backgroundClasses.includes(page.canvasBackgroundStyle)) {
                 styleToApply = page.canvasBackgroundStyle;
@@ -313,6 +366,12 @@ export class BackgroundManager {
 
         // Apply the determined background
         if (imageToApply) {
+            // Double check no existing background images remain
+            if (canvas.querySelector('.canvas-background-image')) {
+                console.warn("[BackgroundManager.loadCurrentPageBackground] Background image still exists after removal. Forcibly removing.");
+                canvas.querySelectorAll('.canvas-background-image').forEach(bg => bg.remove());
+            }
+            
             const bgImg = document.createElement('img');
             bgImg.src = imageToApply.src;
             bgImg.alt = "Canvas Background";
@@ -323,8 +382,11 @@ export class BackgroundManager {
             });
             bgImg.dataset.imageId = imageToApply.id;
             canvas.insertBefore(bgImg, canvas.firstChild);
+            console.log("[BackgroundManager.loadCurrentPageBackground] Successfully added background image to canvas.");
         } else {
+            // Apply style class
             canvas.classList.add(styleToApply);
+            console.log(`[BackgroundManager.loadCurrentPageBackground] Applied style class: ${styleToApply}`);
         }
     }
 } 

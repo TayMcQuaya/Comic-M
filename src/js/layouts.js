@@ -746,6 +746,14 @@ export const layouts = {
         panels: [
             { x: 0, y: 35, width: 100, height: 30 }   // Centered horizontal panel
         ]
+    },
+    'landscape-with-bottom-left-inset': {
+        name: "LANDSCAPE WITH BOTTOM LEFT INSET",
+        description: "Wide mangel with an overlapping square in the bottom-left",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
+            { x: 10, y: 60, width: 30, height: 30 }    // Overlapping square in the bottom-left
+        ]
     }
 };
 
