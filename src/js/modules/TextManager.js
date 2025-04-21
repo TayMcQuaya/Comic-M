@@ -734,10 +734,6 @@ export class TextManager {
                                 <div class="bubble-preview whisper-bubble-preview"></div>
                                 <span>Whisper</span>
                             </div>
-                            <div class="bubble-option ${textBox.dataset.bubbleType === 'jagged-bubble' ? 'selected' : ''}" data-type="jagged-bubble">
-                                <div class="bubble-preview jagged-bubble-preview"></div>
-                                <span>Jagged</span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -1011,7 +1007,7 @@ export class TextManager {
                 popup.querySelector('#bubble-tail-position').disabled = (previousType === 'caption-box');
             } else {
                 textBox.dataset.previousBubbleType = textBox.dataset.bubbleType;
-                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble');
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble');
                 textBox.classList.add('no-bubble');
                 textBox.dataset.bubbleType = 'no-bubble';
                 popup.querySelector('#bubble-tail-position').disabled = true;
@@ -1026,7 +1022,7 @@ export class TextManager {
                 popup.querySelectorAll('.bubble-option').forEach(opt => opt.classList.remove('selected'));
                 option.classList.add('selected');
                 const bubbleType = option.dataset.type;
-                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'jagged-bubble', 'no-bubble');
+                textBox.classList.remove('speech-bubble', 'thought-bubble', 'caption-box', 'shout-bubble', 'whisper-bubble', 'no-bubble');
                 textBox.classList.add(bubbleType);
                 textBox.dataset.bubbleType = bubbleType;
                 bubbleToggle.checked = true;
@@ -1432,14 +1428,14 @@ export class TextManager {
         // We'll use text-shadow to create a 1px outline around the text
         // This creates 8 shadows (one for each direction) to form a complete outline
         const shadowValue = `
-           -1px -1px 0 ${color},  
-            1px -1px 0 ${color},
-           -1px  1px 0 ${color},
-            1px  1px 0 ${color},
-           -1px  0   0 ${color},
-            1px  0   0 ${color},
-            0   -1px 0 ${color},
-            0    1px 0 ${color}
+           -2px -2px 0 ${color},  
+            2px -2px 0 ${color},
+           -2px  2px 0 ${color},
+            2px  2px 0 ${color},
+           -2px  0   0 ${color},
+            2px  0   0 ${color},
+            0   -2px 0 ${color},
+            0    2px 0 ${color}
         `.trim().replace(/\s+/g, ' ');
         
         // Apply text shadow
