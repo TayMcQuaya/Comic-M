@@ -754,6 +754,239 @@ export const layouts = {
             { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
             { x: 10, y: 60, width: 30, height: 30 }    // Overlapping square in the bottom-left
         ]
+    },
+    
+    // Chipper's Story Layouts
+    'establishing-shot-top': {
+        name: "Establishing Shot (Top)",
+        description: "Large, full-width establishing shot at the top of the page",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 40 }
+        ]
+    },
+    'frustration-mid-panel': {
+        name: "Mid-sized Frustration Panel",
+        description: "Mid-sized panel showing character's frustration",
+        panels: [
+            { x: 25, y: 30, width: 50, height: 40 }
+        ]
+    },
+    'resting-corner-small': {
+        name: "Resting Corner Panel",
+        description: "Smaller panel at the bottom-right corner for resting scene",
+        panels: [
+            { x: 65, y: 70, width: 35, height: 30 }
+        ]
+    },
+    'vertical-exhaustion': {
+        name: "Vertical Exhaustion Panel",
+        description: "A vertical panel emphasizing character's exhaustion",
+        panels: [
+            { x: 30, y: 10, width: 40, height: 80 }
+        ]
+    },
+    'wide-forest-clearing': {
+        name: "Wide Forest Clearing",
+        description: "Wide panel showing a broader view of the forest clearing",
+        panels: [
+            { x: 0, y: 25, width: 100, height: 50 }
+        ]
+    },
+    'off-screen-introduction': {
+        name: "Off-screen Introduction",
+        description: "Mid-sized panel introducing a character from off-screen",
+        panels: [
+            { x: 15, y: 35, width: 70, height: 30 }
+        ]
+    },
+    'character-reveal': {
+        name: "Character Reveal",
+        description: "Medium shot revealing a character for the first time",
+        panels: [
+            { x: 25, y: 25, width: 50, height: 50 }
+        ]
+    },
+    'two-shot-dialogue': {
+        name: "Two-Shot Dialogue",
+        description: "Panel showing two characters talking",
+        panels: [
+            { x: 10, y: 30, width: 80, height: 40 }
+        ]
+    },
+    'notebook-closeup': {
+        name: "Notebook Closeup",
+        description: "Close-up of a notebook with visible text",
+        panels: [
+            { x: 30, y: 30, width: 40, height: 40 }
+        ]
+    },
+    'low-angle-walking': {
+        name: "Low Angle Walking Shot",
+        description: "Horizontal panel from a low angle showing characters walking",
+        panels: [
+            { x: 0, y: 40, width: 100, height: 30 }
+        ]
+    },
+    'thoughtful-closeup': {
+        name: "Thoughtful Closeup",
+        description: "Close-up of a character's thoughtful face",
+        panels: [
+            { x: 30, y: 25, width: 40, height: 45 }
+        ]
+    },
+    'uplifting-corner': {
+        name: "Uplifting Corner Scene",
+        description: "A small, uplifting scene at the bottom corner",
+        panels: [
+            { x: 60, y: 65, width: 40, height: 35 }
+        ]
+    },
+    'bright-berries-featured': {
+        name: "Bright Berries Feature",
+        description: "Large panel featuring bright orange berries",
+        panels: [
+            { x: 20, y: 20, width: 60, height: 60 }
+        ]
+    },
+    'offering-mid-shot': {
+        name: "Offering Mid Shot",
+        description: "Mid shot of a character offering something",
+        panels: [
+            { x: 25, y: 25, width: 50, height: 50 }
+        ]
+    },
+    'reaction-small': {
+        name: "Small Reaction Shot",
+        description: "Smaller panel showing a character's reaction",
+        panels: [
+            { x: 35, y: 40, width: 30, height: 30 }
+        ]
+    },
+    'horizontal-split': {
+        name: "Two-Panel Horizontal Split",
+        description: "Horizontal split with two related scenes",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 49 },
+            { x: 0, y: 51, width: 100, height: 49 }
+        ]
+    },
+    'branch-jumping-fullwidth': {
+        name: "Branch Jumping Full-Width",
+        description: "Full-width panel showing a character jumping onto a branch",
+        panels: [
+            { x: 0, y: 30, width: 100, height: 40 }
+        ]
+    },
+    'camaraderie-small': {
+        name: "Small Camaraderie Panel",
+        description: "Small panel focusing on characters' camaraderie",
+        panels: [
+            { x: 35, y: 35, width: 30, height: 30 }
+        ]
+    },
+    'pendant-reveal-large': {
+        name: "Pendant Reveal Large",
+        description: "Large panel revealing a pendant from a character's satchel",
+        panels: [
+            { x: 15, y: 15, width: 70, height: 70 }
+        ]
+    },
+    'split-pendant-seeds': {
+        name: "Split Panel: Pendant and Seeds",
+        description: "Split panel showing pendant closeup and seeds/nuts",
+        panels: [
+            { x: 0, y: 30, width: 49, height: 40 },
+            { x: 51, y: 30, width: 49, height: 40 }
+        ]
+    },
+    'pendant-placement-wide': {
+        name: "Pendant Placement Wide Shot",
+        description: "Wide shot of a character placing a pendant around their neck",
+        panels: [
+            { x: 10, y: 30, width: 80, height: 40 }
+        ]
+    },
+    'vertical-gathering-action': {
+        name: "Vertical Gathering Action",
+        description: "Tall vertical panel showing a character gathering objects",
+        panels: [
+            { x: 30, y: 10, width: 40, height: 80 }
+        ]
+    },
+    'observation-mid-shot': {
+        name: "Observation Mid Shot",
+        description: "Mid shot of a character observing and taking notes",
+        panels: [
+            { x: 25, y: 30, width: 50, height: 40 }
+        ]
+    },
+    'celebration-bottom': {
+        name: "Celebration Bottom Panel",
+        description: "Bright panel at the bottom showing a character celebrating",
+        panels: [
+            { x: 20, y: 65, width: 60, height: 35 }
+        ]
+    },
+    'dusk-picnic-wide': {
+        name: "Dusk Picnic Wide",
+        description: "Wide panel showing characters sharing a picnic at dusk",
+        panels: [
+            { x: 10, y: 30, width: 80, height: 40 }
+        ]
+    },
+    'gentle-smile-closeup': {
+        name: "Gentle Smile Closeup",
+        description: "Close-up of a character smiling gently",
+        panels: [
+            { x: 35, y: 35, width: 30, height: 30 }
+        ]
+    },
+    'cap-tip-twoshot': {
+        name: "Cap Tip Two-Shot",
+        description: "Tight two-shot of characters with one tipping a cap",
+        panels: [
+            { x: 30, y: 30, width: 40, height: 40 }
+        ]
+    },
+    'sunrise-opening': {
+        name: "Sunrise Opening Panel",
+        description: "Large opening panel with bright sunrise",
+        panels: [
+            { x: 10, y: 10, width: 80, height: 40 }
+        ]
+    },
+    'montage-helping': {
+        name: "Montage Helping Panel",
+        description: "Montage-style panel showing a character helping others",
+        panels: [
+            { x: 20, y: 30, width: 60, height: 40 }
+        ]
+    },
+    'finale-fullwidth': {
+        name: "Finale Full-Width Panel",
+        description: "Full-width panel concluding the story with multiple characters",
+        panels: [
+            { x: 0, y: 20, width: 100, height: 60 }
+        ]
+    },
+    'vertical-split-center-square': {
+        name: "Vertical Split with Center Square",
+        description: "Two vertical panels with an overlapping square in the center",
+        panels: [
+            { x: 0, y: 0, width: 49, height: 100 },   // Left vertical panel
+            { x: 51, y: 0, width: 49, height: 100 },  // Right vertical panel
+            { x: 30, y: 35, width: 40, height: 40 }   // Center overlapping square
+        ]
+    },
+    'landscape-large-bottom-right-inset': {
+        name: "Landscape with Large Bottom-Right Inset",
+        description: "Wide landscape panel positioned higher with a larger inset at the bottom right",
+        panels: [
+            // Main landscape panel moved up
+            { x: 1, y: 15, width: 98, height: 45 },
+            // Larger inset in bottom-right
+            { x: 55, y: 62, width: 40, height: 35 }
+        ]
     }
 };
 
