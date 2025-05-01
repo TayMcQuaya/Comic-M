@@ -202,8 +202,13 @@ export class PanelManager {
         delete panel.dataset.rotation; // Also clear rotation data
         delete panel.dataset.isFlippedHorizontally; // Also clear flip data
 
-        // Update controls (method will be moved here too)
-        this.updatePanelControls(panel);
+        // Update controls - Find the container and pass it
+        const controlsContainer = document.querySelector('#panel-properties');
+        if (controlsContainer) {
+            this.updatePanelControls(panel, controlsContainer);
+        } else {
+             console.error("Could not find #panel-properties container in clearPanelImage");
+        }
         // Update thumbnail states via ComicCreator
         this.comicCreator.imageLibrary.updateThumbnails();
 

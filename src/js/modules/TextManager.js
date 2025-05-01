@@ -315,6 +315,12 @@ export class TextManager {
         document.querySelectorAll('.text-bubble').forEach(box => {
             box.classList.remove('selected-text');
         });
+
+        // --- Explicitly deselect any currently selected panel --- 
+        if (this.comicCreator.panelManager.currentPanel) {
+            this.comicCreator.panelManager.selectPanel(null); // Deselect the panel
+        }
+        // --- End panel deselection --- 
         
         // Select the current text box
         textBox.classList.add('selected-text');

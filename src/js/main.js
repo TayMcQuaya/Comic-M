@@ -246,17 +246,23 @@ class ComicCreator {
         
         // Add keyboard event listener for delete key
         document.addEventListener('keydown', (e) => {
+            // Existing Delete key logic
             if (e.key === 'Delete') {
                 // Check current sidebar mode and selected element
                 switch (this.currentSidebarMode) {
                     case 'panels':
-                        // Use the PanelManager's currentPanel property and clear method
-                        if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
+                        // FIRST check if a text box is selected
+                        if (this.textManager.currentTextBox) {
+                            // If a text box is selected, do nothing here.
+                            // Let the browser handle the default Delete key behavior
+                            // for the contenteditable element (deleting text, not the box).
+                            ; // Do nothing
+                        }
+                        // ONLY if NO text box is selected, THEN check if a panel image should be deleted
+                        else if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
+                            // *** Record state BEFORE clearing panel image ***
                             this.historyManager.recordSnapshotBeforeAction(false, 'panel');
                             this.panelManager.clearPanelImage(this.panelManager.currentPanel);
-                        } else if (this.textManager.currentTextBox) { // Check TextManager for selected text
-                            this.historyManager.recordSnapshotBeforeAction(false, 'text');
-                            this.textManager.deleteSelectedTextBox(); // Use TextManager method
                         }
                         break;
                     case 'backgrounds':
@@ -693,15 +699,25 @@ class ComicCreator {
                 // Check current sidebar mode and selected element
                 switch (this.currentSidebarMode) {
                     case 'panels':
-                        // Use the PanelManager's currentPanel property and clear method
-                        if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
+                        // FIRST check if a text box is selected
+                        if (this.textManager.currentTextBox) {
+                            // Check if the key press originated INSIDE the editable text area
+                            const editableTextElement = this.textManager.currentTextBox.querySelector('.text-content');
+                            if (editableTextElement && editableTextElement.contains(e.target)) {
+                                // If triggered inside the editable area, let the browser handle character deletion
+                                // Do nothing here.
+                            } else {
+                                // If triggered outside the editable area (e.g., bubble selected), delete the whole box
+                                // *** Record state BEFORE deleting text box ***
+                                this.historyManager.recordSnapshotBeforeAction(false, 'text');
+                                this.textManager.deleteSelectedTextBox(); // Use TextManager method
+                            }
+                        } 
+                        // ONLY if NO text box is selected (or deletion wasn't handled above), THEN check if a panel image should be deleted
+                        else if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
                             // *** Record state BEFORE clearing panel image ***
-                            this.historyManager.recordSnapshotBeforeAction();
+                            this.historyManager.recordSnapshotBeforeAction(false, 'panel');
                             this.panelManager.clearPanelImage(this.panelManager.currentPanel);
-                        } else if (this.textManager.currentTextBox) { // Check TextManager for selected text
-                             // *** Record state BEFORE deleting text box ***
-                            this.historyManager.recordSnapshotBeforeAction();
-                            this.textManager.deleteSelectedTextBox(); // Use TextManager method
                         }
                         break;
                     case 'backgrounds':
