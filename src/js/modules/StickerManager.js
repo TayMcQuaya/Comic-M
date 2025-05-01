@@ -4,6 +4,8 @@ export class StickerManager {
     constructor(comicCreator) {
         this.comicCreator = comicCreator; // Store reference to the main ComicCreator instance
         this.currentSticker = null; // Track the currently selected sticker element
+        this.isResizing = false; // Track if we're in the middle of a resize operation
+        this.isRotating = false; // Track if we're in the middle of a rotation operation
         console.log('StickerManager initialized');
     }
 
@@ -13,6 +15,9 @@ export class StickerManager {
             console.error('StickerManager: Cannot add sticker - no image provided');
             return;
         }
+
+        // Record state before adding sticker for undo
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
 
         const comicCanvas = document.querySelector('#comic-canvas');
         if (!comicCanvas) {
@@ -70,6 +75,10 @@ export class StickerManager {
         // Make draggable after adding to DOM
         const that = this; // Store reference for the callback
         this.comicCreator.dragAndDropManager.makeStickerDraggable(stickerImg, {
+            onDragStart: function(element) {
+                // Record state before dragging for undo
+                that.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+            },
             onDragEnd: function(element) {
                 that.resetPositionGrid(element); // Reset position grid after manual drag
                 that.comicCreator.saveCurrentPageState(); // Save state
@@ -206,6 +215,9 @@ export class StickerManager {
     positionSticker(sticker, position) {
         if (!sticker) return;
         
+        // Record state before repositioning for undo
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+        
         const container = sticker.parentElement;
         if (!container) return;
         
@@ -296,7 +308,8 @@ export class StickerManager {
             
             btn.appendChild(dot);
             
-            // Add click handler
+            // Add click handler - no need to record state here
+            // as the positionSticker method will now handle that
             btn.addEventListener('click', () => {
                 this.positionSticker(sticker, pos);
             });
@@ -420,13 +433,20 @@ export class StickerManager {
         const deleteBtn = stickerPropsContainer.querySelector('.delete-sticker-btn');
         if (deleteBtn) {
             // Use an instance method reference for the listener
-            deleteBtn.onclick = () => this.deleteSelectedSticker();
+            deleteBtn.onclick = () => {
+                // Record state before deletion for undo
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                this.deleteSelectedSticker();
+            };
         }
 
         // Flip horizontal listener
         const flipHorizontalBtn = stickerPropsContainer.querySelector('.flip-horizontal-btn');
         if (flipHorizontalBtn) {
             flipHorizontalBtn.addEventListener('click', () => {
+                // Record state before flipping for undo
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                
                 const isCurrentlyFlipped = sticker.dataset.isFlippedHorizontally === 'true';
                 sticker.dataset.isFlippedHorizontally = isCurrentlyFlipped ? 'false' : 'true';
                 flipHorizontalBtn.classList.toggle('active');
@@ -449,18 +469,41 @@ export class StickerManager {
 
         if (sizeControl && sizeValue) {
             sizeControl.addEventListener('input', (e) => {
+                // Record state at the start of the sizing operation (only if not already undoing)
+                if (!this.isResizing) {
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    this.isResizing = true;
+                }
+                
                 const sizePercent = parseFloat(e.target.value);
                 const scale = sizePercent / 100;
                 sticker.style.width = `${scale * 100}px`; // Adjust width based on scale
                 sticker.style.height = 'auto'; // Maintain aspect ratio
                 sticker.dataset.size = sizePercent; // Store percentage in dataset
                 sizeValue.textContent = `${Math.round(sizePercent)}%`;
-                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Add mouseup and blur events to save final state and reset flag
+            sizeControl.addEventListener('mouseup', () => {
+                if (this.isResizing) {
+                    this.isResizing = false;
+                    this.comicCreator.saveCurrentPageState();
+                }
+            });
+            
+            sizeControl.addEventListener('blur', () => {
+                if (this.isResizing) {
+                    this.isResizing = false;
+                    this.comicCreator.saveCurrentPageState();
+                }
             });
 
              // Reset Size Button
             if (resetSizeBtn) {
                 resetSizeBtn.addEventListener('click', () => {
+                    // Record state before resetting for undo
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    
                     const defaultSize = 200; // Default size percentage
                     sizeControl.value = defaultSize;
                     sizeValue.textContent = `${defaultSize}%`;
@@ -479,16 +522,39 @@ export class StickerManager {
 
         if (rotationControl && rotationValue) {
             rotationControl.addEventListener('input', (e) => {
+                // Record state at the start of the rotation operation (only if not already rotating)
+                if (!this.isRotating) {
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    this.isRotating = true;
+                }
+                
                 const angle = parseInt(e.target.value);
                 sticker.dataset.rotationAngle = angle;
                 rotationValue.textContent = `${angle}°`;
                 this.updateStickerTransform(sticker);
-                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Add mouseup and blur events to save final state and reset flag
+            rotationControl.addEventListener('mouseup', () => {
+                if (this.isRotating) {
+                    this.isRotating = false;
+                    this.comicCreator.saveCurrentPageState();
+                }
+            });
+            
+            rotationControl.addEventListener('blur', () => {
+                if (this.isRotating) {
+                    this.isRotating = false;
+                    this.comicCreator.saveCurrentPageState();
+                }
             });
 
             // Reset Rotation Button
             if (resetRotationBtn) {
                 resetRotationBtn.addEventListener('click', () => {
+                    // Record state before resetting for undo
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    
                     rotationControl.value = 0;
                     rotationValue.textContent = '0°';
                     sticker.dataset.rotationAngle = 0;
@@ -508,6 +574,9 @@ export class StickerManager {
         if (outlineToggle && outlineControls) {
             // Toggle outline controls visibility
             outlineToggle.addEventListener('change', () => {
+                // Record state before changing outline for undo
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                
                 const enabled = outlineToggle.checked;
                 outlineControls.style.display = enabled ? 'block' : 'none';
                 sticker.dataset.outlineEnabled = enabled;
@@ -518,6 +587,9 @@ export class StickerManager {
             // Width input
             if (outlineWidthInput) {
                 outlineWidthInput.addEventListener('change', () => {
+                    // Record state before changing outline width for undo
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    
                     sticker.dataset.outlineWidth = outlineWidthInput.value;
                     this.updateStickerOutline(sticker);
                     this.comicCreator.saveCurrentPageState();
@@ -527,6 +599,9 @@ export class StickerManager {
             // Color input
             if (outlineColorInput) {
                 outlineColorInput.addEventListener('change', () => {
+                    // Record state before changing outline color for undo
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    
                     sticker.dataset.outlineColor = outlineColorInput.value;
                     this.updateStickerOutline(sticker);
                     this.comicCreator.saveCurrentPageState();
@@ -536,6 +611,9 @@ export class StickerManager {
             // Style input
             if (outlineStyleInput) {
                 outlineStyleInput.addEventListener('change', () => {
+                    // Record state before changing outline style for undo
+                    this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    
                     sticker.dataset.outlineStyle = outlineStyleInput.value;
                     this.updateStickerOutline(sticker);
                     this.comicCreator.saveCurrentPageState();
@@ -673,6 +751,10 @@ export class StickerManager {
                     // Make draggable and add click listener AFTER appending and styling
                     const that = this; // Store reference for the callback
                     this.comicCreator.dragAndDropManager.makeStickerDraggable(stickerImg, {
+                        onDragStart: function(element) {
+                            // Record state before dragging for undo
+                            that.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                        },
                         onDragEnd: function(element) {
                             that.resetPositionGrid(element); // Reset position grid after manual drag
                             that.comicCreator.saveCurrentPageState(); // Save state

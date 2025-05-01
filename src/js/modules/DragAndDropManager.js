@@ -720,6 +720,11 @@ export class DragAndDropManager {
                     element.style.top = `${relativeTop}px`;
                 }
             }
+            
+            // Call the onDragStart callback if provided
+            if (options.onDragStart && typeof options.onDragStart === 'function') {
+                options.onDragStart(element);
+            }
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp, { once: true });

@@ -1,6 +1,3 @@
-// Remove the unused import
-// import { deepCopy } from './Utils.js'; // Assuming a deepCopy utility exists or will be added
-
 class HistoryManager {
     /**
      * Creates an instance of HistoryManager.
@@ -102,10 +99,15 @@ class HistoryManager {
                 previousPanelState: previousPanelState
             };
         } else if (actionType === 'sticker') {
-             // Keep sticker logic selective if desired (or revert to full copy later)
+             // Make sticker logic more complete - save all sticker states with a deep copy
+             console.log(`[HistoryManager] Creating selective sticker state copy`);
+             // Only save what's needed for stickers to restore
+             const stickerStateCopy = currentPage.stickerStates ? 
+                 JSON.parse(JSON.stringify(currentPage.stickerStates)) : [];
+             
              return {
                 layout: currentPage.layout, 
-                stickerStates: JSON.parse(JSON.stringify(currentPage.stickerStates || []))
+                stickerStates: stickerStateCopy
              };
         } else if (actionType === 'text' || actionType === 'text_create') {
              // Keep text logic selective
@@ -207,8 +209,17 @@ class HistoryManager {
                         }
                         break;
                     case 'sticker':
-                        // Restore using the potentially selective sticker state
-                        currentPage.stickerStates = JSON.parse(JSON.stringify(pageState.stickerStates || []));
+                        // Improve sticker state restoration with better logging and error handling
+                        console.log(`[Undo] Restoring sticker states from history.`);
+                        
+                        if (pageState.stickerStates !== undefined) {
+                            // Deep copy the sticker states to avoid reference issues
+                            currentPage.stickerStates = JSON.parse(JSON.stringify(pageState.stickerStates));
+                            console.log(`[Undo] Restored ${currentPage.stickerStates.length} sticker states.`);
+                        } else {
+                            console.warn("[Undo] Sticker action type, but missing sticker state info. Restoring full page.");
+                            Object.assign(currentPage, JSON.parse(JSON.stringify(pageState))); // Restore full state as fallback
+                        }
                         break;
                     case 'text_create':
                     case 'text':
@@ -314,20 +325,5 @@ class HistoryManager {
         this.recordSnapshotBeforeAction();
     }
 }
-
-// We might need to export this if Utils.js doesn't exist or deepCopy isn't there.
-// Simple deep copy for plain objects/arrays. Fails on Dates, Functions, Regexps, etc.
-// function deepCopy(obj) {
-//     if (typeof obj !== 'object' || obj === null) {
-//         return obj; // Primitive value or null
-//     }
-//     try {
-//       return JSON.parse(JSON.stringify(obj));
-//     } catch (e) {
-//       console.error("Deep copy failed, returning original object.", e);
-//       return obj; // Fallback to original reference if stringify fails
-//     }
-// }
-
 
 export { HistoryManager }; 
