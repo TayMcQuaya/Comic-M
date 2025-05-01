@@ -329,6 +329,11 @@ export class PanelManager {
         // --- Setup Reset Zoom Button --- 
         if (resetZoomBtn && img) {
             resetZoomBtn.addEventListener('click', () => {
+                // --- Record History Before Reset --- 
+                const targetPanelIndex = Array.from(panel.parentElement.children).indexOf(panel); // Find index
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex });
+                // --- End History Recording ---
+
                 // Reset zoom to initial scale
                 const initialScale = parseFloat(panel.dataset.initialScale) || 1;
                 img.style.transform = img.style.transform.replace(/scale\(.*?\)/, `scale(${initialScale})`);
@@ -352,6 +357,11 @@ export class PanelManager {
             flipHorizontalBtn.classList.toggle('active', isFlipped);
             
             flipHorizontalBtn.addEventListener('click', () => {
+                // --- Record History Before Flip --- 
+                const targetPanelIndex = Array.from(panel.parentElement.children).indexOf(panel); // Find index
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex });
+                // --- End History Recording ---
+
                 const currentTransform = img.style.transform || '';
                 const isCurrentlyFlipped = currentTransform.includes('scaleX(-1)');
                 
@@ -381,6 +391,11 @@ export class PanelManager {
             
             // Add listener for rotation changes
             rotationControl.addEventListener('input', (e) => {
+                // --- Record History Before Rotation --- 
+                const targetPanelIndex = Array.from(panel.parentElement.children).indexOf(panel); // Find index
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex });
+                // --- End History Recording ---
+
                 const angle = parseInt(e.target.value);
                 panel.dataset.rotation = angle;
                 
@@ -404,6 +419,11 @@ export class PanelManager {
         // --- Setup Reset Rotation Button --- 
         if (resetRotationBtn && img) {
             resetRotationBtn.addEventListener('click', () => {
+                // --- Record History Before Reset --- 
+                const targetPanelIndex = Array.from(panel.parentElement.children).indexOf(panel); // Find index
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex });
+                // --- End History Recording ---
+
                 // Reset rotation to 0 degrees
                 panel.dataset.rotation = '0';
                 
@@ -443,6 +463,11 @@ export class PanelManager {
     handleZoom(e, panel) {
         const img = panel.querySelector('img');
         if (!img) return;
+
+        // --- Record History Before Zoom --- 
+        const targetPanelIndex = Array.from(panel.parentElement.children).indexOf(panel); // Find index
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex });
+        // --- End History Recording ---
 
         const initialScale = parseFloat(panel.dataset.initialScale) || 1;
         const zoomPercentage = parseFloat(e.target.value);
@@ -485,6 +510,11 @@ export class PanelManager {
     handlePositionChange(btn, panel) {
         const img = panel.querySelector('img');
         if (!img) return;
+
+        // --- Record History Before Position Change --- 
+        const targetPanelIndex = Array.from(panel.parentElement.children).indexOf(panel); // Find index
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex });
+        // --- End History Recording ---
 
         // Get and validate step size from input within the panel controls
         // Assume panel controls are updated/available when this is called
