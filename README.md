@@ -57,7 +57,7 @@ A web-based tool for creating digital comic books with a drag-and-drop interface
    - Navigate between pages using the page thumbnails
    - Set backgrounds per page or globally
 
-5. **Saving & Exporting**:
+5. **Saving & Exportin'
    - Save your project regularly with the Save button
    - Export as PDF when your comic is complete
 
