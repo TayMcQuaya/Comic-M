@@ -389,4 +389,29 @@ export class BackgroundManager {
             console.log(`[BackgroundManager.loadCurrentPageBackground] Applied style class: ${styleToApply}`);
         }
     }
+
+    // --- Save Background State ---
+    saveBackgroundState() {
+        console.log("[BackgroundManager.saveBackgroundState] Saving background state");
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) {
+            console.error("[BackgroundManager.saveBackgroundState] Canvas element not found!");
+            return null;
+        }
+
+        // Get current background image if any
+        const bgImage = canvas.querySelector('.canvas-background-image');
+        const imageId = bgImage?.dataset?.imageId;
+
+        // Get current background style class if any
+        const currentStyle = Array.from(canvas.classList)
+            .find(cls => this.backgroundClasses.includes(cls));
+
+        return {
+            imageId: imageId || null,
+            style: currentStyle || null,
+            useGlobalStyle: this.useGlobalBackgroundStyle,
+            globalStyle: this.globalBackgroundStyle
+        };
+    }
 } 

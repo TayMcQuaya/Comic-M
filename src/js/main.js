@@ -10,6 +10,7 @@ import { StickerManager } from './modules/StickerManager.js'; // Import StickerM
 import { BackgroundManager } from './modules/BackgroundManager.js'; // Import BackgroundManager
 import { UIManager } from './modules/UIManager.js'; // Import UIManager
 import { LayoutBuilderManager } from './modules/LayoutBuilderManager.js'; // Import LayoutBuilderManager
+import { HistoryManager } from './modules/HistoryManager.js'; // Import HistoryManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -47,6 +48,7 @@ class ComicCreator {
         this.stickerManager = new StickerManager(this); // Instantiate StickerManager
         this.backgroundManager = new BackgroundManager(this); // Instantiate BackgroundManager
         this.uiManager = new UIManager(this); // Instantiate UIManager
+        this.historyManager = new HistoryManager(this); // Instantiate HistoryManager
         
         this.init();
     }
@@ -75,6 +77,16 @@ class ComicCreator {
         this.setupProjectControls(); // Add this line
         this.initializeUI(); // This might be moved/refactored later
         this.uiManager.setupSidebarTabs(); // Call UIManager method
+        
+        // Initialize history AFTER the initial setup seems complete
+        // This assumes the initial state (e.g., first blank page) is ready
+        // We might need to adjust this if loading a project happens later.
+        try {
+            this.historyManager.initializeWithInitialState();
+        } catch (e) {
+            console.error("Failed to initialize history manager state:", e);
+            // Potentially notify user?
+        }
     }
 
     setupUploadArea() {
@@ -240,28 +252,25 @@ class ComicCreator {
                     case 'panels':
                         // Use the PanelManager's currentPanel property and clear method
                         if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
+                            this.historyManager.recordSnapshotBeforeAction(false, 'panel');
                             this.panelManager.clearPanelImage(this.panelManager.currentPanel);
                         } else if (this.textManager.currentTextBox) { // Check TextManager for selected text
+                            this.historyManager.recordSnapshotBeforeAction(false, 'text');
                             this.textManager.deleteSelectedTextBox(); // Use TextManager method
                         }
                         break;
                     case 'backgrounds':
                         const backgroundElement = document.querySelector('.canvas-background-image');
                         if (backgroundElement) {
-                            // Call BackgroundManager to handle removal and state
-                            this.backgroundManager.removeBackgroundImage(); 
-                            this.deselectAll(); // Keep deselectAll here
-                            // updateRightSidebarView is called within removeBackgroundImage if needed
-                        } else {
-                             console.log("Delete key pressed in background mode, but no background image found.");
+                            this.historyManager.recordSnapshotBeforeAction(false, 'background');
+                            this.backgroundManager.clearCustomBackground(); // Use BackgroundManager method
                         }
                         break;
                     case 'stickers':
-                        // Use the StickerManager's currentSticker property and delete method
-                        if (this.stickerManager.currentSticker) {
-                            this.stickerManager.deleteSelectedSticker();
-                        } else if (this.textManager.currentTextBox) { // Also check for selected text
-                            this.textManager.deleteSelectedTextBox();
+                         // Check StickerManager for selected sticker
+                        if (this.stickerManager.selectedSticker) {
+                            this.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                            this.stickerManager.deleteSelectedSticker(); // Use StickerManager method
                         }
                         break;
                 }
@@ -323,8 +332,7 @@ class ComicCreator {
                 case 'panels':
                     if (panel) {
                         panel.classList.remove('drop-target');
-                        console.log('Mode: Panels - Dropped image ID:', imageId, 'onto panel');
-                        // Call the method on the PanelManager instance
+                        this.historyManager.recordSnapshotBeforeAction(false, 'panel');
                         this.panelManager.addImageToPanel(panel, image); 
                     } else {
                         console.log('Mode: Panels - Drop outside panel ignored.');
@@ -334,7 +342,7 @@ class ComicCreator {
                 case 'backgrounds':
                     // Allow drop anywhere on the canvas for background
                     console.log('Mode: Backgrounds - Dropped image ID:', imageId, 'onto canvas');
-                    // Call the method on the BackgroundManager instance
+                    this.historyManager.recordSnapshotBeforeAction(false, 'background');
                     this.backgroundManager.addBackgroundImage(image);
                     // Remove drop-target from panel if dragged over one initially
                     if (panel) panel.classList.remove('drop-target');
@@ -343,6 +351,7 @@ class ComicCreator {
                 case 'stickers':
                     // Allow drop anywhere on the canvas for stickers
                     console.log('Mode: Stickers - Dropped image ID:', imageId, 'onto canvas');
+                    this.historyManager.recordSnapshotBeforeAction(false, 'sticker');
                     // Pass viewport drop coordinates (clientX, clientY)
                     // Call the method on the StickerManager instance
                     this.stickerManager.addSticker(image, e.clientX, e.clientY);
@@ -430,73 +439,46 @@ class ComicCreator {
         const currentPage = this.pages[this.currentPageIndex];
         if (!currentPage) {
             console.error("Cannot save state - current page not found");
-            return;
+            return null;
         }
         
-        // Preserve existing layout (should be an ID)
-        const existingLayout = currentPage.layout;
-        if (!existingLayout) {
-            // If somehow layout got lost, restore it from selectedLayout
-            currentPage.layout = this.selectedLayout;
-            console.log(`Restored missing layout ID: ${this.selectedLayout}`);
-        } else if (typeof existingLayout === 'object') {
-            // Convert object to ID if we have an old format
-            try {
-                const layoutId = Object.entries(this.layouts).find(
-                    ([id, layout]) => JSON.stringify(layout) === JSON.stringify(existingLayout)
-                )?.[0];
-                
-                if (layoutId) {
-                    currentPage.layout = layoutId;
-                    console.log(`Converted layout object to ID: ${layoutId}`);
-                } else {
-                    console.warn("Could not match layout object to an ID");
-                }
-            } catch (e) {
-                console.error("Error trying to find layout ID:", e);
-            }
-        }
-        
-        // Save panel image states (via PanelManager)
+        // Get states from managers
         const panelImageStates = this.panelManager.savePanelStates();
-
-        // --- Save Text States (via TextManager) ---
         const textStates = this.textManager.saveTextStates(); 
-        currentPage.canvasTextElements = textStates.canvasTextElements; // Save canvas text
-        // --- End Text State Saving ---
+        const stickerStates = this.stickerManager.saveStickerStates();
+        
+        // Get background state safely
+        let backgroundState = null;
+        try {
+            backgroundState = this.backgroundManager.saveBackgroundState();
+        } catch (e) {
+            console.warn("Error saving background state:", e);
+            backgroundState = currentPage.backgroundState || null;
+        }
 
-        // --- Save Sticker States (via StickerManager) ---
-        currentPage.stickerStates = this.stickerManager.saveStickerStates();
-        // --- End Sticker State Saving ---
-
-        const panels = Array.from(document.querySelectorAll('.comic-panel'));
-
-        currentPage.panelStates = panels.map((panel, index) => {
-            const state = panelImageStates[index] || {}; 
-
-            // Assign saved panel text state
-            state.textElements = textStates.panelTextStates[index] || []; 
-
-            // Add background style saving (can be moved later)
-            state.backgroundStyle = panel.dataset.backgroundStyle || 'classic-white'; 
-            
-            return state;
+        // Combine panel states with text states
+        const combinedPanelStates = panelImageStates.map((panelState, index) => {
+            return {
+                ...(panelState || {}), // Merge existing panel state (image, transform)
+                textElements: textStates.panelTextStates[index] || [] // Add text for this panel
+            };
         });
 
-        // --- Background State Saving (Handled by BackgroundManager actions) ---
-        // The BackgroundManager methods (applyBackgroundStyle, addBackgroundImage, etc.)
-        // directly update the relevant properties (canvasBackgroundStyle, backgroundState) 
-        // on the current page object within this.comicCreator.pages.
-        // So, no specific extraction needed here for saving, but ensure those methods do update the page state.
-        // We also need to ensure the global state is saved correctly in saveProject.
+        // Construct the state object
+        const pageStateSnapshot = {
+            layout: currentPage.layout,
+            panelStates: combinedPanelStates,
+            canvasTextElements: textStates.canvasTextElements || [],
+            stickerStates: stickerStates || [],
+            backgroundState: backgroundState,
+            canvasBackgroundStyle: currentPage.canvasBackgroundStyle || 'classic-white'
+        };
 
-        // --- Update ComicCreator state from BackgroundManager ---
-        // Reflect the manager's state back onto the main instance for saving project state
-        this.useGlobalBackgroundStyle = this.backgroundManager.useGlobalBackgroundStyle;
-        this.globalBackgroundStyle = this.backgroundManager.globalBackgroundStyle;
-        // --- End BackgroundManager State Update ---
-        
-        console.log(`Saved page ${this.currentPageIndex} with ${currentPage.panelStates.length} panel states and layout ID ${currentPage.layout}`);
+        // Update the actual page object
+        Object.assign(currentPage, pageStateSnapshot);
+
+        console.log(`Saved page ${this.currentPageIndex} state snapshot`);
+        return pageStateSnapshot;
     }
 
     setupEventListeners() {
@@ -678,6 +660,89 @@ class ComicCreator {
                 }
             });
         }
+
+        // Add keyboard event listener for delete key and UNDO
+        document.addEventListener('keydown', (e) => {
+            // Check for Ctrl+Z (or Cmd+Z on Mac) for UNDO
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault(); // Prevent browser's default undo behavior
+                console.log("Ctrl+Z detected, attempting undo...");
+                this.historyManager.undo();
+                return; // Don't process other keys if undo was triggered
+            }
+            
+            // Add Ctrl+Y for REDO later if needed
+            // if ((e.ctrlKey || e.metaKey) && event.key === 'y') {
+            //    e.preventDefault(); 
+            //    console.log("Ctrl+Y detected, attempting redo...");
+            //    this.historyManager.redo();
+            //    return;
+            // }
+
+            // Existing Delete key logic
+            if (e.key === 'Delete') {
+                // Check current sidebar mode and selected element
+                switch (this.currentSidebarMode) {
+                    case 'panels':
+                        // Use the PanelManager's currentPanel property and clear method
+                        if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
+                            // *** Record state BEFORE clearing panel image ***
+                            this.historyManager.recordSnapshotBeforeAction();
+                            this.panelManager.clearPanelImage(this.panelManager.currentPanel);
+                        } else if (this.textManager.currentTextBox) { // Check TextManager for selected text
+                             // *** Record state BEFORE deleting text box ***
+                            this.historyManager.recordSnapshotBeforeAction();
+                            this.textManager.deleteSelectedTextBox(); // Use TextManager method
+                        }
+                        break;
+                    case 'backgrounds':
+                        const backgroundElement = document.querySelector('.canvas-background-image');
+                        if (backgroundElement) {
+                            // *** Record state BEFORE removing background ***
+                            this.historyManager.recordSnapshotBeforeAction();
+                            this.backgroundManager.clearCustomBackground(); // Use BackgroundManager method
+                        }
+                        break;
+                    case 'stickers':
+                         // Check StickerManager for selected sticker
+                        if (this.stickerManager.selectedSticker) {
+                             // *** Record state BEFORE deleting sticker ***
+                            this.historyManager.recordSnapshotBeforeAction();
+                            this.stickerManager.deleteSelectedSticker(); // Use StickerManager method
+                        }
+                        break;
+                    case 'library':
+                         // Call ImageLibrary's delete method
+                         if (this.imageLibrary.selectedAssets.length > 0) {
+                            // *** Record state BEFORE deleting library image(s) ***
+                            this.historyManager.recordSnapshotBeforeAction();
+                            this.imageLibrary.deleteSelectedImages();
+                         }
+                         break;
+                }
+            }
+
+             // Deselect elements on Escape key
+            if (e.key === 'Escape') {
+                this.deselectAll();
+            }
+        });
+
+        // Add other specific listeners (like canvas interactions, sidebar controls) if not handled by managers
+        const canvas = document.querySelector('#comic-canvas');
+        canvas.addEventListener('click', (e) => {
+            // Clicking on the canvas background deselects panels/text
+            if (e.target === canvas || e.target.classList.contains('canvas-background') || e.target.classList.contains('canvas-background-image')) {
+                this.deselectAll();
+            }
+        });
+        
+        // Global click listener for deselecting assets in image library moved to init()
+
+        // Listener for window resize (optional, but good for responsiveness)
+        // window.addEventListener('resize', () => {
+            // Might need to redraw canvas or adjust element positions
+        // });
     }
 
     createComic(layout = null) {
@@ -985,14 +1050,14 @@ class ComicCreator {
     addNewPage(layoutId) {
         console.log(`Adding new page with layout: ${layoutId}`);
         
-        // Save current page state before creating new page
-        this.saveCurrentPageState();
+        // Record the current state before adding new page
+        this.historyManager.recordSnapshotBeforeAction(true);
         
         // Create new page with the selected layout
         this.pages.push({
-            layout: layoutId, // Store just the layout ID, not the layout object
+            layout: layoutId,
             panelStates: [],
-            canvasBackgroundStyle: 'classic-white' // Default background style
+            canvasBackgroundStyle: 'classic-white'
         });
         
         // Update current page index

@@ -35,6 +35,9 @@ export class TextManager {
     // state management, and event handling will be moved here.
 
     addTextToPanel(panel) {
+        // Record state before adding text, with special action type for text creation
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_create');
+
         // Create text container with default speech bubble
         const textId = `text_${Date.now()}`;
         const textContainer = document.createElement('div');
@@ -169,12 +172,15 @@ export class TextManager {
         this.selectTextBox(textContainer); // Call internal method
 
         // Save state immediately after adding
-        this.comicCreator.saveCurrentPageState(); 
+        // this.comicCreator.saveCurrentPageState(); 
         
         return textContainer;
     }
 
     addTextToCanvas() {
+        // Record state before adding text, with special action type for text creation
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_create');
+
         const canvas = document.querySelector('#comic-canvas');
         if (!canvas) {
             console.error("Cannot add text, canvas not found.");
@@ -298,8 +304,8 @@ export class TextManager {
         // Automatically select the new text box
         this.selectTextBox(textContainer); // Call internal method
 
-        // Save state immediately after adding (via ComicCreator)
-        this.comicCreator.saveCurrentPageState(); 
+        // Save state immediately after adding (REMOVE THIS LINE)
+        // this.comicCreator.saveCurrentPageState(); 
 
         return textContainer;
     }
@@ -346,16 +352,22 @@ export class TextManager {
     updateTextProperties(textBox) {
         const textProperties = document.getElementById('text-properties');
         if (!textProperties) { 
-             console.error('Error: Text properties panel (#text-properties) not found in updateTextProperties.');
+            console.error('Error: Text properties panel (#text-properties) not found in updateTextProperties.');
             return;
         }
+
+        if (!textBox) return;
         
+        // Record state before updating text properties
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text');
+
         const textElement = textBox.querySelector('.text-content');
         if (!textElement) {
             console.error("Could not find '.text-content' inside the provided textBox element.", textBox);
             textProperties.innerHTML = '<p>Error loading text properties.</p>'; 
             return;
         }
+        
         const computedStyle = window.getComputedStyle(textElement);
         
         // (Keep the innerHTML generation from main.js - too long to paste here)
@@ -1984,9 +1996,9 @@ export class TextManager {
      */
     deleteSelectedTextBox() {
         if (!this.currentTextBox) return;
-
-        const popup = document.getElementById('text-format-popup');
-        if (popup) popup.remove(); // Remove formatting popup if open
+        
+        // Record state before deleting text
+        this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text');
 
         this.currentTextBox.remove();
         this.currentTextBox = null;
