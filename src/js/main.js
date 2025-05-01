@@ -332,7 +332,16 @@ class ComicCreator {
                 case 'panels':
                     if (panel) {
                         panel.classList.remove('drop-target');
-                        this.historyManager.recordSnapshotBeforeAction(false, 'panel');
+
+                        // --- Find the index of the target panel --- 
+                        const panelsNodeList = document.querySelectorAll('#comic-canvas .comic-panel');
+                        const targetPanelIndex = Array.from(panelsNodeList).indexOf(panel);
+                        console.log(`[Canvas Drop] Target panel index: ${targetPanelIndex}`);
+                        // --- End find index ---
+
+                        // Pass targetPanelIndex to recordSnapshotBeforeAction
+                        this.historyManager.recordSnapshotBeforeAction(false, 'panel', { targetPanelIndex }); 
+                        
                         this.panelManager.addImageToPanel(panel, image); 
                     } else {
                         console.log('Mode: Panels - Drop outside panel ignored.');
@@ -825,6 +834,16 @@ class ComicCreator {
 
         // Create panels using the PanelManager
         this.panelManager.createPanels(layoutConfig, canvas);
+
+        // --- Update the actual page object's layout property --- 
+        // Ensure this happens BEFORE saveCurrentPageState might be called below
+        const currentPageForLayoutUpdate = this.pages[this.currentPageIndex];
+        if (currentPageForLayoutUpdate) {
+            // Use the ID stored in this.selectedLayout if createComic was called without a specific layout argument
+            currentPageForLayoutUpdate.layout = layout ? (typeof layout === 'string' ? layout : this.selectedLayout) : this.selectedLayout;
+            console.log(`[createComic] Updated page ${this.currentPageIndex} layout to: ${currentPageForLayoutUpdate.layout}`);
+        }
+        // --- End layout update ---
 
         // Apply default background style if no layout is provided
         if (!layout) {

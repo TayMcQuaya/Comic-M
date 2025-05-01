@@ -20,8 +20,11 @@ class HistoryManager {
      * Records the current state BEFORE an action modifies it.
      * Must be called before the action takes place.
      * Ensures deep copies are stored.
+     * @param {boolean} [isNewPage=false] - Indicates if the action is adding a new page.
+     * @param {string|null} [actionType=null] - The type of action being performed (e.g., 'panel', 'text', 'sticker').
+     * @param {object|null} [options=null] - Additional options specific to the action type (e.g., { targetPanelIndex: number }).
      */
-    recordSnapshotBeforeAction(isNewPage = false, actionType = null) {
+    recordSnapshotBeforeAction(isNewPage = false, actionType = null, options = null) {
         if (this.isUndoingOrRedoing) return;
 
         try {
@@ -29,15 +32,8 @@ class HistoryManager {
             const currentPage = this.comicCreator.pages[currentPageIndex];
             if (!currentPage) return;
 
-            // Create a selective copy based on action type
-            let stateCopy;
-            if (isNewPage) {
-                // For new pages, store the previous page's full state
-                stateCopy = JSON.parse(JSON.stringify(currentPage));
-            } else {
-                // For other actions, only store relevant state
-                stateCopy = this.createSelectiveStateCopy(currentPage, actionType);
-            }
+            // Pass options (like targetPanelIndex) to createSelectiveStateCopy
+            const stateCopy = this.createSelectiveStateCopy(currentPage, actionType, options); 
 
             const historyEntry = {
                 pageState: stateCopy,
@@ -57,51 +53,83 @@ class HistoryManager {
                 this.historyStack.shift();
             }
 
+            // --- Improved Logging ---
             console.log("State recorded.", {
                 historySize: this.historyStack.length,
-                actionType: actionType,
-                isNewPage: isNewPage,
+                actionType: historyEntry.actionType, // Use value from historyEntry
+                isNewPage: historyEntry.isNewPage,   // Use value from historyEntry
+                layoutIdSaved: historyEntry.pageState?.layout, // Log the layout ID actually saved in the state object
                 timestamp: historyEntry.timestamp
             });
+            // --- End Improved Logging ---
         } catch (error) {
             console.error("Error recording state:", error);
         }
     }
 
-    createSelectiveStateCopy(currentPage, actionType) {
-        const baseCopy = {
-            layout: currentPage.layout
-        };
+    /**
+     * Creates a state copy. For specific actions, it copies only relevant parts.
+     * @param {object} currentPage - The current page object.
+     * @param {string|null} actionType - The type of action.
+     * @param {object|null} options - Additional options (e.g., { targetPanelIndex: number }).
+     * @returns {object} - The state copy.
+     */
+    createSelectiveStateCopy(currentPage, actionType, options) {
+        // Log the layout ID BEFORE copying
+        console.log(`[HistoryManager] Creating copy. Layout on input page object: ${currentPage?.layout}`);
 
-        switch (actionType) {
-            case 'panel':
-                baseCopy.panelStates = JSON.parse(JSON.stringify(currentPage.panelStates));
-                break;
-            case 'sticker':
-                baseCopy.stickerStates = JSON.parse(JSON.stringify(currentPage.stickerStates || []));
-                break;
-            case 'text_create':
-            case 'text':
-                // Only copy text-related properties
-                baseCopy.panelStates = currentPage.panelStates.map(panel => {
-                    // Only include text elements and minimal panel info
-                    return {
-                        id: panel.id, // Keep panel ID for reference
-                        textElements: panel.textElements || []
-                    };
-                });
-                baseCopy.canvasTextElements = currentPage.canvasTextElements || [];
-                break;
-            case 'background':
-                baseCopy.backgroundState = JSON.parse(JSON.stringify(currentPage.backgroundState));
-                baseCopy.canvasBackgroundStyle = currentPage.canvasBackgroundStyle;
-                break;
-            default:
-                // If no specific action type, copy everything
-                return JSON.parse(JSON.stringify(currentPage));
+        // --- Handle selective copying based on actionType --- 
+        if (actionType === 'panel' && options && options.targetPanelIndex !== undefined && options.targetPanelIndex !== -1) {
+            const targetIndex = options.targetPanelIndex;
+            
+            // --- Add logging for the state being copied --- 
+            const panelStateToCopy = (currentPage.panelStates && currentPage.panelStates[targetIndex]) 
+                ? currentPage.panelStates[targetIndex] 
+                : null; // Get the actual state object reference
+            console.log(`[HistoryManager] State of panel ${targetIndex} BEFORE copy:`, JSON.stringify(panelStateToCopy));
+            // --- End logging ---
+
+            const previousPanelState = panelStateToCopy 
+                ? JSON.parse(JSON.stringify(panelStateToCopy)) // Deep copy it
+                : { imageId: null, transform: null, textElements: [] }; // Default empty state if somehow undefined
+            
+            console.log(`[HistoryManager] Selectively copying panel state for index: ${targetIndex}`);
+            
+            // Store layout, target index, and previous state of THAT panel
+            return {
+                layout: currentPage.layout, // Still need layout for restore
+                targetPanelIndex: targetIndex,
+                previousPanelState: previousPanelState
+            };
+        } else if (actionType === 'sticker') {
+             // Keep sticker logic selective if desired (or revert to full copy later)
+             return {
+                layout: currentPage.layout, 
+                stickerStates: JSON.parse(JSON.stringify(currentPage.stickerStates || []))
+             };
+        } else if (actionType === 'text' || actionType === 'text_create') {
+             // Keep text logic selective
+             return {
+                 layout: currentPage.layout, 
+                 panelStates: currentPage.panelStates.map(panel => ({ // Only need text from panels
+                     id: panel.id, 
+                     textElements: panel.textElements || []
+                 })),
+                 canvasTextElements: JSON.parse(JSON.stringify(currentPage.canvasTextElements || []))
+             };
+        } else if (actionType === 'background') {
+             // Keep background logic selective
+             return {
+                 layout: currentPage.layout, 
+                 backgroundState: JSON.parse(JSON.stringify(currentPage.backgroundState)),
+                 canvasBackgroundStyle: currentPage.canvasBackgroundStyle
+             };
         }
+        // --- End selective copying --- 
 
-        return baseCopy;
+        // Default: For 'new page', other actions, or if selective logic fails, return full copy
+        console.log(`[HistoryManager] Performing full state copy (actionType: ${actionType})`);
+        return JSON.parse(JSON.stringify(currentPage));
     }
 
     /**
@@ -150,31 +178,68 @@ class HistoryManager {
                 // Get current page
                 const currentPage = this.comicCreator.pages[pageIndex];
                 
+                // --- Log the layout ID we are about to restore ---
+                console.log(`[Undo] Restoring layout ID: ${pageState.layout} from history state for page ${pageIndex}`);
+                // --- End logging ---
+                
+                // --- Always restore the layout from the snapshot --- 
+                // Ensure layout exists on pageState, otherwise use current page's layout
+                currentPage.layout = pageState.layout || currentPage.layout;
+                // --- End layout restoration ---
+
                 // Selectively update only the relevant parts based on action type
                 switch (actionType) {
                     case 'panel':
-                        currentPage.panelStates = JSON.parse(JSON.stringify(pageState.panelStates));
+                        // NEW LOGIC for specific panel restore
+                        if (pageState.targetPanelIndex !== undefined && pageState.previousPanelState !== undefined) {
+                            const targetIndex = pageState.targetPanelIndex;
+                            console.log(`[Undo] Restoring state for single panel index: ${targetIndex}`);
+                            if (currentPage.panelStates && currentPage.panelStates[targetIndex]) {
+                                // Restore the specific panel state
+                                currentPage.panelStates[targetIndex] = JSON.parse(JSON.stringify(pageState.previousPanelState));
+                            } else {
+                                console.warn(`[Undo] Cannot restore panel state - Panel index ${targetIndex} not found in current page state.`);
+                            }
+                        } else {
+                            // Fallback to old behavior if specific panel info is missing (shouldn't happen with new save logic)
+                            console.warn("[Undo] Panel action type, but missing specific panel info. Restoring full panelStates.");
+                            currentPage.panelStates = JSON.parse(JSON.stringify(pageState.panelStates || [])); // Use pageState.panelStates if available
+                        }
                         break;
                     case 'sticker':
+                        // Restore using the potentially selective sticker state
                         currentPage.stickerStates = JSON.parse(JSON.stringify(pageState.stickerStates || []));
                         break;
                     case 'text_create':
                     case 'text':
-                        // Update text elements while preserving other panel properties
-                        currentPage.panelStates.forEach((panel, idx) => {
-                            const previousPanelState = pageState.panelStates.find(p => p.id === panel.id);
-                            if (previousPanelState) {
-                                panel.textElements = JSON.parse(JSON.stringify(previousPanelState.textElements || []));
-                            }
-                        });
-                        currentPage.canvasTextElements = JSON.parse(JSON.stringify(pageState.canvasTextElements || []));
+                        // Restore text using the selective state saved
+                        if (pageState.panelStates && pageState.canvasTextElements !== undefined) {
+                            currentPage.panelStates.forEach((panel) => {
+                                const previousPanelState = pageState.panelStates.find(p => p.id === panel.id);
+                                if (previousPanelState) {
+                                    panel.textElements = JSON.parse(JSON.stringify(previousPanelState.textElements || []));
+                                }
+                            });
+                            currentPage.canvasTextElements = JSON.parse(JSON.stringify(pageState.canvasTextElements));
+                        } else {
+                             console.warn("[Undo] Text action type, but missing selective text info. Restoring full page.");
+                             Object.assign(currentPage, JSON.parse(JSON.stringify(pageState))); // Restore full state as fallback
+                        }
                         break;
                     case 'background':
-                        currentPage.backgroundState = JSON.parse(JSON.stringify(pageState.backgroundState));
-                        currentPage.canvasBackgroundStyle = pageState.canvasBackgroundStyle;
+                         // Restore background using selective state
+                         if (pageState.backgroundState !== undefined && pageState.canvasBackgroundStyle !== undefined) {
+                            currentPage.backgroundState = JSON.parse(JSON.stringify(pageState.backgroundState));
+                            currentPage.canvasBackgroundStyle = pageState.canvasBackgroundStyle;
+                         } else {
+                             console.warn("[Undo] Background action type, but missing selective background info. Restoring full page.");
+                             Object.assign(currentPage, JSON.parse(JSON.stringify(pageState))); // Restore full state as fallback
+                         }
                         break;
                     default:
-                        // If no specific action type, restore everything
+                        // If no specific action type, restore the full state from pageState
+                        console.log(`[Undo] Default action or unknown type (${actionType}). Restoring full page state.`);
+                        // Replace the existing page object with the full state saved
                         this.comicCreator.pages[pageIndex] = JSON.parse(JSON.stringify(pageState));
                 }
                 

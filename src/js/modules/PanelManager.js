@@ -119,6 +119,11 @@ export class PanelManager {
             this.comicCreator.dragAndDropManager.setupImageDragging(img);
             // Select the panel after adding the image
             this.selectPanel(panel);
+
+            // --- Explicitly save state AFTER image is added and panel selected --- 
+            this.comicCreator.saveCurrentPageState();
+            // --- End state save ---
+
         } catch (error) {
             console.error('Error adding image to panel:', error);
         }
@@ -577,18 +582,34 @@ export class PanelManager {
         
         const processablePanels = Math.min(panels.length, panelStates.length);
         console.log(`PanelManager: Restoring ${processablePanels} panel image states`);
+        
+        // --- Add logging for the input state array --- 
+        console.log(`PanelManager: Received panelStates for loading:`, JSON.stringify(panelStates));
+        // --- End logging ---
             
         for (let index = 0; index < processablePanels; index++) {
             const panel = panels[index];
             const state = panelStates[index];
                 
+            // --- Add logging for each panel's state --- 
+            console.log(`PanelManager: Processing panel index ${index}. State:`, JSON.stringify(state));
+            // --- End logging ---
+
             // Check if state exists before accessing its properties
             if (state) { 
                 // Restore image if present (Check state AND state.imageId)
                 if (state.imageId) { 
+                    // --- Add logging for image restore attempt ---
+                    console.log(`PanelManager: Panel ${index} has imageId: ${state.imageId}. Attempting to restore.`);
+                    // --- End logging ---
+                    
                     // Use comicCreator instance to access imageLibrary
                     const image = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
                     if (image) {
+                        // --- Add logging on successful image find --- 
+                        console.log(`PanelManager: Found image ${image.id} in library. Creating img element.`);
+                        // --- End logging ---
+                        
                         const img = document.createElement('img');
                         img.src = image.dataUrl || image.src;
                         img.alt = image.name;
@@ -605,7 +626,10 @@ export class PanelManager {
                         
                         // Append the image
                         panel.appendChild(img);
-                        // panel.classList.add('has-image'); // Maybe add this? Check if needed
+                        
+                        // --- Add logging after appending image --- 
+                        console.log(`PanelManager: Appended image ${image.id} to panel ${index}.`);
+                        // --- End logging ---
                         
                         // Restore dataset attributes used by controls
                         if (state.initialScale) panel.dataset.initialScale = state.initialScale;
@@ -624,8 +648,12 @@ export class PanelManager {
                         // Setup dragging for the restored image via ComicCreator
                         this.comicCreator.dragAndDropManager.setupImageDragging(img);
                     } else {
-                         console.warn(`PanelManager: Panel image ID ${state.imageId} not found in loaded images.`);
+                         console.warn(`PanelManager: Panel ${index} - Image ID ${state.imageId} not found in library.`);
                     }
+                } else {
+                    // --- Add logging if no imageId --- 
+                    console.log(`PanelManager: Panel ${index} has no imageId in state. Skipping image restore.`);
+                    // --- End logging ---
                 }
                 // Text element restoration remains in ComicCreator.loadPageState
 
