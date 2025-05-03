@@ -15,6 +15,10 @@ export class ImageLibrary {
         this.lastSelectedAsset = null; // String | null - ID of the last clicked asset for shift-selection
 
         console.log("ImageLibrary initialized");
+
+        // --- NEW: Web Worker Initialization ---
+        this.#imageProcessingWorker = null;
+        this.#pendingImageFiles = 0; // Counter for files sent to worker
     }
 
     // --- Property Accessors --- 
@@ -555,10 +559,54 @@ export class ImageLibrary {
     }
 
     /**
-     * Processes uploaded image files, adds them to the library and current folder.
-     * @param {FileList} files - The files selected by the user.
+     * Processes uploaded image files using a Web Worker, adds them to the library and current folder.
+     * @param {FileList} files - The files selected or dropped by the user.
      */
     async handleImageUpload(files) {
+        console.log('[ImageLibrary.handleImageUpload] Starting WORKER upload process with files:', files.length);
+
+        // --- Ensure worker is initialized ---
+        this.#initializeWorker();
+
+        if (!this.#imageProcessingWorker) {
+            console.error("Worker not available. Cannot process images.");
+            this.comicCreator.uiManager?.showNotification("Image processing unavailable. Upload failed.", "error");
+            // You could potentially fall back to the old synchronous method here if desired,
+            // but for performance, it's better to rely on the worker.
+            // await this.#handleImageUploadSync(files); // Example fallback call
+            return;
+        }
+
+        // --- Filter for actual image files ---
+        const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+        if (imageFiles.length === 0) {
+            console.log("No image files found in selection.");
+            return;
+        }
+
+        // --- Show processing notification ---
+        this.comicCreator.uiManager?.showNotification(`Processing ${imageFiles.length} image(s)...`, "info", 3000);
+
+        // --- Send each image file to the worker ---
+        imageFiles.forEach(file => {
+            try {
+                // IMPORTANT: Pass the File object directly
+                this.#imageProcessingWorker.postMessage(file);
+                this.#pendingImageFiles++; // Increment pending counter
+            } catch (error) {
+                // This catches errors during postMessage itself (rare)
+                console.error(`Error sending file to worker: ${file.name}`, error);
+                this.comicCreator.uiManager?.showNotification(`Error uploading ${file.name}.`, "error");
+                // Decrement counter if postMessage failed
+                // this.#pendingImageFiles = Math.max(0, this.#pendingImageFiles - 1);
+            }
+        });
+
+        console.log(`[handleImageUpload] Sent ${imageFiles.length} files to worker. Pending: ${this.#pendingImageFiles}`);
+
+        // --- REMOVE OR COMMENT OUT THE OLD SYNCHRONOUS FileReader LOGIC --- 
+        /* 
         console.log('[ImageLibrary.handleImageUpload] Starting upload process with files:', files);
         const imagePromises = Array.from(files)
             .filter(file => file.type.startsWith('image/'))
@@ -622,5 +670,192 @@ export class ImageLibrary {
         } else {
             console.log('[ImageLibrary.handleImageUpload] No valid images were processed.');
         }
+        */
+    }
+
+    // --- NEW: Optional Synchronous Fallback (Example) ---
+    /*
+    async #handleImageUploadSync(files) {
+        console.warn('[ImageLibrary.#handleImageUploadSync] Using synchronous fallback for image upload.');
+        // ... [Paste the original FileReader logic here if you want a fallback] ...
+        // Make sure to call this.addImages, add IDs to folder, this.updateThumbnails, this.enableNextButton
+    }
+    */
+
+    // --- NEW: Web Worker Initialization ---
+    #imageProcessingWorker = null;
+    #pendingImageFiles = 0; // Counter for files sent to worker
+
+    #initializeWorker() {
+        if (!this.#imageProcessingWorker) {
+            try {
+                this.#imageProcessingWorker = new Worker('/src/js/workers/imageProcessor.worker.js', { type: 'module' }); 
+                console.log("Image processing worker initialized.");
+
+                this.#imageProcessingWorker.onmessage = (event) => {
+                    this.#pendingImageFiles--; // Decrement counter when a result is received
+                    const data = event.data;
+
+                    if (data.error) {
+                        console.error('Error from image worker:', data.message, `File: ${data.fileName}`);
+                        this.comicCreator.uiManager?.showNotification(`Error processing ${data.fileName || 'image'}: ${data.message}`, 'error');
+                    } else if (data.success) {
+                        console.log('[Worker Success] Received processed image data:', data.name);
+                        // Add the successfully processed image
+                        const imageData = {
+                            id: data.id,
+                            name: data.name,
+                            src: data.objectURL, // Store the Object URL
+                            width: data.width,
+                            height: data.height,
+                            isObjectURL: true // Flag to know we need to revoke later
+                        };
+                        this.addImages([imageData]); // Add to internal array
+
+                        // Add to current folder in folder structure
+                        try {
+                           const currentFolder = this.comicCreator.folderStructure[this.comicCreator.currentFolderId];
+                           if (currentFolder && currentFolder.items && !currentFolder.items.includes(imageData.id)) {
+                               currentFolder.items.push(imageData.id.toString());
+                           }
+                        } catch (e) {
+                           console.error("Error adding image ID to folder structure:", e);
+                        }
+
+
+                        // Incrementally update the UI
+                        this.#addThumbnailToGrid(imageData);
+
+                        // Enable next button if it's the first image
+                        if (this.uploadedImages.length === 1) {
+                           this.enableNextButton();
+                        }
+                    }
+
+                    // Optional: Terminate worker if no more files are pending?
+                    // Or keep it alive for future uploads. For now, keep it alive.
+                    // if (this.#pendingImageFiles === 0) {
+                    //     console.log("All pending images processed. Worker idle.");
+                    // }
+                };
+
+                this.#imageProcessingWorker.onerror = (error) => {
+                    // Handle potential worker loading errors or unhandled exceptions within the worker
+                    console.error('Error in image processing worker:', error.message, error);
+                    this.comicCreator.uiManager?.showNotification('An error occurred in the image processing worker. Please check the console.', 'error');
+                    // Attempt to gracefully terminate the worker?
+                    this.#imageProcessingWorker?.terminate();
+                    this.#imageProcessingWorker = null;
+                    this.#pendingImageFiles = 0; // Reset counter on critical error
+                };
+            } catch (e) {
+                console.error("Failed to initialize image processing worker:", e);
+                this.comicCreator.uiManager?.showNotification('Could not initialize image processing worker. Uploads may be slow.', 'warning');
+                // Fallback to synchronous processing? Or disable uploads? For now, log warning.
+            }
+        }
+    }
+
+    /**
+     * NEW Helper method to add a single thumbnail element to all relevant grids.
+     * Encapsulates DOM creation and listener attachment for one image.
+     * @param {object} imageData - The image data object {id, name, src, width, height, isObjectURL}
+     * @private
+     */
+     #addThumbnailToGrid(imageData) {
+        const grids = document.querySelectorAll('.thumbnails-grid');
+        if (!grids.length) return; // No grids found to update
+
+        const isInUse = this.#isImageUsed(imageData.id); // Check if image is used
+
+        grids.forEach(grid => {
+            const container = document.createElement('div');
+            container.className = 'thumbnail-container image'; // Add 'image' class
+            container.dataset.imageId = imageData.id;
+            container.dataset.assetId = imageData.id; // For selection logic
+
+            const isSelected = this.selectedAssets.includes(String(imageData.id));
+            if (isSelected) {
+                container.classList.add('selected');
+            }
+
+            container.innerHTML = `
+                <img src="${imageData.src}" alt="${imageData.name}" class="thumbnail-image">
+                <span class="thumbnail-name">${imageData.name}</span>
+                ${isInUse ? '<span class="in-use-indicator" title="Image is used in the comic">USED</span>' : ''}
+                <button class="delete-asset-btn" title="Delete Image">&times;</button>
+            `;
+
+            // Append the new thumbnail to the grid
+            // We need to find the right place, usually after folders/buttons
+            // Let's find the first existing thumbnail/folder and insert before it,
+            // or just append if the grid is empty (besides buttons/breadcrumbs)
+             const firstAssetElement = grid.querySelector('.thumbnail-container, .folder-container');
+             if (firstAssetElement) {
+                 grid.insertBefore(container, firstAssetElement);
+             } else {
+                 grid.appendChild(container); // Append if no other assets exist
+             }
+
+
+            // --- Attach Listeners ---
+            // Setup selection handling
+            this.setupImageSelection(container);
+
+            // Setup drag and drop
+            if (this.comicCreator.dragAndDropManager) {
+                 this.comicCreator.dragAndDropManager.setupImageDragAndDrop(container);
+            } else {
+                 console.warn("DragAndDropManager not available on comicCreator instance.");
+            }
+
+            // Setup delete button
+            const deleteBtn = container.querySelector('.delete-asset-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent triggering selection
+                    if (confirm(`Are you sure you want to delete "${imageData.name}"?`)) {
+                        this.deleteImage(imageData.id); // Call the existing delete method
+                    }
+                });
+            }
+        });
+
+        console.log(`[#addThumbnailToGrid] Added thumbnail for: ${imageData.name}`);
+     }
+
+
+    /**
+     * Helper method to check if an image ID is used in any page's panels, backgrounds, or stickers.
+     * @param {string} imageId
+     * @returns {boolean}
+     * @private
+     */
+    #isImageUsed(imageId) {
+        if (!this.comicCreator || !this.comicCreator.pages) return false;
+        const idString = String(imageId);
+        return this.comicCreator.pages.some(page =>
+            (page.panelStates?.some(panel => String(panel.imageId) === idString)) ||
+            (String(page.backgroundState?.imageId) === idString) ||
+            (page.stickerStates?.some(sticker => String(sticker.imageId) === idString))
+        );
+    }
+
+    /**
+     * Sets up click event listeners for asset selection (single, multi, range).
+     * @param {HTMLElement} container - The thumbnail or folder container element.
+     */
+    setupImageSelection(container) {
+        container.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent document click listener from clearing selection
+
+            const assetId = container.dataset.assetId || container.dataset.folderId || container.dataset.imageId;
+            if (!assetId) return;
+
+            const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+            const isShift = e.shiftKey;
+
+            this.handleAssetSelection(container, assetId, isCtrlOrMeta, isShift);
+        });
     }
 } 

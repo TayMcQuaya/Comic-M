@@ -1410,6 +1410,64 @@ class ComicCreator {
             }
         });
         
+        // --- MODIFIED: Convert Object URLs back to Data URLs before saving ---
+        const imageProcessingPromises = this.imageLibrary.getImages().map(async (img) => {
+            if (img.isObjectURL && img.src && img.src.startsWith('blob:')) {
+                try {
+                    // Fetch the blob data from the Object URL
+                    const response = await fetch(img.src);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch blob URL for ${img.name} (status: ${response.status})`);
+                    }
+                    const blob = await response.blob();
+                    
+                    // Use FileReader to convert Blob to Data URL
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                    
+                    console.log(`Converted Object URL back to Data URL for saving: ${img.name}`);
+                    // Return image data with the persistent Data URL
+                    return {
+                        id: img.id,
+                        name: img.name,
+                        width: img.width,
+                        height: img.height,
+                        src: dataUrl
+                        // No need to save isObjectURL flag
+                    };
+                } catch (error) {
+                    console.error(`Failed to convert Object URL to Data URL for image: ${img.name} (${img.id})`, error);
+                    // Fallback: Save with a null src or indicate error? Saving null might be safer.
+                    return { 
+                        id: img.id, 
+                        name: img.name, 
+                        width: img.width, 
+                        height: img.height, 
+                        src: null, // Indicate data loss 
+                        saveError: true
+                    };
+                }
+            } else {
+                // If it's not an Object URL (e.g., already a Data URL or failed load),
+                // save the existing src (which might be null or a Data URL)
+                return {
+                    id: img.id,
+                    name: img.name,
+                    width: img.width,
+                    height: img.height,
+                    src: img.src // Keep original src 
+                };
+            }
+        });
+
+        // Wait for all conversions to complete
+        const imagesToSave = await Promise.all(imageProcessingPromises);
+        // --- END MODIFICATION ---
+
         // Create project state object
         const projectState = {
             version: '1.2', // Increment version to indicate custom layouts support
@@ -1423,13 +1481,7 @@ class ComicCreator {
                     imageId: panel.imageId || null
                 }))
             })),
-            images: this.imageLibrary.getImages().map(img => ({
-                id: img.id,
-                name: img.name,
-                width: img.width,
-                height: img.height,
-                src: img.src // Keep the data URL for now
-            })),
+            images: imagesToSave, // <-- Use the processed images array
             currentPageIndex: this.currentPageIndex,
             // Add folder structure and current folder ID
             folderStructure: this.folderStructure,
@@ -1526,37 +1578,66 @@ class ComicCreator {
             }
             
             // Load images first
-            const loadedImages = await Promise.all(projectState.images.map(img => {
-                return new Promise((resolve) => {
-                    const image = new Image();
-                    image.onload = () => {
-                        resolve({
-                            id: img.id,
-                            name: img.name,
-                            src: img.src,
-                            width: img.width || image.width,
-                            height: img.height || image.height
-                        });
+            // --- MODIFIED: Convert Data URLs to Object URLs during load ---
+            const imageProcessingPromises = projectState.images.map(async (img) => {
+                // If the src is already an object URL or not a data URL, skip conversion
+                if (!img.src || !img.src.startsWith('data:')) {
+                    // If src is missing or not a Data URL, check if it might be a leftover Object URL
+                    // (though ideally projects shouldn't save these). Treat as error or skip.
+                    if (img.src && img.src.startsWith('blob:')) {
+                        console.warn(`Image ${img.name} has a blob URL in save file. Attempting to use as is, but it might be invalid.`);
+                        return { ...img, isObjectURL: true }; // Assume it *might* be valid, needs revoke
+                    }
+                    // If src is missing or invalid, return data but log error
+                    console.error(`Invalid or missing image source for ${img.name} (${img.id}) in project file.`);
+                    return { ...img, src: null, loadError: true }; 
+                }
+
+                try {
+                    // Fetch the Data URL to get a Blob
+                    const response = await fetch(img.src);
+                    if (!response.ok) {
+                         throw new Error(`Failed to fetch data URL for ${img.name} (status: ${response.status})`);
+                    }
+                    const blob = await response.blob();
+                    
+                    // Create an Object URL from the Blob
+                    const objectURL = URL.createObjectURL(blob);
+                    
+                    console.log(`Converted Data URL to Object URL for: ${img.name}`);
+                    
+                    // Return the updated image data object
+                    return {
+                        id: img.id,
+                        name: img.name,
+                        src: objectURL, // Use the efficient Object URL
+                        width: img.width, // Keep width/height from save file
+                        height: img.height,
+                        isObjectURL: true // Mark for later revocation
                     };
-                    image.onerror = () => {
-                        console.error(`Failed to load image: ${img.name} (${img.id})`);
-                        // Resolve with the image data anyway, but it won't display properly
-                        resolve({
-                            id: img.id,
-                            name: img.name,
-                            src: img.src,
-                            width: img.width || 100,
-                            height: img.height || 100,
-                            loadError: true
-                        });
+                } catch (error) {
+                    console.error(`Failed to convert Data URL to Object URL for image: ${img.name} (${img.id})`, error);
+                    // Return data with original src (or null) and error flag
+                    return {
+                        id: img.id,
+                        name: img.name,
+                        src: img.src, // Keep original data URL on error? Or null?
+                        width: img.width,
+                        height: img.height,
+                        loadError: true, 
+                        conversionError: true // Specific flag for conversion error
                     };
-                    image.src = img.src;
-                });
-            }));
+                }
+            });
+
+            const loadedImages = await Promise.all(imageProcessingPromises);
+            // Filter out any potential nulls if errors occurred during promise phase itself (unlikely here)
+            const validLoadedImages = loadedImages.filter(img => img !== null);
             
-            this.imageLibrary.addImages(loadedImages);
+            this.imageLibrary.addImages(validLoadedImages);
+            // --- END MODIFICATION ---
             
-            // Log the loaded images data
+            // Log the loaded images data (src will now be Object URLs)
             console.log('Images loaded into this.imageLibrary:', this.imageLibrary.getImages().map(img => ({
                 id: img.id, 
                 name: img.name, 

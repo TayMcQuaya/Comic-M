@@ -345,7 +345,12 @@ export class DragAndDropManager {
 
             // Move the actual dragging element to provide visual feedback
             if (nextSibling) {
-                grid.insertBefore(draggingElement, nextSibling);
+                if (grid.contains(nextSibling)) {
+                    grid.insertBefore(draggingElement, nextSibling);
+                } else {
+                    console.warn("Dragover: nextSibling is not a child of the target grid. Appending instead.");
+                    grid.appendChild(draggingElement);
+                }
             } else {
                 grid.appendChild(draggingElement);
             }
