@@ -11,6 +11,7 @@ import { BackgroundManager } from './modules/BackgroundManager.js'; // Import Ba
 import { UIManager } from './modules/UIManager.js'; // Import UIManager
 import { LayoutBuilderManager } from './modules/LayoutBuilderManager.js'; // Import LayoutBuilderManager
 import { HistoryManager } from './modules/HistoryManager.js'; // Import HistoryManager
+import { AutoSaveManager } from './modules/AutoSaveManager.js'; // Import AutoSaveManager
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -19,7 +20,8 @@ class ComicCreator {
         // this.uploadedImages = []; // Moved to ImageLibrary
         this.pages = [{
             layout: null,
-            panelStates: [] // Will store image positions and transforms for each panel
+            panelStates: [], // Will store image positions and transforms for each panel
+            canvasBackgroundStyle: 'classic-white' // Ensure default exists
         }];
         this.currentPageIndex = 0;
         this.layouts = layouts; // Store layouts in the instance
@@ -49,11 +51,12 @@ class ComicCreator {
         this.backgroundManager = new BackgroundManager(this); // Instantiate BackgroundManager
         this.uiManager = new UIManager(this); // Instantiate UIManager
         this.historyManager = new HistoryManager(this); // Instantiate HistoryManager
+        this.autoSaveManager = new AutoSaveManager(this); // Instantiate AutoSaveManager
         
         this.init();
     }
 
-    init() {
+    async init() { // Make init async to await autoSaveManager.init
         // Initialize selection tracking - Moved to ImageLibrary
         // this.selectedAssets = [];
         // this.lastSelectedAsset = null;
@@ -87,6 +90,10 @@ class ComicCreator {
             console.error("Failed to initialize history manager state:", e);
             // Potentially notify user?
         }
+
+        // Initialize AutoSaveManager AFTER other initializations
+        // It might prompt the user, which could load state, so it should run late.
+        await this.autoSaveManager.init(); // Await initialization
     }
 
     setupUploadArea() {
@@ -1253,10 +1260,13 @@ class ComicCreator {
         
         // Restore background image if present
         if (page.backgroundState && page.backgroundState.imageId) {
-            const bgImage = this.imageLibrary.getImageById(String(page.backgroundState.imageId));
-            if (bgImage) {
+            // *** CRITICAL PART for Background Image ***
+            const bgImage = this.imageLibrary.getImageById(String(page.backgroundState.imageId)); // Lookup by ID
+            console.log(`[loadPageState] Attempting to load background. Found image data:`, bgImage); // Log lookup result
+            if (bgImage && bgImage.src) { // Check if found and has src
                 const bgImg = document.createElement('img');
-                bgImg.src = bgImage.src;
+                console.log(`[loadPageState] Setting background img.src to: ${bgImage.src.substring(0, 100)}...`); // Log the src being set
+                bgImg.src = bgImage.src; // <-- USE THE SRC FROM ImageLibrary
                 bgImg.alt = "Canvas Background";
                 bgImg.className = 'canvas-background-image';
                 bgImg.style.position = 'absolute';
@@ -1470,7 +1480,7 @@ class ComicCreator {
 
         // Create project state object
         const projectState = {
-            version: '1.2', // Increment version to indicate custom layouts support
+            version: '1.3-autosave', // Update version
             useGlobalBackgroundStyle: this.useGlobalBackgroundStyle,
             globalBackgroundStyle: this.globalBackgroundStyle,
             pages: this.pages.map(page => ({
@@ -1500,9 +1510,20 @@ class ComicCreator {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+
+        // --- Clear auto-save data after successful manual save ---
+        await this.autoSaveManager.clearAutoSave();
+        console.log("Manual save successful, cleared auto-save data.");
+         this.uiManager.showNotification("Project saved successfully!", "success");
     }
 
     async loadProject(file) {
+         // --- Clear any existing auto-save data before loading a manual project ---
+         await this.autoSaveManager.clearAutoSave();
+         console.log("Loading manual project, cleared any existing auto-save data.");
+         // Stop the timer while loading a new project
+         this.autoSaveManager.stopAutoSaveTimer();
+
         try {
             // Load custom layouts first to ensure they're available when restoring pages
             this.loadCustomLayouts();
@@ -1723,13 +1744,20 @@ class ComicCreator {
             // Update navigation
             this.updatePageIndicator();
             this.updateNavigationButtons();
-            
+
             console.log('Project loaded successfully');
+            // Restart the auto-save timer after successfully loading a project
+            this.autoSaveManager.saveIntervalId = setInterval(this.autoSaveManager.performAutoSave, AUTOSAVE_INTERVAL);
+            window.addEventListener('beforeunload', this.autoSaveManager.handleBeforeUnload);
+            this.uiManager.showNotification("Project loaded successfully!", "success");
+
         } catch (error) {
             console.error('Error loading project:', error);
             // Use UIManager to show notification
             this.uiManager.showNotification('Error loading project file. Please make sure it is a valid comic project file.', 'error'); 
             // alert('Error loading project file. Please make sure it is a valid comic project file.'); // Keep alert as backup?
+            // Ensure timer is stopped/restarted appropriately on error?
+            this.autoSaveManager.stopAutoSaveTimer(); // Stop timer on load error
         }
     }
 
@@ -1990,6 +2018,7 @@ class ComicCreator {
                 break;
                 
             case "New (Discard)":
+                await this.autoSaveManager.clearAutoSave(); // Clear auto-save when discarding
                 this.resetProject();
                 break;
                 
@@ -2002,13 +2031,17 @@ class ComicCreator {
     
     /**
      * Resets the application state to a blank project.
+     * @param {boolean} [navigateToLayout=true] - Whether to navigate to the layout selection page.
      */
-    resetProject() {
+    async resetProject(navigateToLayout = true) { // Make async
+        // Stop the auto-save timer during reset
+        this.autoSaveManager.stopAutoSaveTimer();
+
         // Reset pages
         this.pages = [{
             layout: null,
             panelStates: [],
-            canvasBackgroundStyle: 'classic-white'
+            canvasBackgroundStyle: 'classic-white' // Ensure default exists
         }];
         
         // Reset page state
@@ -2020,42 +2053,59 @@ class ComicCreator {
         
         // Reset any other necessary state variables
         this.imageLibrary.clearSelection();
+        this.imageLibrary.clearImages(); // Clear images as well for a truly new project
+        
+        // Reset folder structure
+        this.folderStructure = {
+            root: { type: 'folder', name: 'root', items: [], parent: null }
+        };
+        this.currentFolderId = 'root';
+        this.imageLibrary.updateThumbnails(); // Update library UI
         
         // Reset background style
-        this.backgroundManager.resetBackgroundStyle();
+        this.backgroundManager.applyBackgroundStyle('classic-white'); // Apply default style
         
         // Update navigation UI
         this.updatePageIndicator();
         this.updateNavigationButtons();
-        
-        // Ensure we navigate to layout page regardless of current page
-        // Hide all pages first
-        document.querySelector('#upload-page').classList.remove('active');
-        document.querySelector('#editor-page').classList.remove('active');
-        
-        // Then show only the layout page
-        document.querySelector('#layout-page').classList.add('active');
-        
-        // Reset filter to "All"
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
-        
-        // Make sure all layout options are visible
-        document.querySelectorAll('.layout-option').forEach(option => {
-            option.style.display = 'block';
-        });
-        
-        // Update layout selection behavior for new page
-        const layoutOptions = document.querySelectorAll('.layout-option');
-        layoutOptions.forEach(option => {
-            option.onclick = () => {
-                const layoutId = option.dataset.layout;
-                this.addNewPage(layoutId);
-            };
-        });
-        
-        // Show notification
-        this.uiManager.showNotification("New project created", "success");
+
+        if (navigateToLayout) {
+            // Ensure we navigate to layout page regardless of current page
+            // Hide all pages first
+            document.querySelector('#upload-page').classList.remove('active');
+            document.querySelector('#editor-page').classList.remove('active');
+
+            // Then show only the layout page
+            document.querySelector('#layout-page').classList.add('active');
+
+            // Reset filter to "All"
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.filter-btn[data-filter="all"]').classList.add('active');
+
+            // Make sure all layout options are visible
+            document.querySelectorAll('.layout-option').forEach(option => {
+                option.style.display = 'block';
+            });
+
+            // Update layout selection behavior for new page
+            const layoutOptions = document.querySelectorAll('.layout-option');
+            layoutOptions.forEach(option => {
+                option.onclick = () => {
+                    const layoutId = option.dataset.layout;
+                    this.addNewPage(layoutId);
+                };
+            });
+        }
+
+        // Show notification only if navigating
+        if (navigateToLayout) {
+            this.uiManager.showNotification("New project created", "success");
+        }
+
+        // Restart the auto-save timer for the new blank project by re-initializing the manager
+        // this.autoSaveManager.saveIntervalId = setInterval(this.autoSaveManager.performAutoSave, AUTOSAVE_INTERVAL); // Removed: Incorrect approach
+        // window.addEventListener('beforeunload', this.autoSaveManager.handleBeforeUnload); // Removed: Handled by init
+        await this.autoSaveManager.init(); // Re-initialize the manager to restart timer/listeners
     }
 
     // --- Update Sticker Controls ---

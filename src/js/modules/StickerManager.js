@@ -700,13 +700,16 @@ loadStickerStates(page) {
 
     if (stickerStates.length > 0) {
         stickerStates.forEach(state => {
-            const image = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
-            if (image) {
+            const imageData = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
+            console.log(`[StickerManager] Loading sticker ${state.id}. Found image data for ID ${state.imageId}:`, imageData); // Log lookup
+
+            if (imageData && imageData.src) { // Check if image exists in library and has a src
                 const stickerImg = document.createElement('img');
-                stickerImg.src = image.src; // Use source from image library
-                stickerImg.alt = image.name || 'Sticker';
+                stickerImg.id = state.id || `sticker_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                console.log(`[StickerManager] Setting sticker ${state.id} img.src to: ${imageData.src.substring(0, 100)}...`); // Log src
+                stickerImg.src = imageData.src; // <-- Use the SRC from the ImageLibrary
+                stickerImg.alt = imageData.name || 'Sticker';
                 stickerImg.className = 'canvas-sticker-image';
-                stickerImg.id = state.id;
                 
                 // Set dataset attributes
                 stickerImg.dataset.imageId = state.imageId;

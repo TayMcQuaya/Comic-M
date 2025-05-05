@@ -639,15 +639,13 @@ export class PanelManager {
                     // --- End logging ---
                     
                     // Use comicCreator instance to access imageLibrary
-                    const image = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
-                    if (image) {
-                        // --- Add logging on successful image find --- 
-                        console.log(`PanelManager: Found image ${image.id} in library. Creating img element.`);
-                        // --- End logging ---
-                        
+                    const imageData = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
+                    console.log(`[PanelManager] Loading panel ${index}. Found image data for ID ${state.imageId}:`, imageData); // Log lookup
+                    if (imageData && imageData.src) { // Check if image exists and has a src
                         const img = document.createElement('img');
-                        img.src = image.dataUrl || image.src;
-                        img.alt = image.name;
+                        console.log(`[PanelManager] Setting panel ${index} img.src to: ${imageData.src.substring(0, 100)}...`); // Log src
+                        img.src = imageData.src; // <-- Use the SRC from the ImageLibrary
+                        img.alt = imageData.name || "Panel Image";
                         img.draggable = false; // Prevent native dragging
                         img.dataset.imageId = state.imageId;
                         
@@ -663,7 +661,7 @@ export class PanelManager {
                         panel.appendChild(img);
                         
                         // --- Add logging after appending image --- 
-                        console.log(`PanelManager: Appended image ${image.id} to panel ${index}.`);
+                        console.log(`PanelManager: Appended image ${state.imageId} to panel ${index}.`);
                         // --- End logging ---
                         
                         // Restore dataset attributes used by controls
