@@ -35,6 +35,9 @@ export class TextManager {
     // state management, and event handling will be moved here.
 
     addTextToPanel(panel) {
+        // Deselect everything else first to ensure correct initial layering
+        this.comicCreator.deselectAll(); 
+        
         // Record state before adding text, with special action type for text creation
         this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_create');
 
@@ -56,7 +59,7 @@ export class TextManager {
         textContainer.style.minWidth = '100px';
         textContainer.style.minHeight = '50px';
         textContainer.style.padding = '10px';
-        textContainer.style.zIndex = '10';
+        textContainer.style.zIndex = '100'; // Ensure panel text is also above stickers
         
         // Create editable text element
         const textElement = document.createElement('div');
@@ -178,6 +181,9 @@ export class TextManager {
     }
 
     addTextToCanvas() {
+         // Deselect everything else first to ensure correct initial layering
+        this.comicCreator.deselectAll();
+        
         // Record state before adding text, with special action type for text creation
         this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_create');
 
@@ -187,8 +193,9 @@ export class TextManager {
             return;
         }
 
-        // Determine z-index based on current mode (via ComicCreator)
-        const zIndex = this.comicCreator.currentSidebarMode === 'backgrounds' ? '5' : '100'; // Keep backgrounds at z-index 5, text at 100 (below stickers at 200)
+        // Determine z-index based on current mode (via ComicCreator) - REMOVED Conditional Logic
+        // const zIndex = this.comicCreator.currentSidebarMode === 'backgrounds' ? '5' : '100'; // Keep backgrounds at z-index 5, text at 100 (below stickers at 200)
+        const zIndex = '100'; // Canvas text should always have a high z-index
 
         // Create text container
         const textId = `canvas_text_${Date.now()}`;
@@ -322,6 +329,12 @@ export class TextManager {
         }
         // --- End panel deselection --- 
         
+        // --- Explicitly deselect any currently selected sticker --- 
+        if (this.comicCreator.stickerManager.currentSticker) { // Check StickerManager's property
+            this.comicCreator.stickerManager.deselectCurrentSticker(); // Call StickerManager method
+        }
+        // --- End sticker deselection --- 
+
         // Select the current text box
         textBox.classList.add('selected-text');
         this.currentTextBox = textBox; // Use internal property
@@ -1330,7 +1343,7 @@ export class TextManager {
                 const hexValue = shadowColorHex.textContent.trim();
                 if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
                     shadowColorPicker.value = hexValue;
-                     this.applyTextShadow(textElement, 
+                    this.applyTextShadow(textElement, 
                                          hexValue, 
                                          shadowOffsetXSlider.value, 
                                          shadowOffsetYSlider.value, 
@@ -1516,15 +1529,6 @@ export class TextManager {
         textElement.style.textShadow = 'none';
     }
     
-    // removeEffectFromShadow seems unused after refactoring, can be omitted if confirmed
-    /* 
-    removeEffectFromShadow(shadow, prefix) {
-        if (!shadow) return '';
-        const shadows = shadow.split(',');
-        return shadows.filter(s => !s.trim().startsWith(prefix)).join(',');
-    }
-    */
-    
     updateBubbleTail(textBox, position) {
         textBox.className = textBox.className.replace(/(?:speech|thought)-tail-\S+/g, '').trim();
         const bubbleType = textBox.dataset.bubbleType;
@@ -1682,6 +1686,7 @@ export class TextManager {
                         textShadow: textElement.style.textShadow,
                         hasOutline: textElement.getAttribute('data-has-outline') === 'true',
                         outlineColor: textElement.getAttribute('data-outline-color') || '#000000',
+                        zIndex: textBubble.style.zIndex || '100' // Save z-index, default to 100
                     }
                 });
             });
@@ -1735,6 +1740,7 @@ export class TextManager {
                             textShadow: textElement.style.textShadow,
                             hasOutline: textElement.getAttribute('data-has-outline') === 'true',
                             outlineColor: textElement.getAttribute('data-outline-color') || '#000000',
+                            zIndex: textBubble.style.zIndex || '100' // Save z-index, default to 100
                         }
                     });
                 });
@@ -1887,7 +1893,7 @@ export class TextManager {
                 width: bubbleStyle.width || 'auto',
                 height: bubbleStyle.height || 'auto',
                 transform: bubbleStyle.transform || 'none',
-                zIndex: bubbleStyle.zIndex || (parentElement.id === 'comic-canvas' ? '100' : '10'), // Update canvas text bubbles to z-index 100
+                zIndex: bubbleStyle.zIndex || '100', // Restore z-index, default to 100 for both panel/canvas
                 padding: bubbleStyle.padding || '10px' // Restore padding
             });
         }

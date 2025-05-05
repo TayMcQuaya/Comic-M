@@ -65,8 +65,9 @@ export class StickerManager {
             top: `${top}%`,
             width: '100px', // Initial width, will be adjusted by size control
             height: 'auto',  // Maintain aspect ratio
-            zIndex: '200', // Increased from 100 to 200 to ensure it's above text elements
-            cursor: 'grab'
+            zIndex: '5', // Set default z-index below text
+            cursor: 'grab',
+            userSelect: 'none'
         });
         
         // Add to canvas
@@ -113,7 +114,7 @@ export class StickerManager {
 
         this.currentSticker = stickerElement;
         stickerElement.classList.add('selected-sticker'); // Add a specific class for styling
-        stickerElement.style.zIndex = '201'; // Increased from 101 to 201 for selected stickers
+        stickerElement.style.zIndex = '101'; // Set slightly higher than max text z-index (100)
 
         // Update the right sidebar with sticker controls
         this.updateStickerControls();
@@ -124,7 +125,7 @@ export class StickerManager {
         if (this.currentSticker) {
             console.log('StickerManager: Deselecting sticker:', this.currentSticker.id);
             this.currentSticker.classList.remove('selected-sticker');
-            this.currentSticker.style.zIndex = '200'; // Increased from 100 to 200 when deselected
+            this.currentSticker.style.zIndex = '5'; // Reset to base sticker z-index
             this.currentSticker = null;
         }
     }
@@ -637,160 +638,159 @@ export class StickerManager {
             width: sticker.style.width,
                 height: sticker.style.height,
             transform: sticker.style.transform,
-            zIndex: sticker.style.zIndex,
-                size: sticker.dataset.size || '200',
-                isFlippedHorizontally: sticker.dataset.isFlippedHorizontally === 'true',
-                rotationAngle: parseInt(sticker.dataset.rotationAngle || '0'),
-                outlineEnabled: sticker.dataset.outlineEnabled === 'true',
-                outlineWidth: sticker.dataset.outlineWidth || '2',
-                outlineColor: sticker.dataset.outlineColor || '#000000',
-                outlineStyle: sticker.dataset.outlineStyle || 'solid',
-                position: position // Add position information
-            };
-        });
-        return stickerStates;
+            zIndex: sticker.style.zIndex || '5', // Save z-index, default to 5 if missing
+            size: sticker.dataset.size || '100', // Store size percentage
+            flipped: sticker.classList.contains('flipped'), // Store flipped state
+            outlineEnabled: sticker.dataset.outlineEnabled === 'true',
+            outlineWidth: sticker.dataset.outlineWidth || '2',
+            outlineColor: sticker.dataset.outlineColor || '#000000',
+            outlineStyle: sticker.dataset.outlineStyle || 'solid',
+            position: position // Add position information
+        };
+    });
+    return stickerStates;
+}
+
+/**
+ * Determine position identifier from sticker's current position
+ * @param {HTMLElement} sticker - The sticker element
+ * @returns {string} Position identifier (e.g., 'top-left', 'middle-center')
+ */
+getPositionFromSticker(sticker) {
+    if (!sticker) return 'middle-center'; // Default
+    
+    const left = sticker.style.left;
+    const top = sticker.style.top;
+    
+    // If not percentage-based positioning, return default
+    if (!left.endsWith('%') || !top.endsWith('%')) {
+        return 'custom'; // Custom position
+    }
+    
+    const leftValue = parseInt(left);
+    const topValue = parseInt(top);
+    
+    // Determine horizontal position
+    let horizontal;
+    if (leftValue <= 20) horizontal = 'left';
+    else if (leftValue >= 80) horizontal = 'right';
+    else horizontal = 'center';
+    
+    // Determine vertical position
+    let vertical;
+    if (topValue <= 20) vertical = 'top';
+    else if (topValue >= 80) vertical = 'bottom';
+    else vertical = 'middle';
+    
+    return `${vertical}-${horizontal}`;
+}
+
+loadStickerStates(page) {
+    console.log("StickerManager: Loading sticker states for page");
+    const stickerStates = page.stickerStates || [];
+    const stickerCanvas = document.querySelector('#comic-canvas');
+    if (!stickerCanvas) {
+        console.error("StickerManager: Canvas not found during sticker loading.");
+        return;
     }
 
-    /**
-     * Determine position identifier from sticker's current position
-     * @param {HTMLElement} sticker - The sticker element
-     * @returns {string} Position identifier (e.g., 'top-left', 'middle-center')
-     */
-    getPositionFromSticker(sticker) {
-        if (!sticker) return 'middle-center'; // Default
-        
-        const left = sticker.style.left;
-        const top = sticker.style.top;
-        
-        // If not percentage-based positioning, return default
-        if (!left.endsWith('%') || !top.endsWith('%')) {
-            return 'custom'; // Custom position
-        }
-        
-        const leftValue = parseInt(left);
-        const topValue = parseInt(top);
-        
-        // Determine horizontal position
-        let horizontal;
-        if (leftValue <= 20) horizontal = 'left';
-        else if (leftValue >= 80) horizontal = 'right';
-        else horizontal = 'center';
-        
-        // Determine vertical position
-        let vertical;
-        if (topValue <= 20) vertical = 'top';
-        else if (topValue >= 80) vertical = 'bottom';
-        else vertical = 'middle';
-        
-        return `${vertical}-${horizontal}`;
-    }
+    // Clear any existing stickers managed by this instance before loading
+    stickerCanvas.querySelectorAll('.canvas-sticker-image').forEach(sticker => sticker.remove());
+    this.currentSticker = null; // Reset selection
 
-    loadStickerStates(page) {
-        console.log("StickerManager: Loading sticker states for page");
-        const stickerStates = page.stickerStates || [];
-        const stickerCanvas = document.querySelector('#comic-canvas');
-        if (!stickerCanvas) {
-            console.error("StickerManager: Canvas not found during sticker loading.");
-            return;
-        }
-
-        // Clear any existing stickers managed by this instance before loading
-        stickerCanvas.querySelectorAll('.canvas-sticker-image').forEach(sticker => sticker.remove());
-        this.currentSticker = null; // Reset selection
-
-        if (stickerStates.length > 0) {
-            stickerStates.forEach(state => {
-                const image = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
-                if (image) {
-                    const stickerImg = document.createElement('img');
-                    stickerImg.src = image.src; // Use source from image library
-                    stickerImg.alt = image.name || 'Sticker';
-                    stickerImg.className = 'canvas-sticker-image';
-                    stickerImg.id = state.id;
-                    
-                    // Set dataset attributes
-                    stickerImg.dataset.imageId = state.imageId;
-                    stickerImg.dataset.size = state.size || '200';
-                    stickerImg.dataset.isFlippedHorizontally = state.isFlippedHorizontally ? 'true' : 'false';
-                    stickerImg.dataset.rotationAngle = state.rotationAngle !== undefined ? state.rotationAngle : 0;
-                    stickerImg.dataset.outlineEnabled = state.outlineEnabled ? 'true' : 'false';
-                    stickerImg.dataset.outlineWidth = state.outlineWidth || '2';
-                    stickerImg.dataset.outlineColor = state.outlineColor || '#000000';
-                    stickerImg.dataset.outlineStyle = state.outlineStyle || 'solid';
-                    
-                    // Store position grid information
-                    if (state.position) {
-                        stickerImg.dataset.positionGrid = state.position;
-                    }
-
-                    // Restore position and size
-                    Object.assign(stickerImg.style, {
-                        position: 'absolute',
-                        left: state.left || '0px',
-                        top: state.top || '0px',
-                        width: state.width || '100px',
-                        height: state.height || 'auto',
-                        zIndex: '200', // Always set to 200 regardless of saved state to ensure consistency
-                        cursor: 'grab'
-                    });
-                    
-                    stickerCanvas.appendChild(stickerImg);
-                    
-                    // If it has a standard position, apply it (this will set transform)
-                    if (state.position && state.position !== 'custom') {
-                        this.positionSticker(stickerImg, state.position);
-                    } else {
-                        // Otherwise apply the transform directly
-                        // Apply transform (rotation + flip)
-                        this.updateStickerTransform(stickerImg);
-                    }
-                    
-                    // Apply outline (after transform is set)
-                    this.updateStickerOutline(stickerImg);
-
-                    // Make draggable and add click listener AFTER appending and styling
-                    const that = this; // Store reference for the callback
-                    this.comicCreator.dragAndDropManager.makeStickerDraggable(stickerImg, {
-                        onDragStart: function(element) {
-                            // Record state before dragging for undo
-                            that.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
-                        },
-                        onDragEnd: function(element) {
-                            that.resetPositionGrid(element); // Reset position grid after manual drag
-                            that.comicCreator.saveCurrentPageState(); // Save state
-                        }
-                    });
-                    
-                    stickerImg.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.selectSticker(stickerImg);
-                    });
-                } else {
-                    console.warn(`StickerManager: Image ID ${state.imageId} not found in library for sticker ${state.id}. Skipping sticker.`);
+    if (stickerStates.length > 0) {
+        stickerStates.forEach(state => {
+            const image = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
+            if (image) {
+                const stickerImg = document.createElement('img');
+                stickerImg.src = image.src; // Use source from image library
+                stickerImg.alt = image.name || 'Sticker';
+                stickerImg.className = 'canvas-sticker-image';
+                stickerImg.id = state.id;
+                
+                // Set dataset attributes
+                stickerImg.dataset.imageId = state.imageId;
+                stickerImg.dataset.size = state.size || '200';
+                stickerImg.dataset.isFlippedHorizontally = state.isFlippedHorizontally ? 'true' : 'false';
+                stickerImg.dataset.rotationAngle = state.rotationAngle !== undefined ? state.rotationAngle : 0;
+                stickerImg.dataset.outlineEnabled = state.outlineEnabled ? 'true' : 'false';
+                stickerImg.dataset.outlineWidth = state.outlineWidth || '2';
+                stickerImg.dataset.outlineColor = state.outlineColor || '#000000';
+                stickerImg.dataset.outlineStyle = state.outlineStyle || 'solid';
+                
+                // Store position grid information
+                if (state.position) {
+                    stickerImg.dataset.positionGrid = state.position;
                 }
-            });
-        }
-        console.log(`StickerManager: Loaded ${stickerStates.length} stickers.`);
-    }
 
-    /**
-     * Resets position grid value when a sticker is manually moved
-     * This should be called by the DragAndDropManager after dragging ends
-     * @param {HTMLElement} sticker - The sticker element that was moved
-     */
-    resetPositionGrid(sticker) {
-        if (!sticker) return;
-        
-        // Set to custom to indicate it's not on the grid anymore
-        sticker.dataset.positionGrid = 'custom';
-        
-        // Also ensure there's no transform applied after a drag
-        // that might conflict with future grid positioning
-        if (sticker.style.transform && !sticker.style.transform.includes('rotate') && !sticker.style.transform.includes('scaleX')) {
-            sticker.style.transform = '';
-            
-            // Re-apply just rotation and flip if needed
-            this.updateStickerTransform(sticker);
-        }
+                // Restore position and size
+                Object.assign(stickerImg.style, {
+                    position: 'absolute',
+                    left: state.left || '0px',
+                    top: state.top || '0px',
+                    width: state.width || '100px',
+                    height: state.height || 'auto',
+                    zIndex: state.zIndex || '5', // Restore z-index, default to 5 if missing
+                    cursor: 'grab'
+                });
+                
+                stickerCanvas.appendChild(stickerImg);
+                
+                // If it has a standard position, apply it (this will set transform)
+                if (state.position && state.position !== 'custom') {
+                    this.positionSticker(stickerImg, state.position);
+                } else {
+                    // Otherwise apply the transform directly
+                    // Apply transform (rotation + flip)
+                    this.updateStickerTransform(stickerImg);
+                }
+                
+                // Apply outline (after transform is set)
+                this.updateStickerOutline(stickerImg);
+
+                // Make draggable and add click listener AFTER appending and styling
+                const that = this; // Store reference for the callback
+                this.comicCreator.dragAndDropManager.makeStickerDraggable(stickerImg, {
+                    onDragStart: function(element) {
+                        // Record state before dragging for undo
+                        that.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'sticker');
+                    },
+                    onDragEnd: function(element) {
+                        that.resetPositionGrid(element); // Reset position grid after manual drag
+                        that.comicCreator.saveCurrentPageState(); // Save state
+                    }
+                });
+                
+                stickerImg.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.selectSticker(stickerImg);
+                });
+            } else {
+                console.warn(`StickerManager: Image ID ${state.imageId} not found in library for sticker ${state.id}. Skipping sticker.`);
+            }
+        });
     }
+    console.log(`StickerManager: Loaded ${stickerStates.length} stickers.`);
+}
+
+/**
+ * Resets position grid value when a sticker is manually moved
+ * This should be called by the DragAndDropManager after dragging ends
+ * @param {HTMLElement} sticker - The sticker element that was moved
+ */
+resetPositionGrid(sticker) {
+    if (!sticker) return;
+    
+    // Set to custom to indicate it's not on the grid anymore
+    sticker.dataset.positionGrid = 'custom';
+    
+    // Also ensure there's no transform applied after a drag
+    // that might conflict with future grid positioning
+    if (sticker.style.transform && !sticker.style.transform.includes('rotate') && !sticker.style.transform.includes('scaleX')) {
+        sticker.style.transform = '';
+        
+        // Re-apply just rotation and flip if needed
+        this.updateStickerTransform(sticker);
+    }
+}
 } 
