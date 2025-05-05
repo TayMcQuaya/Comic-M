@@ -673,86 +673,36 @@ export const layouts = {
             { x: 5, y: 62, width: 40, height: 35 }
         ]
     },
-    // Layouts from user images
-    'top-left-inset': {
-        name: "TOP-LEFT INSET",
-        description: "A horizontal bottom panel with a square inset panel overlapping from the top-left",
-        panels: [
-            { x: 0, y: 20, width: 100, height: 80 },  // Main horizontal panel
-            { x: 10, y: 0, width: 35, height: 35 }    // Top-left inset panel
-        ]
-    },
-    'single-panel-large-square': {
-        name: "SINGLE PANEL LARGE SQUARE",
-        description: "A large square panel floating in the middle",
-        panels: [
-            { x: 20, y: 20, width: 60, height: 60 }   // Centered square panel
-        ]
-    },
-    'two-square-one-vertical': {
-        name: "TWO SQUARE ONE VERTICAL",
-        description: "Two square panels on the left with one vertical panel on the right",
-        panels: [
-            { x: 0, y: 0, width: 49, height: 49 },    // Top-left square
-            { x: 0, y: 51, width: 49, height: 49 },   // Bottom-left square
-            { x: 51, y: 0, width: 49, height: 100 }   // Right vertical panel
-        ]
-    },
-    'single-vertical-panel-medium': {
-        name: "SINGLE VERTICAL PANEL MEDIUM",
-        description: "A larger vertical panel option",
-        panels: [
-            { x: 20, y: 0, width: 60, height: 100 }   // Centered vertical panel
-        ]
-    },
-    'split-screen': {
-        name: "SPLIT SCREEN",
-        description: "Side-by-side panels showing parallel action",
-        panels: [
-            { x: 0, y: 0, width: 49, height: 32 },    // Top-left
-            { x: 51, y: 0, width: 49, height: 32 },   // Top-right
-            { x: 0, y: 34, width: 49, height: 32 },   // Middle-left
-            { x: 51, y: 34, width: 49, height: 32 },  // Middle-right
-            { x: 0, y: 68, width: 49, height: 32 },   // Bottom-left
-            { x: 51, y: 68, width: 49, height: 32 }   // Bottom-right
-        ]
-    },
-    'asymmetrical-dynamic': {
-        name: "ASYMMETRICAL DYNAMIC",
-        description: "Complex asymmetrical layout for dynamic storytelling",
-        panels: [
-            { x: 0, y: 0, width: 55, height: 35 },    // Top-left large panel
-            { x: 57, y: 0, width: 43, height: 60 },   // Right vertical panel
-            { x: 0, y: 37, width: 27, height: 23 },   // Middle-left small panel
-            { x: 29, y: 37, width: 26, height: 43 },  // Middle-center small panel
-            { x: 0, y: 62, width: 55, height: 38 },   // Bottom-left medium panel
-            { x: 57, y: 62, width: 43, height: 38 }   // Bottom-right medium panel
-        ]
-    },
-    'comic-book-style': {
-        name: "COMIC BOOK STYLE",
-        description: "Dynamic asymmetrical layout with varying panel sizes",
-        panels: [
-            { x: 0, y: 0, width: 60, height: 49 },    // Top-left large panel
-            { x: 62, y: 0, width: 38, height: 24 },   // Top-right small panel
-            { x: 62, y: 26, width: 38, height: 23 },  // Middle-right small panel
-            { x: 0, y: 51, width: 49, height: 49 },   // Bottom-left medium panel
-            { x: 51, y: 51, width: 49, height: 49 }   // Bottom-right medium panel
-        ]
-    },
-    'single-horizontal-panel-medium': {
-        name: "SINGLE HORIZONTAL PANEL MEDIUM",
-        description: "A larger horizontal panel option",
-        panels: [
-            { x: 0, y: 35, width: 100, height: 30 }   // Centered horizontal panel
-        ]
-    },
     'landscape-with-bottom-left-inset': {
         name: "LANDSCAPE WITH BOTTOM LEFT INSET",
         description: "Wide mangel with an overlapping square in the bottom-left",
         panels: [
             { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
             { x: 10, y: 60, width: 30, height: 30 }    // Overlapping square in the bottom-left
+        ]
+    },
+    'landscape-with-bottom-right-inset': {
+        name: "LANDSCAPE WITH BOTTOM RIGHT INSET",
+        description: "Wide panel with an overlapping square in the bottom-right",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
+            { x: 60, y: 60, width: 30, height: 30 }    // Overlapping square in the bottom-right
+        ]
+    },
+    'landscape-with-medium-bottom-right-inset': {
+        name: "LANDSCAPE WITH MEDIUM BOTTOM RIGHT INSET",
+        description: "Wide panel with a medium-sized overlapping panel in the bottom-right",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
+            { x: 50, y: 50, width: 40, height: 40 }    // Medium overlapping panel in the bottom-right
+        ]
+    },
+    'landscape-with-large-bottom-right-inset': {
+        name: "LANDSCAPE WITH LARGE BOTTOM RIGHT INSET",
+        description: "Wide panel with a large overlapping panel in the bottom-right",
+        panels: [
+            { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
+            { x: 40, y: 40, width: 50, height: 50 }    // Large overlapping panel in the bottom-right
         ]
     },
     
