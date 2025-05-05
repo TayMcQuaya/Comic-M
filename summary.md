@@ -1,838 +1,486 @@
-# Comic Book Maker - Functionality Summary
+# Comic Creator - Functional Summary (Modular)
 
-This document provides a detailed summary of specific functionalities within the Comic Book Maker application, including relevant code snippets and design considerations.
+This document provides a detailed summary of specific functionalities within the modular Comic Creator application, focusing on UI interactions, element management, and their implementation across different manager modules.
 
-## 1. Tabs (Background, Sticker, Panel) & Drag-and-Drop
+## 1. Sidebar Tabs & Mode Switching
 
 ### Functionality:
 
--   The editor features a left sidebar with three tabs: "Panels", "Backgrounds", and "Stickers".
--   Clicking a tab changes the `currentSidebarMode` in the JavaScript, which controls the behavior of subsequent actions, particularly drag-and-drop.
--   The sidebar displays uploaded images in a thumbnail grid (`#editor-thumbnails`).
--   Users can drag images from the thumbnail grid onto the main canvas (`#comic-canvas`).
--   The drop behavior depends on the active tab:
-    -   **Panels Mode:** Images can only be dropped onto designated comic panels (`div.comic-panel`). The image replaces any existing image in that panel.
-    -   **Backgrounds Mode:** Images can be dropped anywhere on the canvas and become the background for the *current page*.
-    -   **Stickers Mode:** Images can be dropped anywhere on the canvas and are added as draggable/resizable stickers on top of panels and backgrounds.
+-   The editor's left sidebar (`.editor-sidebar`) contains tabs ("Panels", "Backgrounds", "Stickers") managed by `UIManager`.
+-   Clicking a tab triggers `UIManager.setupSidebarTabs`, which:
+    -   Updates the visual active state of the clicked tab (`.tab-btn.active`).
+    -   Sets the `comicCreator.currentSidebarMode` property (`'panels'`, `'backgrounds'`, or `'stickers'`). This mode dictates the behavior of subsequent actions, especially drag-and-drop.
+    -   Calls `comicCreator.uiManager.updateRightSidebarView()` to show the appropriate properties panel on the right.
+    -   Calls `comicCreator.deselectAll()` to clear any current panel, text, or sticker selection.
+-   The sidebar content area (`.sidebar-content`) displays image thumbnails managed by `ImageLibrary` and `FolderSystem`.
 
 ### Design (`main.css`):
 
--   The tabs are styled using `.sidebar-tabs`, `.tab-btn`, and `.tab-btn.active`. They use flexbox for layout and have distinct styles for hover and active states.
--   The sidebar content area (`.sidebar-content`) holds the image thumbnails (`.thumbnails-grid`).
--   When dragging an image, the `.dragging` class is applied to the thumbnail.
--   When dragging over a valid drop target (a panel in "Panels" mode), the target element gets the `.drop-target` class for visual feedback (e.g., a border highlight).
+-   Tabs are styled using `.sidebar-tabs`, `.tab-btn`, and `.tab-btn.active` (flexbox layout).
+-   Sidebar content area (`.sidebar-content`) holds the thumbnail grid (`#editor-thumbnails`).
 
-### Code Snippets:
+### Code Snippets / Logic Flow:
 
-**HTML Structure (`index.html` - relevant part):**
+**Tab Click Handling (`UIManager.js` - `setupSidebarTabs`):**
+```javascript
+// Simplified logic within setupSidebarTabs event listener
+const newMode = clickedTab.dataset.tab;
+if (newMode === this.comicCreator.currentSidebarMode) return;
 
-```html
-<!-- Left Sidebar: Image Library -->
-<div class=\"editor-sidebar\">
-    <!-- Add Tab Structure -->
-    <div class=\"sidebar-tabs\">
-        <button class=\"tab-btn active\" data-tab=\"panels\">Panels</button>
-        <button class=\"tab-btn\" data-tab=\"backgrounds\">Backgrounds</button>
-        <button class=\"tab-btn\" data-tab=\"stickers\">Stickers</button>
-    </div>
-    <div class=\"sidebar-content\">
-        <!-- Image Library (now within content area) -->
-        <h3>Your Images</h3>
-        <div id=\"editor-thumbnails\" class=\"thumbnails-grid\"></div>
-    </div>
-</div>
+// Update active tab CSS
+// ... remove 'active' from others, add to clickedTab ...
 
-<!-- Main Canvas Area -->
-<div class=\"comic-canvas-container\">
-    <div id=\"comic-canvas\">
-        <!-- Panels will be dynamically added here -->
-    </div>
-</div>
+// Update central mode state
+this.comicCreator.currentSidebarMode = newMode;
+
+// Update right sidebar UI
+this.updateRightSidebarView();
+
+// Clear selection
+this.comicCreator.deselectAll();
 ```
 
-**JavaScript - Tab Switching (`src/js/main.js` - `setupSidebarTabs`):**
-
+**Right Sidebar Update (`UIManager.js` - `updateRightSidebarView`):**
 ```javascript
-setupSidebarTabs() {
-    const tabsContainer = document.querySelector('.sidebar-tabs');
-    if (!tabsContainer) return;
+updateRightSidebarView() {
+    // ... hide all property sections ...
 
-    tabsContainer.addEventListener('click', (e) => {
-        const clickedTab = e.target.closest('.tab-btn');
-        if (!clickedTab) return;
+    switch (this.comicCreator.currentSidebarMode) {
+        case 'panels':
+            // Show panel properties (potentially placeholder or specific controls via PanelManager)
+            this.comicCreator.panelManager.updatePanelControls(this.comicCreator.currentPanel);
+            // Make #panel-properties visible
+            break;
+        case 'backgrounds':
+            // Show background properties via BackgroundManager
+            this.comicCreator.backgroundManager.updateBackgroundControls();
+            // Make #background-properties visible
+            break;
+        case 'stickers':
+            // Show sticker properties (potentially placeholder or specific controls via StickerManager)
+            this.comicCreator.stickerManager.updateStickerControls(this.comicCreator.currentSticker);
+             // Make #sticker-properties visible
+            break;
+    }
+    // Text properties visibility is handled separately on text selection/deselection
+}
+```
 
-        const newMode = clickedTab.dataset.tab;
-        if (newMode === this.currentSidebarMode) return; // Do nothing if clicking the active tab
+## 2. Drag-and-Drop Operations
 
-        // Update the active tab visually
-        tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
-            tab.classList.remove('active');
-        });
-        clickedTab.classList.add('active');
+### Functionality:
 
-        // Update the internal mode state
-        this.currentSidebarMode = newMode;
-        console.log('Switched sidebar mode to:', this.currentSidebarMode);
+-   Managed primarily by `DragAndDropManager`.
+-   **Image Library to Canvas:**
+    -   Uses HTML5 Drag and Drop API (`dragstart` on thumbnails, `dragover`/`drop` on canvas/panels/folders).
+    -   `dragstart` (in `ImageLibrary`): Stores `imageId` in `dataTransfer`.
+    -   `drop` listener (in `DragAndDropManager` - `setupCanvasDropzone`): Retrieves `imageId`, finds the `image` object, and determines action based on `comicCreator.currentSidebarMode`:
+        -   **Panels Mode:** If dropped on a `.comic-panel`, calls `comicCreator.panelManager.addImageToPanel(panel, image)`.
+        -   **Backgrounds Mode:** Calls `comicCreator.backgroundManager.addBackgroundImage(image)`.
+        -   **Stickers Mode:** Calculates drop coordinates relative to the canvas and calls `comicCreator.stickerManager.addSticker(image, dropX, dropY)`.
+    -   Visual feedback (`.drop-target` class) is applied on `dragover`.
+-   **Element Repositioning/Resizing (Panels, Text, Stickers):**
+    -   Uses custom `mousedown`, `mousemove`, `mouseup` logic implemented in `DragAndDropManager`.
+    -   Specific setup functions are called by the respective managers when elements are created (e.g., `dragAndDropManager.setupPanelImageDragging`, `dragAndDropManager.setupTextDragging`, `dragAndDropManager.setupStickerDragging`).
+    -   These functions attach listeners to the element or specific drag handles.
+    -   `mousemove` handlers calculate new positions/dimensions based on mouse movement, apply necessary constraints (panel/canvas boundaries), and update the element's style (`transform`, `left`, `top`, `width`, `height`).
+    -   `mouseup` handlers finalize the position, potentially save the state (`comicCreator.saveCurrentPageState()`), and remove temporary listeners/classes.
 
-        // Update the right sidebar based on the selected mode
-        this.updateRightSidebarView();
+### Code Snippets / Logic Flow:
 
-        // Deselect any currently selected item when switching modes
-        this.deselectAll();
+**Canvas Drop Handling (`DragAndDropManager.js` - `_handleDrop` called from `setupCanvasDropzone`):**
+```javascript
+_handleDrop(event) {
+    event.preventDefault();
+    this.canvas.classList.remove('drag-over');
+    // ... remove drop-target from panels ...
+
+    const imageId = event.dataTransfer.getData('image/id');
+    const image = this.comicCreator.imageLibrary.getImageById(imageId);
+    if (!image) return;
+
+    const panel = event.target.closest('.comic-panel');
+
+    switch (this.comicCreator.currentSidebarMode) {
+        case 'panels':
+            if (panel) {
+                this.comicCreator.panelManager.addImageToPanel(panel, image);
+            }
+            break;
+        case 'backgrounds':
+            this.comicCreator.backgroundManager.addBackgroundImage(image);
+            break;
+        case 'stickers':
+            const rect = this.canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            this.comicCreator.stickerManager.addSticker(image, x, y);
+            break;
+    }
+    // ... other cleanup ...
+}
+```
+
+**Generic Element Drag Setup (`DragAndDropManager.js` - Simplified `_setupDraggable`):**
+```javascript
+_setupDraggable(element, handle, options) {
+    // options = { onDragStart, onDrag, onDragEnd, container, usePercentage, boundaryCheck }
+    handle.addEventListener('mousedown', (e) => {
+        // ... prevent default, record start position (initialX/Y, elementStartLeft/Top) ...
+        // ... call options.onDragStart if provided ...
+
+        const onMouseMove = (moveEvent) => {
+            // ... calculate deltaX, deltaY ...
+            let newLeft, newTop;
+            if (options.usePercentage) {
+                // Calculate percentage position relative to options.container
+            } else {
+                // Calculate pixel position
+            }
+
+            if (options.boundaryCheck) {
+               // Apply boundary constraints based on options.container
+            }
+
+            // Update element style (left, top, or transform)
+            element.style.left = `${newLeft}${options.usePercentage ? '%' : 'px'}`;
+            element.style.top = `${newTop}${options.usePercentage ? '%' : 'px'}`;
+
+            // ... call options.onDrag if provided ...
+        };
+
+        const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            // ... call options.onDragEnd if provided (e.g., to save state) ...
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     });
 }
 ```
 
-**JavaScript - Canvas Drop Handling (`src/js/main.js` - `canvas.addEventListener('drop', ...)`):**
-
-```javascript
-canvas.addEventListener('drop', (e) => {
-    e.preventDefault();
-    console.log('[Canvas Drop] Drop event detected.');
-
-    let imageId = e.dataTransfer.getData('image/id') || /* ... other formats ... */;
-
-    if (!imageId) {
-        console.log('[Canvas Drop] No image/id found in dataTransfer. Exiting.');
-        return;
-    }
-
-    const image = this.uploadedImages.find(img => String(img.id) === imageId);
-    if (!image) {
-         console.error('[Canvas Drop] Image not found for ID:', imageId);
-         return;
-    }
-
-    const panel = e.target.closest('.comic-panel');
-    console.log('[Canvas Drop] Target panel (if any):', panel);
-    console.log('[Canvas Drop] Current sidebar mode:', this.currentSidebarMode);
-
-    // Handle drop based on current sidebar mode
-    switch (this.currentSidebarMode) {
-        case 'panels':
-            if (panel) {
-                panel.classList.remove('drop-target');
-                console.log('Mode: Panels - Dropped image ID:', imageId, 'onto panel');
-                this.addImageToPanel(panel, image);
-            } else {
-                console.log('Mode: Panels - Drop outside panel ignored.');
-            }
-            break;
-
-        case 'backgrounds':
-            console.log('Mode: Backgrounds - Dropped image ID:', imageId, 'onto canvas');
-            this.addBackgroundImage(image);
-            if (panel) panel.classList.remove('drop-target');
-            break;
-
-        case 'stickers':
-            console.log('Mode: Stickers - Dropped image ID:', imageId, 'onto canvas');
-            this.addSticker(image, e.clientX, e.clientY);
-            if (panel) panel.classList.remove('drop-target');
-            break;
-
-        default:
-            console.warn('Unknown sidebar mode:', this.currentSidebarMode);
-    }
-});
-```
-
-**CSS - Tabs (`src/styles/main.css`):**
-
-```css
-/* Sidebar Tabs */
-.sidebar-tabs {
-    display: flex;
-    margin-bottom: 1rem;
-    border-bottom: 2px solid var(--border-color);
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 0.5rem 0.2rem;
-    background: var(--card-bg);
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 0.75rem;
-    font-weight: bold;
-    text-align: center;
-    transition: all 0.2s ease;
-    text-transform: uppercase;
-}
-
-.tab-btn:hover {
-    color: var(--text-color);
-    background: var(--hover-color);
-}
-
-.tab-btn.active {
-    color: var(--text-bright);
-    background: var(--input-bg);
-    border-bottom-color: var(--primary-color);
-}
-
-/* Style the content area within the sidebar */
-.sidebar-content {
-    /* ... */
-}
-
-.sidebar-content .thumbnails-grid {
-    max-height: calc(100vh - 250px); /* Adjust based on header/tabs height */
-}
-```
-
-## 2. Add Text and Boundaries
+## 3. Text Elements & Boundaries
 
 ### Functionality:
 
--   Text can be added in two ways:
-    -   **Inside a Panel:** Clicking the "Add Text" button (`#add-text-btn`) when a panel is selected calls `addTextToPanel(panel)`. This creates a `.text-bubble` element *inside* the selected `.comic-panel`.
-    -   **Directly on Canvas:** Clicking the "Add Text" button when *no* panel is selected (or when in Backgrounds/Stickers mode?) calls `addTextToCanvas()`. This creates a `.text-bubble` element as a direct child of the `#comic-canvas`.
--   Each `.text-bubble` contains an editable `div.text-content`, drag/resize handles, and format/delete buttons.
+-   Managed by `TextManager`.
+-   Text bubbles (`.text-bubble`) are added via:
+    -   `TextManager.addTextToPanel(panel)`: Creates bubble inside the panel. Positioning (`left`, `top`) is percentage-based relative to the panel.
+    -   `TextManager.addTextToCanvas()`: Creates bubble as a direct child of `#comic-canvas`. Positioning is pixel-based relative to the canvas. The `z-index` is set lower (e.g., 5) if `currentSidebarMode` is 'backgrounds', higher otherwise (e.g., 100).
+-   Each bubble contains a `contentEditable` div (`.text-content`).
 -   **Boundaries:**
-    -   **Panel Text:** Draggable text bubbles added via `addTextToPanel` are constrained *within the boundaries of their parent panel*. The `makeTextDraggable` function calculates boundaries based on the panel's dimensions.
-    -   **Canvas Text:** Draggable text bubbles added via `addTextToCanvas` are constrained *within the boundaries of the main canvas* (`#comic-canvas`). The `makeCanvasTextDraggable` function calculates boundaries based on the canvas's dimensions, using pixel values for positioning.
--   Text bubbles created for backgrounds (presumably via `addTextToCanvas` when in Backgrounds mode) have a lower `z-index` (5) than those for panels/stickers (100), making them appear underneath panels and stickers.
+    -   Dragging is handled by `DragAndDropManager` via `setupTextDragging`.
+    -   Panel Text: Drag logic uses `usePercentage: true` and boundary checks against the parent panel's dimensions.
+    -   Canvas Text: Drag logic uses `usePercentage: false` (pixels) and boundary checks against the main canvas dimensions.
+-   **Selection & Properties:**
+    -   Clicking a text bubble calls `TextManager.selectTextBox(bubbleElement)`.
+    -   This adds the `.selected-text` class for visual feedback.
+    -   It calls `TextManager.updateTextProperties()` to populate the `#text-properties` panel in the right sidebar.
+    -   `DeselectAll()` (called by `UIManager` or `TextManager`) removes the selection and hides `#text-properties`.
 
 ### Design (`main.css`):
 
--   Text bubbles have base styles defined by `.text-bubble`.
--   Different bubble types (e.g., `.speech-bubble`, `.thought-bubble`) add specific border-radius, background, and pseudo-elements (`::before`, `::after`) for tails.
--   The selected text bubble gets the `.selected-text` class, highlighting it with a distinct border and glow.
--   The `.text-properties` section in the right sidebar becomes visible when a text bubble is selected, allowing font, size, color, etc., adjustments.
+-   `.text-bubble` provides base styles.
+-   Bubble type classes (`.speech-bubble`, `.thought-bubble`, etc.) modify appearance (borders, backgrounds, tails via pseudo-elements).
+-   `.selected-text` class adds highlight (border, box-shadow).
 
-### Code Snippets:
+### Code Snippets / Logic Flow:
 
-**JavaScript - Add Text to Panel (`src/js/main.js` - `addTextToPanel`):**
-
+**Adding Text (`TextManager.js` - Simplified `addTextToPanel` / `addTextToCanvas`):
 ```javascript
 addTextToPanel(panel) {
-    // Create text container with default speech bubble
-    const textId = `text_${Date.now()}`;
-    const textContainer = document.createElement('div');
-    textContainer.className = 'text-bubble speech-bubble';
-    textContainer.id = textId;
-    textContainer.dataset.bubbleType = 'speech-bubble';
+    // ... create textContainer, textElement ...
     textContainer.style.position = 'absolute';
-    // Position near panel center initially (using px relative to panel)
-    const initialLeft = Math.max(0, (panel.clientWidth / 2) - 50);
-    const initialTop = Math.max(0, (panel.clientHeight / 2) - 25);
-    textContainer.style.left = `${initialLeft}px`;
-    textContainer.style.top = `${initialTop}px`;
-    textContainer.style.minWidth = '100px';
-    textContainer.style.zIndex = '10'; // High z-index for panel text
-
-    // Create editable text element
-    const textElement = document.createElement('div');
-    textElement.className = 'text-content';
-    textElement.contentEditable = true;
-    textElement.innerHTML = 'Click to edit text';
-    // ... add controls (drag, resize, format, delete) ...
-
+    textContainer.style.left = '50%'; // Initial position (percentage)
+    textContainer.style.top = '50%';
+    textContainer.style.transform = 'translate(-50%, -50%)'; // Center
+    textContainer.style.zIndex = '100';
     panel.appendChild(textContainer);
-
-    // Make draggable within panel boundaries
-    this.makeTextDraggable(textContainer, dragHandle); // Uses panel boundaries
-
-    // Make resizable
-    this.makeTextResizable(textContainer, resizeHandle);
-
-    // ... event listeners for controls and selection ...
-
-    this.selectTextBox(textContainer);
-    return textContainer;
+    // ... create controls ...
+    this.comicCreator.dragAndDropManager.setupTextDragging(textContainer, dragHandle, panel);
+    // ... setup resizing, select, save state ...
 }
-```
 
-**JavaScript - Add Text to Canvas (`src/js/main.js` - `addTextToCanvas`):**
-
-```javascript
 addTextToCanvas() {
-    const canvas = document.querySelector('#comic-canvas');
-    if (!canvas) return;
-
-    // Determine z-index based on current mode
-    const zIndex = this.currentSidebarMode === 'backgrounds' ? '5' : '100';
-
-    // Create text container
-    const textId = `canvas_text_${Date.now()}`;
-    const textContainer = document.createElement('div');
-    textContainer.className = 'text-bubble speech-bubble'; // Default style
-    textContainer.id = textId;
-    textContainer.dataset.bubbleType = 'speech-bubble';
+    const canvas = document.getElementById('comic-canvas');
+    // ... create textContainer, textElement ...
     textContainer.style.position = 'absolute';
-    // Position near canvas center initially (using px relative to canvas)
+    // Position near canvas center initially (pixels)
     const canvasRect = canvas.getBoundingClientRect();
-    const initialLeft = Math.max(0, (canvasRect.width / 2) - 50);
-    const initialTop = Math.max(0, (canvasRect.height / 2) - 25);
-    textContainer.style.left = `${initialLeft}px`;
-    textContainer.style.top = `${initialTop}px`;
-    textContainer.style.minWidth = '100px';
-    textContainer.style.zIndex = zIndex; // Set z-index based on mode
-
-    // Create editable text element
-    const textElement = document.createElement('div');
-    textElement.className = 'text-content';
-    textElement.contentEditable = true;
-    textElement.innerHTML = 'Click to edit text';
-    // ... add controls (drag, resize, format, delete) ...
-
-    canvas.appendChild(textContainer); // Append directly to canvas
-
-    // Make draggable within canvas boundaries
-    this.makeCanvasTextDraggable(textContainer, dragHandle); // Uses canvas boundaries
-
-    // Make resizable
-    this.makeTextResizable(textContainer, resizeHandle);
-
-    // ... event listeners for controls and selection ...
-
-    this.selectTextBox(textContainer);
-    this.saveCurrentPageState();
-    return textContainer;
+    textContainer.style.left = `${canvasRect.width / 2 - 50}px`;
+    textContainer.style.top = `${canvasRect.height / 2 - 25}px`;
+    textContainer.style.zIndex = this.comicCreator.currentSidebarMode === 'backgrounds' ? '5' : '100';
+    canvas.appendChild(textContainer);
+    // ... create controls ...
+    this.comicCreator.dragAndDropManager.setupTextDragging(textContainer, dragHandle, canvas);
+    // ... setup resizing, select, save state ...
 }
 ```
 
-**JavaScript - Text Dragging within Panel (`src/js/main.js` - `makeTextDraggable` relevant part):**
-
+**Selecting Text (`TextManager.js` - `selectTextBox`):**
 ```javascript
-// Inside onMouseMove for makeTextDraggable (Panel Text)
-const panel = element.parentElement;
-const percentX = (deltaX / panel.offsetWidth) * 100;
-const percentY = (deltaY / panel.offsetHeight) * 100;
-let newLeft = startLeft + percentX;
-let newTop = startTop + percentY;
-// ... calculate boundaries based on elementWidth/Height and panelRect ...
-// Apply boundaries
-newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
-newTop = Math.max(minTop, Math.min(newTop, maxTop));
-element.style.left = `${newLeft}%`; // Position using percentage
-element.style.top = `${newTop}%`;
-```
-
-**JavaScript - Text Dragging on Canvas (`src/js/main.js` - `makeCanvasTextDraggable` relevant part):**
-
-```javascript
-// Inside onMouseMove for makeCanvasTextDraggable (Canvas Text)
-const dx = e.clientX - startX;
-const dy = e.clientY - startY;
-let desiredCanvasX = originalX + dx;
-let desiredCanvasY = originalY + dy;
-// Clamp the desired position to stay within the canvas padding box boundaries
-const clampedCanvasX = Math.max(0, Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth));
-const clampedCanvasY = Math.max(0, Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight));
-// Apply the clamped, canvas-relative position
-element.style.left = `${clampedCanvasX}px`; // Position using pixels
-element.style.top = `${clampedCanvasY}px`;
-```
-
-**CSS - Basic Text Bubble (`src/styles/main.css`):**
-
-```css
-.text-bubble {
-    position: absolute;
-    border: 2px solid #000;
-    border-radius: 20px;
-    cursor: grab;
-    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-    user-select: none;
-    /* ... other styles ... */
-    --bubble-background-color: white; /* Customizable background */
-}
-
-.text-content {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    /* ... other styles ... */
-    cursor: text;
-}
-
-.selected-text {
-    border: 3px solid #ffcc00 !important;
-    z-index: 100;
-    box-shadow: 0 0 10px rgba(255, 204, 0, 0.5), 0 0 0 2px rgba(255, 204, 0, 0.3);
-    /* ... other styles ... */
+selectTextBox(textBox) {
+    if (this.currentTextBox === textBox) return;
+    this.comicCreator.deselectAll(textBox); // Deselect others first
+    this.currentTextBox = textBox;
+    textBox.classList.add('selected-text');
+    // ... show controls (resize handles etc.) ...
+    this.updateTextProperties(textBox); // Populate right sidebar
 }
 ```
 
-## 3. Layout Types
+## 4. Layouts & Panel Creation
 
 ### Functionality:
 
--   Layout types are defined as objects within the `layouts` export in `src/js/layouts.js`.
--   Each layout object has:
-    -   `name`: A user-friendly name (e.g., "Classic 2×2 Grid").
-    -   `description`: A brief description.
-    -   `panels`: An array of panel definition objects.
--   Each panel definition object specifies its position and size within the canvas using percentage-based coordinates:
-    -   `x`: Left offset percentage.
-    -   `y`: Top offset percentage.
-    -   `width`: Width percentage.
-    -   `height`: Height percentage.
--   The application uses these definitions to dynamically create the `.comic-panel` elements on the `#comic-canvas` when a layout is selected or a page is loaded.
+-   Predefined layouts are stored in `src/js/layouts.js`.
+-   Custom layouts can be created using `LayoutBuilderManager` and are stored in `localStorage` and the project save file.
+-   Applying a layout (either initially or changing page layout) is handled by `PanelManager.applyLayout(layoutData)`:
+    -   Clears existing panels from `#comic-canvas`.
+    -   Iterates through the `layoutData.panels` array.
+    -   For each panel definition (`{ x, y, width, height }`), creates a `div.comic-panel` element.
+    -   Sets the panel's `id`, `style.left`, `style.top`, `style.width`, `style.height` using the percentage values from the definition.
+    -   Appends the panel to the `#comic-canvas`.
+    -   After creating panels, `ComicCreator` calls `loadPanelStates`, `loadStickerStates`, `loadCanvasTextElements`, etc., to repopulate the page content according to the saved state for that page.
 
 ### Design (`main.css`):
 
--   The layout selection screen (`#layout-page`) displays previews using the `.layout-grid` container.
--   Each option (`.layout-option`) shows a miniature preview (`.layout-preview`) composed of `.preview-panel` divs styled to mimic the actual layout structure.
--   Specific classes like `.grid-2x2`, `.grid-1x2` might be used on the `.layout-preview` element for styling previews, although the primary panel creation relies on the JavaScript definitions.
+-   Layout selection screen (`#layout-page`, managed by `UIManager`) shows previews (`.layout-preview`, `.preview-panel`).
+-   `.comic-panel` elements are absolutely positioned, with `overflow: hidden`.
+-   `.comic-panel.selected` gets a distinct border.
 
-### Code Snippets:
+### Code Snippets / Logic Flow:
 
-**JavaScript - Layout Definitions (`src/js/layouts.js` - examples):**
-
+**Layout Definitions (`src/js/layouts.js` - example):**
 ```javascript
+// (Same as previous summary, structure is accurate)
 export const layouts = {
-    'single': {
-        name: 'Single Panel',
-        description: 'One large panel for a single scene',
-        panels: [
-            { x: 0, y: 0, width: 100, height: 100 }
-        ]
-    },
     'four-grid': {
         name: 'Classic 2×2 Grid',
-        description: 'Traditional four-panel comic layout',
         panels: [
-            { x: 0, y: 0, width: 49, height: 49 }, // Using 49/51 for spacing
+            { x: 0, y: 0, width: 49, height: 49 },
             { x: 51, y: 0, width: 49, height: 49 },
             { x: 0, y: 51, width: 49, height: 49 },
             { x: 51, y: 51, width: 49, height: 49 }
         ]
     },
-    'manga-style': {
-        name: 'Manga Style',
-        description: 'Asymmetrical manga-inspired layout',
-        panels: [
-            { x: 0, y: 0, width: 60, height: 100 },
-            { x: 62, y: 0, width: 38, height: 49 }, // Adjusted for gap
-            { x: 62, y: 51, width: 38, height: 49 }  // Adjusted for gap
-        ]
-    },
-    // ... many other layouts ...
+    // ... other layouts ...
 };
 ```
 
-**JavaScript - Creating Panels (`src/js/main.js` - `createComic` relevant part):**
-
+**Creating Panels (`PanelManager.js` - `applyLayout`):**
 ```javascript
-createComic(layout = null) {
+applyLayout(layoutData) {
     const canvas = document.getElementById('comic-canvas');
-    canvas.innerHTML = ''; // Clear previous panels
+    // Clear only existing panels, not stickers or canvas text
+    canvas.querySelectorAll('.comic-panel').forEach(p => p.remove());
 
-    const useLayout = layout || this.layouts[this.selectedLayout]; // Use provided or selected layout
+    if (!layoutData || !layoutData.panels) return;
 
-    if (!useLayout || !useLayout.panels) {
-        console.error('Invalid layout selected or layout has no panels:', useLayout);
-        return;
-    }
-
-    useLayout.panels.forEach((panelData, index) => {
+    this.panels = []; // Clear internal reference
+    layoutData.panels.forEach((panelDef, index) => {
         const panel = document.createElement('div');
         panel.className = 'comic-panel';
         panel.id = `panel-${index}`;
-        panel.style.left = `${panelData.x}%`;
-        panel.style.top = `${panelData.y}%`;
-        panel.style.width = `${panelData.width}%`;
-        panel.style.height = `${panelData.height}%`;
-        panel.tabIndex = 0; // Make panel focusable
+        panel.style.left = `${panelDef.x}%`;
+        panel.style.top = `${panelDef.y}%`;
+        panel.style.width = `${panelDef.width}%`;
+        panel.style.height = `${panelDef.height}%`;
+        panel.tabIndex = 0; // Make focusable
+
         canvas.appendChild(panel);
+        this.panels.push(panel);
+
+        // Add event listener for selecting this panel
+        panel.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent canvas click
+            this.selectPanel(panel);
+        });
+        // Setup dragging for image within panel (if image added later)
+        this.comicCreator.dragAndDropManager.setupPanelImageDragging(panel);
     });
 
-    // Re-apply background image if it exists for the current page state
-    const currentPage = this.pages[this.currentPageIndex];
-    if (currentPage && currentPage.backgroundState && currentPage.backgroundState.imageId) {
-        // Code to re-add the background image element...
-    }
-
-    // Re-add stickers if they exist for the current page state
-    if (currentPage && currentPage.stickerStates) {
-         // Code to re-add sticker elements...
-    }
-
-    // Re-add canvas text elements if they exist for the current page state
-    if (currentPage && currentPage.canvasTextStates) {
-        // Code to re-add canvas text elements...
-    }
-
-    // Deselect any previously selected panel or text
-    this.deselectAll();
+    // Reset current panel selection
+    this.currentPanel = null;
 }
 ```
 
-**CSS - Comic Panel (`src/styles/main.css`):**
-
-```css
-.comic-panel {
-    position: absolute; /* Positioned by JS using % */
-    background: transparent;
-    border: 3px solid #000000;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    user-select: none;
-}
-
-.comic-panel:not(.has-image) {
-    background: #E0E0E0; /* Placeholder background */
-}
-
-.comic-panel.selected {
-    border-color: #FF0000; /* Red border when selected */
-}
-```
-
-## 4. Navbar and Navigation
+## 5. Page Navigation & Management
 
 ### Functionality:
 
--   The "navbar" is part of the `.editor-header` div.
--   It contains:
-    -   A "Back to Layouts" button (`#back-to-layout`).
-    -   Editor tools (`.editor-tools`) like "Add Text", "Save", "Download".
-    -   A dynamic page navigation section (`.page-navigation`).
--   The page navigation section is added dynamically by `setupPageNavigation` and includes:
-    -   Page indicator (`.page-indicator`) showing "Page X of Y".
-    -   Previous/Next page buttons (`#prevPage`, `#nextPage`).
-    -   A page number input (`#pageNumberInput`) and a "GO" button (`#goToPage`) to jump directly to a specific page.
-    -   Buttons for adding (`#addPage`), deleting (`#deletePage`), and reordering (`#reorderPagesBtn`) pages.
--   Clicking navigation buttons (Prev, Next, GO) calls `navigateToPage(index)`, which saves the current page's state (`saveCurrentPageState`), updates the `currentPageIndex`, and loads the new page's state (`loadPageState`).
+-   The top header (`.editor-header`) contains navigation controls, managed primarily by `UIManager` and `ComicCreator`.
+-   `UIManager.setupPageNavigation` dynamically creates the page controls (indicator, prev/next buttons, jump input, add/delete/reorder buttons) and adds listeners.
+-   **Navigation:**
+    -   Prev/Next buttons and Jump Input trigger `ComicCreator.navigateToPage(index)`.
+    -   `navigateToPage`:
+        - Saves the current page's state via `ComicCreator.saveCurrentPageState()`.
+        - Updates `comicCreator.currentPageIndex`.
+        - Loads the new page's state via `ComicCreator.loadPageState(newIndex)`, which calls manager methods like `panelManager.applyLayout`, `panelManager.loadPanelStates`, `textManager.loadTextStates`, `stickerManager.loadStickerStates`, `backgroundManager.loadCurrentPageBackground`.
+        - Updates the UI indicator and button states via `UIManager.updatePageIndicator` and `UIManager.updateNavigationButtons`.
+-   **Page Management:**
+    -   Add Page (`#addPage`): Calls `ComicCreator.showLayoutSelection()`, which eventually leads to `ComicCreator.addPage(selectedLayoutId)` adding a new page state object to `comicCreator.pages` and navigating to it.
+    -   Delete Page (`#deletePage`): Calls `ComicCreator.deleteCurrentPage()`, which removes the current page state from the array and navigates to an adjacent page.
+    -   Reorder Pages (`#reorderPagesBtn`): Calls `ComicCreator.reorderPages()`, likely using `UIManager` to show a modal for reordering.
 
 ### Design (`main.css`):
 
--   The `.editor-header` uses flexbox to position the back button, tools, and page navigation.
--   The `.page-navigation` itself likely uses flexbox or grid to arrange its controls (`.page-controls`, `.page-actions`).
--   The input field (`.page-number-input`) and buttons (`.tool-btn`, `.primary-btn`, `.danger-btn`) have specific styles for appearance, borders, background colors, and hover states. Notably, the navigation buttons use inline styles in the JS, which might override some CSS rules.
+-   `.editor-header` uses flexbox.
+-   `.page-navigation` groups controls.
+-   Buttons (`.tool-btn`, `.primary-btn`, `.danger-btn`) and inputs have standard styling.
 
-### Code Snippets:
+### Code Snippets / Logic Flow:
 
-**HTML Structure (`index.html` - relevant part):**
-
-```html
-<div class=\"editor-header\">
-    <button class=\"back-btn\" id=\"back-to-layout\">
-        <i class=\"fas fa-arrow-left\"></i> Back to Layouts
-    </button>
-    <div class=\"editor-tools\">
-        <button id=\"add-text-btn\" class=\"tool-btn\">...</button>
-        <button id=\"save-project-btn\" class=\"tool-btn\">...</button>
-        <button id=\"download-btn\" class=\"tool-btn\">...</button>
-        <!-- Page Navigation is dynamically added here by JS -->
-    </div>
-</div>
-```
-
-**JavaScript - Setting up Navigation (`src/js/main.js` - `setupPageNavigation`):**
-
+**Navigation Logic (`ComicCreator.js` - `navigateToPage`):**
 ```javascript
-setupPageNavigation() {
-    const pageNavigation = document.createElement('div');
-    pageNavigation.className = 'page-navigation';
-    // Uses innerHTML to create buttons, input, indicator etc.
-    // (See previous analysis for the innerHTML content)
-    pageNavigation.innerHTML = ` ... HTML for nav controls ... `;
+async navigateToPage(pageIndex, saveCurrentState = true) {
+    if (pageIndex < 0 || pageIndex >= this.pages.length) return;
 
-    const editorHeader = document.querySelector('.editor-header');
-    editorHeader.appendChild(pageNavigation);
-
-    // Add event listeners for the new buttons/input
-    const prevPageBtn = pageNavigation.querySelector('#prevPage');
-    const nextPageBtn = pageNavigation.querySelector('#nextPage');
-    const pageNumberInput = pageNavigation.querySelector('#pageNumberInput');
-    const goToPageBtn = pageNavigation.querySelector('#goToPage');
-    const addPageBtn = pageNavigation.querySelector('#addPage');
-    const deletePageBtn = pageNavigation.querySelector('#deletePage');
-    const reorderPagesBtn = pageNavigation.querySelector('#reorderPagesBtn');
-
-    prevPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex - 1));
-    nextPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex + 1));
-
-    const handlePageNavigation = () => {
-        const pageNum = parseInt(pageNumberInput.value);
-        if (!isNaN(pageNum) && pageNum >= 1 && pageNum <= this.pages.length) {
-            this.navigateToPage(pageNum - 1);
-        } else {
-            pageNumberInput.value = this.currentPageIndex + 1; // Reset if invalid
-        }
-    };
-
-    goToPageBtn.addEventListener('click', handlePageNavigation);
-    pageNumberInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handlePageNavigation();
-    });
-    pageNumberInput.addEventListener('blur', handlePageNavigation); // Navigate on blur too
-
-    addPageBtn.addEventListener('click', () => this.showLayoutSelection());
-    deletePageBtn.addEventListener('click', () => this.deleteCurrentPage());
-    reorderPagesBtn.addEventListener('click', () => this.reorderPages());
-
-    // Initial update
-    this.updatePageIndicator();
-    this.updateNavigationButtons();
-}
-```
-
-**JavaScript - Navigating Pages (`src/js/main.js` - `navigateToPage`):**
-
-```javascript
-navigateToPage(pageIndex, saveCurrentState = true) {
-    if (pageIndex < 0 || pageIndex >= this.pages.length) {
-        console.error('Invalid page index:', pageIndex);
-        return;
-    }
-    console.log(`Navigating from page ${this.currentPageIndex} to page ${pageIndex}`);
-
-    if (saveCurrentState) {
-        console.log(`Saving state of current page ${this.currentPageIndex}`);
-        this.saveCurrentPageState();
+    if (saveCurrentState && this.pages.length > 0) {
+        await this.saveCurrentPageState(); // Ensure state is saved before navigating
     }
 
     this.currentPageIndex = pageIndex;
-    this.loadPageState(pageIndex); // Load panels, images, text for the new page
-    this.updatePageIndicator();   // Update "Page X of Y" text
-    this.updateNavigationButtons(); // Enable/disable Prev/Next buttons
+    await this.loadPageState(pageIndex); // Load layout, panels, text, etc.
+
+    this.uiManager.updatePageIndicator();
+    this.uiManager.updateNavigationButtons();
+    this.deselectAll(); // Deselect elements on new page
 }
 ```
 
-**CSS - Editor Header & Navigation (`src/styles/main.css`):**
-
-```css
-.editor-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.75rem 1.5rem;
-    background: var(--card-bg);
-    /* ... other header styles ... */
-}
-
-.editor-tools {
-    display: flex;
-    gap: 1rem;
-}
-
-.page-navigation {
-    /* Likely uses flexbox, styles defined in CSS */
-    display: flex;
-    align-items: center;
-    gap: 1rem; /* Example */
-}
-
-.page-controls {
-    /* Styles for grouping indicator, input, arrows */
-    display: flex;
-    align-items: center;
-    gap: 0.5rem; /* Example */
-}
-
-.page-indicator {
-    font-size: 1rem;
-    font-weight: bold;
-    /* ... */
-}
-
-.page-number-input {
-    width: 50px; /* Example width */
-    text-align: center;
-    /* ... other input styles ... */
-    /* Note: Inline styles in JS might override these */
-}
-
-.page-actions {
-    /* Styles for Add/Delete/Reorder buttons */
-    display: flex;
-    gap: 0.5rem; /* Example */
-}
-
-/* General Button Styles (examples) */
-.tool-btn { /* Used for Prev/Next/Go/Reorder */
-    /* ... base button styles ... */
-     /* Note: Inline styles in JS might override these */
-}
-
-.primary-btn { /* Used for Add Page */
-    /* ... primary action styles ... */
-}
-
-.danger-btn { /* Used for Delete Page */
-    /* ... danger action styles ... */
-}
-```
-
-### Right Sidebar Integration:
-
--   The `updateRightSidebarView()` function determines which properties panel to show based on the `currentSidebarMode` and whether an item (panel, sticker) is currently selected (`this.currentPanel`, `this.currentSticker`).
--   If the "Panels" tab is active and a panel is selected, `updatePanelControls()` populates the `#panel-properties` div.
--   If the "Backgrounds" tab is active, `updateBackgroundControls()` populates the `#background-properties` div (dynamically created if it doesn't exist).
--   If the "Stickers" tab is active and a sticker is selected, `updateStickerControls()` populates the `#sticker-properties` div (also created dynamically if needed).
--   When a text bubble is selected (regardless of the sidebar tab), `selectTextBox()` calls `updateTextProperties()` which populates the `#text-properties` div.
-
-**JavaScript - Sidebar View Logic (`src/js/main.js` - `updateRightSidebarView`):**
-
+**Loading Page State (`ComicCreator.js` - `loadPageState`):**
 ```javascript
-updateRightSidebarView() {
-    const propertiesPanel = document.querySelector('.properties-panel');
-    if (!propertiesPanel) return;
+async loadPageState(pageIndex) {
+    const pageData = this.pages[pageIndex];
+    if (!pageData) return;
 
-    // Hide all potential sections first
-    const panelProps = propertiesPanel.querySelector('#panel-properties');
-    const textProps = propertiesPanel.querySelector('#text-properties');
-    const backgroundProps = propertiesPanel.querySelector('#background-properties');
-    const stickerProps = propertiesPanel.querySelector('#sticker-properties');
+    // 1. Apply Layout (PanelManager clears old panels)
+    const layout = typeof pageData.layout === 'string' ? this.layouts[pageData.layout] || this.layoutBuilderManager.getLayoutById(pageData.layout) : pageData.layout;
+    this.panelManager.applyLayout(layout); // Creates empty panels
 
-    if (panelProps) panelProps.style.display = 'none';
-    if (textProps) textProps.style.display = 'none';
-    if (backgroundProps) backgroundProps.style.display = 'none';
-    if (stickerProps) stickerProps.style.display = 'none';
+    // 2. Load Panel Content (images, transforms, text within panels)
+    await this.panelManager.loadPanelStates(pageData.panelStates || []);
 
-    // Show the relevant section based on mode AND current selection
-    switch (this.currentSidebarMode) {
-        case 'panels':
-            console.log("Right sidebar: Panels tab active.");
-            if (this.currentPanel) { // Show only if a panel is selected
-                this.updatePanelControls(this.currentPanel);
-                if (panelProps) panelProps.style.display = 'block';
-            } else { // Show placeholder if no panel selected
-                // ... (placeholder HTML) ...
-                if (panelProps) panelProps.style.display = 'block';
-            }
-            break;
-        case 'backgrounds':
-             console.log("Right sidebar: Backgrounds tab active.");
-             // Always show background controls when this tab is active
-             this.updateBackgroundControls(this.currentBackground);
-             if (backgroundProps) backgroundProps.style.display = 'block';
-            break;
-        case 'stickers':
-             console.log("Right sidebar: Stickers tab active.");
-             if (this.currentSticker) { // Show only if a sticker is selected
-                 this.updateStickerControls(this.currentSticker);
-                 if (stickerProps) stickerProps.style.display = 'block';
-             } else { // Show placeholder if no sticker selected
-                 // ... (placeholder HTML) ...
-                 if (stickerProps) stickerProps.style.display = 'block';
-             }
-            break;
-        default:
-             console.warn("Unknown sidebar mode:", this.currentSidebarMode);
+    // 3. Load Background
+    this.backgroundManager.loadCurrentPageBackground(); // Reads from this.pages[this.currentPageIndex]
+
+    // 4. Load Stickers
+    this.stickerManager.loadStickerStates(pageData.stickerStates || []);
+
+    // 5. Load Canvas Text Elements (Text elements not inside panels)
+    this.textManager.loadTextStates(pageData.canvasTextElements || [], document.getElementById('comic-canvas'));
+
+    // Update UI, e.g., folder path if needed
+    this.uiManager.updateFolderPath();
+}
+```
+
+## 6. Right Sidebar Property Panels
+
+### Functionality:
+
+-   The right sidebar (`.properties-panel`) displays context-specific controls based on the active left sidebar tab (`currentSidebarMode`) and the currently selected element.
+-   Managed by `UIManager.updateRightSidebarView()` in conjunction with specific managers.
+-   **Panel Settings (`#panel-properties`):**
+    -   Activated when `currentSidebarMode` is 'panels' AND `comicCreator.currentPanel` is set.
+    -   Populated by `PanelManager.updatePanelControls(panel)`.
+    -   Controls image zoom (`scale`), position (`translate`), rotation, flip. Changes modify the `<img>` transform/style within the selected panel.
+-   **Text Settings (`#text-properties`):**
+    -   Activated when `comicCreator.currentTextBox` is set (regardless of sidebar mode).
+    -   Populated by `TextManager.updateTextProperties(textBox)`.
+    -   Controls bubble type, font family/size/color, bubble color/opacity, text styles (bold, italic, etc.), outline, shadow, padding, rotation. Changes modify the `.text-bubble` and `.text-content` styles.
+-   **Background Settings (`#background-properties`):**
+    -   Activated when `currentSidebarMode` is 'backgrounds'.
+    -   Populated by `BackgroundManager.updateBackgroundControls()`.
+    -   Controls predefined background styles, custom background image management (add/remove, apply-to-all). Changes modify `#comic-canvas` background or `.canvas-background-image`.
+-   **Sticker Settings (`#sticker-properties`):**
+    -   Activated when `currentSidebarMode` is 'stickers' AND `comicCreator.currentSticker` is set.
+    -   Populated by `StickerManager.updateStickerControls(sticker)`.
+    -   Controls sticker size, rotation, flip, outline (color, width, style), delete. Changes modify the sticker `<img>` element's style and transform.
+-   **State Saving:** Any change made through these property panels typically triggers `comicCreator.saveCurrentPageState()` immediately, often via the event listener attached by the manager that created the control.
+
+### Design (`main.css`):
+
+-   `.properties-panel` is the main container.
+-   `.properties-section` (`#panel-properties`, `#text-properties`, etc.) holds controls for one element type.
+-   `.panel-controls`, `.control-group`, `.zoom-group`, etc., structure the inputs/labels/buttons.
+
+### Code Snippets / Logic Flow:
+
+**(See `UIManager.updateRightSidebarView` snippet in Section 1)**
+
+**Example: Updating Panel Controls (`PanelManager.js` - `updatePanelControls` Simplified):**
+```javascript
+updatePanelControls(panel) {
+    const controlsContainer = document.getElementById('panel-properties');
+    // ... clear or prepare controlsContainer ...
+
+    if (!panel) {
+        controlsContainer.innerHTML = '<p>Select a panel to see image controls.</p>';
+        controlsContainer.style.display = 'block';
+        return;
     }
-    // Note: Text properties visibility is handled separately by selectTextBox/deselectAll
+
+    const img = panel.querySelector('img');
+    // Generate HTML for zoom slider, position buttons, rotate, flip etc.
+    controlsContainer.innerHTML = `... HTML for panel image controls ...`;
+
+    // Find controls (zoomControl, positionBtns, rotateSlider, flipBtn)
+    // ...
+
+    // Set initial values from panel/image state (e.g., img transform)
+    // ...
+
+    // Add event listeners
+    zoomControl.addEventListener('input', (e) => {
+        // Update image transform: scale
+        this.comicCreator.saveCurrentPageState();
+    });
+    positionBtns.forEach(btn => btn.addEventListener('click', () => {
+        // Update image transform: translate
+        this.comicCreator.saveCurrentPageState();
+    }));
+    // ... listeners for rotate, flip ...
+
+    controlsContainer.style.display = 'block';
 }
 ```
 
-## 2. Add Text and Boundaries
+**(Similar update logic exists in `TextManager`, `BackgroundManager`, `StickerManager` for their respective panels).**
 
-### Right Sidebar - Text Settings (`#text-properties`):
+## 7. State Management Overview
 
--   **Activation:** This panel becomes visible when a text bubble (`.text-bubble`) is selected (triggered by `selectTextBox()` which calls `updateTextProperties()`). It's hidden on deselection (`deselectAll()`) or when switching sidebar tabs.
--   **Controls Population:** The `updateTextProperties()` function dynamically generates the HTML for the controls within `#text-properties`.
--   **Functionality:**
-    -   **Bubble Style:** A dropdown (`select.bubble-type`) allows changing the bubble's appearance (Speech, Thought, Caption, Shout, Whisper) by adding/removing corresponding CSS classes (`.speech-bubble`, `.thought-bubble`, etc.) to the text bubble element.
-    -   **Font Family:** A dropdown (`select.font-family`) populated with various fonts (grouped by category). Changes `textElement.style.fontFamily`.
-    -   **Font Size:** A range slider (`input.font-size`) controls `textElement.style.fontSize`. Displays the current size (e.g., "16px").
-    -   **Text Color:** A color picker (`input.font-color`) and an editable hex display (`.font-color-hex`) control `textElement.style.color`.
-    -   **Bubble Color:** A color picker (`input.bubble-color`) and an editable hex display (`.bubble-color-hex`) control the bubble's background color (via `textBox.style.backgroundColor` and the `--bubble-background-color` CSS variable).
-    -   **Text Style:** Buttons (`.bold-btn`, `.italic-btn`, `.underline-btn`) toggle `fontWeight`, `fontStyle`, and `textDecoration` on the `textElement`. (Implementation details for toggling might be in the popup logic, not shown in `updateTextProperties`).
-    -   **Rotation:** A range slider (`input.rotation`) controls the `rotate()` value in the `textBox.style.transform`. Displays the current angle (e.g., "0°").
--   **State Saving:** Every control change within this panel immediately triggers `this.saveCurrentPageState()` to persist the modification.
+### Functionality:
 
-**HTML Structure (`index.html` - text properties part):**
+-   The application state is primarily managed within the `ComicCreator` instance, particularly the `pages` array which holds the state for each individual page.
+-   `ComicCreator.saveCurrentPageState()` is the core function for capturing the state of the *currently visible page*.
+    -   It calls methods on relevant managers to get their current state:
+        -   `PanelManager.savePanelStates()` (returns array of panel states, including image transforms and nested text elements gathered via `TextManager.getTextStatesInElement`).
+        -   `StickerManager.saveStickerStates()` (returns array of sticker states).
+        -   `TextManager.getTextStatesInElement(canvas)` (returns array of *canvas-level* text element states).
+        -   `BackgroundManager.saveBackgroundState()` (returns background state object).
+    -   It combines this data with the current layout ID into a page state object and updates the corresponding entry in `comicCreator.pages[currentPageIndex]`.
+    -   It implicitly triggers `HistoryManager.recordSnapshotBeforeAction()` before most state-modifying actions, which saves a copy of the page state *before* the change.
+-   `ComicCreator.loadPageState(index)` orchestrates restoring the state for a given page index by calling the corresponding `load...` methods on the managers.
+-   **Project Save/Load:**
+    -   `ComicCreator.saveProject()` serializes the *entire* application state (version, pages array, image library data including Data URLs, folder structure, custom layouts, settings) into a JSON object and triggers a file download.
+    -   `ComicCreator.loadProject()` reads a JSON file, parses it, restores the entire application state (including converting Data URLs back to Object URLs), and loads the first page.
+-   **Auto-Save:** `AutoSaveManager` periodically calls `ComicCreator.saveProject(true)` to save the full project state silently to `localStorage`.
 
-```html
-<div id="text-properties" class="properties-section" style="display: none;">
-    <h4>Text Settings</h4>
-    <div class="text-controls">
-        <!-- Controls are dynamically added here by updateTextProperties -->
-        <!-- Example structure from JS (simplified): -->
-        <div class="control-group">
-            <label>Bubble Style</label>
-            <select class="bubble-type">...</select>
-        </div>
-        <div class="control-group">
-            <label>Font</label>
-            <select class="font-family">...</select>
-        </div>
-        <div class="control-group">
-            <label>Size</label>
-            <input type="range" class="font-size" min="8" max="36" value="16">
-            <span class="font-size-value">16px</span>
-        </div>
-        <div class="control-group">
-            <label>Text Color</label>
-            <input type="color" class="font-color" value="#000000">
-            <div class="hex-display font-color-hex">#000000</div>
-        </div>
-        <div class="control-group">
-            <label>Bubble Color</label>
-            <input type="color" class="bubble-color" value="#ffffff">
-            <div class="hex-display bubble-color-hex">#ffffff</div>
-        </div>
-        <div class="control-group">
-            <label>Text Style</label>
-            <div class="text-style-buttons">
-                <button class="style-btn bold-btn">...</button>
-                <button class="style-btn italic-btn">...</button>
-                <button class="style-btn underline-btn">...</button>
-            </div>
-        </div>
-         <div class="control-group">
-            <label>Rotation</label>
-            <input type="range" class="rotation" min="-180" max="180" value="0">
-            <span class="rotation-value">0°</span>
-        </div>
-    </div>
-</div>
-```
+### State Structure (Simplified - See TECHNICAL.md for full detail):
 
-**JavaScript - Updating Text Properties Panel (`src/js/main.js` - `updateTextProperties`):**
+-   **Project:** `{ version, pages: [...], images: [...], currentPageIndex, folderStructure, customLayouts, ... }`
+-   **Page:** `{ layout, panelStates: [...], stickerStates: [...], canvasTextElements: [...], backgroundState, canvasBackgroundStyle }`
+-   **Panel:** `{ imageId, transform, ..., textElements: [...] }`
+-   **Text:** `{ id, content, style: { left, top, fontFamily, ... }, bubbleType, ... }`
+-   **Sticker:** `{ id, imageId, left, top, width, height, transform, size, outlineEnabled, ... }`
 
-```javascript
-updateTextProperties(textBox) {
-    const textProperties = document.getElementById('text-properties');
-    // Dynamically sets innerHTML with controls (sliders, dropdowns, color pickers)
-    textProperties.innerHTML = `... HTML for controls ...`;
+This modular approach ensures that each manager is responsible for saving and loading its specific part of the page state, coordinated by the central `ComicCreator` class.
 
-    // Get references to the newly created controls
-    const bubbleType = textProperties.querySelector('.bubble-type');
-    const fontFamily = textProperties.querySelector('.font-family');
-    const fontSize = textProperties.querySelector('.font-size');
-    const fontColor = textProperties.querySelector('.font-color');
-    const bubbleColor = textProperties.querySelector('.bubble-color');
-    const rotation = textProperties.querySelector('.rotation');
-    // ... other controls ...
-
-    // Set initial values of controls based on selected text box's current style/data
-    const textElement = textBox.querySelector('.text-content');
-    const computedStyle = window.getComputedStyle(textElement);
-    // ... code to read styles and set initial control values ...
-    bubbleType.value = textBox.dataset.bubbleType || 'speech-bubble';
-    fontFamily.value = computedStyle.fontFamily.split(',')[0].replace(/['"]/g, '') || 'Arial';
-    // ... etc. ...
-
-    // Add event listeners to each control
-    bubbleType.addEventListener('change', () => { /* update bubble class, save state */ });
-    fontFamily.addEventListener('change', () => { /* update style, save state */ });
-    fontSize.addEventListener('input', () => { /* update style, update value display, save state */ });
-    fontColor.addEventListener('input', () => { /* update style, update hex display, save state */ });
-    bubbleColor.addEventListener('input', () => { /* update style & CSS var, update hex, save state */ });
-    rotation.addEventListener('input', () => { /* update transform, update value display, save state */ });
-    // ... listeners for hex input, style buttons ...
-
-    // Make the properties panel visible
-    textProperties.style.display = 'block';
-
-    // Ensure other properties panels are hidden (though updateRightSidebarView handles most cases)
-    document.getElementById('panel-properties').style.display = 'none';
-    const backgroundProps = document.getElementById('background-properties');
-    if (backgroundProps) backgroundProps.style.display = 'none';
-     const stickerProps = document.getElementById('sticker-properties');
-    if (stickerProps) stickerProps.style.display = 'none';
-}
-```
-
-## 3. Layout Types
+## 8. Layout Types
 
 ### Right Sidebar - Panel Settings (`#panel-properties`):
 
@@ -940,7 +588,7 @@ handlePositionChange(btn, panel) {
 }
 ```
 
-## 4. Navbar and Navigation
+## 9. Navbar and Navigation
 
 ### Right Sidebar - Background Settings (`#background-properties`):
 
@@ -1155,7 +803,7 @@ updateStickerControls(stickerElement) {
 /* ... other specific control styles ... */
 ```
 
-## 3. State Management: Saving and Loading Backgrounds, Stickers, and Panels
+## 10. State Management: Saving and Loading Backgrounds, Stickers, and Panels
 
 ### Overview:
 The application maintains state for each page, including panels, backgrounds, stickers, and text elements. The state is managed through the `saveCurrentPageState()` method, which is called after any significant change to the page content.
