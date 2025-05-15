@@ -818,7 +818,7 @@ export class TextManager {
                                 </div>
                                 <div class="slider-group">
                                     <label for="speech-tail-inset">Position</label>
-                                    <input type="range" id="speech-tail-inset" min="10" max="90" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}" step="1">
+                                    <input type="range" id="speech-tail-inset" min="20" max="80" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}" step="1">
                                     <span class="speech-tail-inset-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}%</span>
                                 </div>
                                 <div class="slider-group">

@@ -35,12 +35,58 @@ export class UIManager {
             this.comicCreator.currentSidebarMode = newMode;
             console.log('Switched sidebar mode to:', this.comicCreator.currentSidebarMode);
 
+            // Add data-mode attribute to body for visual styling
+            document.body.setAttribute('data-mode', newMode);
+
+            // Update the mode indicator in the header
+            this.updateModeIndicator(newMode);
+
             // First deselect any currently selected item when switching modes
             this.comicCreator.deselectAll(); 
 
             // Then update the right sidebar based on the selected mode
             this.updateRightSidebarView();
         });
+
+        // Initialize the body data-mode with the current active mode
+        const activeTab = tabsContainer.querySelector('.tab-btn.active');
+        if (activeTab) {
+            document.body.setAttribute('data-mode', activeTab.dataset.tab);
+            this.updateModeIndicator(activeTab.dataset.tab);
+        }
+    }
+
+    // Update the mode indicator in the header
+    updateModeIndicator(mode) {
+        const modeIndicator = document.querySelector('.mode-indicator');
+        if (!modeIndicator) return;
+
+        // Remove all mode classes
+        modeIndicator.classList.remove('panel-mode', 'background-mode', 'sticker-mode');
+
+        // Update text and icon based on mode
+        const iconElement = modeIndicator.querySelector('i');
+        const textElement = modeIndicator.querySelector('span');
+
+        switch (mode) {
+            case 'panels':
+                modeIndicator.classList.add('panel-mode');
+                if (iconElement) iconElement.className = 'fas fa-th';
+                if (textElement) textElement.textContent = 'Panel Mode';
+                break;
+            case 'backgrounds':
+                modeIndicator.classList.add('background-mode');
+                if (iconElement) iconElement.className = 'fas fa-image';
+                if (textElement) textElement.textContent = 'Background Mode';
+                break;
+            case 'stickers':
+                modeIndicator.classList.add('sticker-mode');
+                if (iconElement) iconElement.className = 'fas fa-star';
+                if (textElement) textElement.textContent = 'Sticker Mode';
+                break;
+            default:
+                break;
+        }
     }
 
     // --- NEW: Update Right Sidebar View --- 

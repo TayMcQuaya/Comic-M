@@ -79,6 +79,10 @@
                 <button class="back-btn" id="back-to-layout">
                     <i class="fas fa-arrow-left"></i> Back to Layouts
                 </button>
+                <div class="mode-indicator panel-mode">
+                    <i class="fas fa-th"></i>
+                    <span>Panel Mode</span>
+                </div>
                 <div class="editor-tools">
                     <button id="add-text-btn" class="tool-btn">
                         <i class="fas fa-font"></i> Add Text
@@ -103,10 +107,25 @@
                 <div class="editor-sidebar">
                     <!-- Add Tab Structure -->
                     <div class="sidebar-tabs">
-                        <button class="tab-btn active" data-tab="panels">Panels</button>
-                        <button class="tab-btn" data-tab="backgrounds">Backgrounds</button>
-                        <button class="tab-btn" data-tab="stickers">Stickers</button>
+                        <button class="tab-btn active" data-tab="panels">
+                            <i class="fas fa-th"></i>
+                            <span>Panels</span>
+                        </button>
+                        <button class="tab-btn" data-tab="backgrounds">
+                            <i class="fas fa-image"></i>
+                            <span>Backgrounds</span>
+                        </button>
+                        <button class="tab-btn" data-tab="stickers">
+                            <i class="fas fa-star"></i>
+                            <span>Stickers</span>
+                        </button>
                     </div>
+                    
+                    <!-- Mode Description Elements -->
+                    <div class="mode-description panels-desc">Drop images here to add them to panels</div>
+                    <div class="mode-description backgrounds-desc">Set background images for your comic page</div>
+                    <div class="mode-description stickers-desc">Add stickers and decorative elements</div>
+                    
                     <div class="sidebar-content">
                         <!-- Existing Upload Area (will move slightly later if needed) -->
                         <!-- The upload area might be better placed above the tabs, TBD -->

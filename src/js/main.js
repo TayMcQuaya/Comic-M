@@ -993,6 +993,12 @@ class ComicCreator {
                 input.max = this.pages.length;
             }
         };
+        
+        // Set initial mode on body element
+        document.body.setAttribute('data-mode', this.currentSidebarMode);
+        
+        // Initialize file reorder drag-and-drop
+        const listElement = document.getElementById('editor-thumbnails');
     }
 
     setupPageNavigation() {
