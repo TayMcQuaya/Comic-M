@@ -466,7 +466,24 @@ class ComicCreator {
         
         // Get states from managers
         const panelImageStates = this.panelManager.savePanelStates();
+        console.log(`Main.saveCurrentPageState: Getting text states from TextManager...`);
+        
+        // Count text elements in DOM to verify they are all captured
+        const comicCanvas = document.querySelector('#comic-canvas');
+        if (comicCanvas) {
+            const domCanvasTextElements = comicCanvas.querySelectorAll(':scope > .text-bubble');
+            const domPanelTextCounts = [];
+            document.querySelectorAll('.comic-panel').forEach(panel => {
+                domPanelTextCounts.push(panel.querySelectorAll('.text-bubble').length);
+            });
+            console.log(`Main.saveCurrentPageState: DOM has ${domCanvasTextElements.length} canvas text elements and panel text counts: [${domPanelTextCounts.join(', ')}]`);
+        }
+        
         const textStates = this.textManager.saveTextStates(); 
+        
+        // Debug logging for text states
+        console.log(`Main.saveCurrentPageState: Received ${textStates.panelTextStates.length} panel text state arrays and ${textStates.canvasTextElements.length} canvas text elements`);
+        
         const stickerStates = this.stickerManager.saveStickerStates();
         
         // Get background state safely
@@ -496,6 +513,25 @@ class ComicCreator {
             canvasBackgroundStyle: currentPage.canvasBackgroundStyle || 'classic-white'
         };
 
+        // Debug log for the page state snapshot
+        console.log(`Main.saveCurrentPageState: Page state snapshot created with ${pageStateSnapshot.panelStates.length} panel states and ${pageStateSnapshot.canvasTextElements.length} canvas text elements`);
+        
+        // For detailed debugging of canvas text elements
+        if (pageStateSnapshot.canvasTextElements.length > 0) {
+            pageStateSnapshot.canvasTextElements.forEach((element, idx) => {
+                console.log(`Main.saveCurrentPageState: Canvas text element ${idx} properties:`, 
+                    JSON.stringify({
+                        id: element.id,
+                        position: {
+                            left: element.style.left,
+                            top: element.style.top,
+                        },
+                        transform: element.style.transform
+                    })
+                );
+            });
+        }
+        
         // Update the actual page object
         Object.assign(currentPage, pageStateSnapshot);
 
@@ -993,12 +1029,6 @@ class ComicCreator {
                 input.max = this.pages.length;
             }
         };
-        
-        // Set initial mode on body element
-        document.body.setAttribute('data-mode', this.currentSidebarMode);
-        
-        // Initialize file reorder drag-and-drop
-        const listElement = document.getElementById('editor-thumbnails');
     }
 
     setupPageNavigation() {
@@ -1295,7 +1325,20 @@ class ComicCreator {
         this.panelManager.loadPanelStates(panelStates);
 
         // --- Restore Text Elements (via TextManager) ---
+        console.log(`Main.loadPageState: Preparing to restore text elements. Page has ${page.panelStates?.length || 0} panel states and ${page.canvasTextElements?.length || 0} canvas text elements`);
+        
+        // Debug log the canvas text elements before restoration
+        if (page.canvasTextElements && page.canvasTextElements.length > 0) {
+            console.log(`Main.loadPageState: Canvas text elements before restoration:`);
+            page.canvasTextElements.forEach((element, idx) => {
+                console.log(`Main.loadPageState: Canvas text element ${idx}: id=${element.id}, position: (${element.style?.left || 'none'}, ${element.style?.top || 'none'}), transform=${element.style?.transform || 'none'}`);
+            });
+        } else {
+            console.log(`Main.loadPageState: No canvas text elements to restore.`);
+        }
+        
         this.textManager.loadTextStates(page); // Pass the whole page state
+        console.log(`Main.loadPageState: Text restoration completed. Canvas now has ${comicCanvas.querySelectorAll(':scope > .text-bubble').length} direct text bubbles.`);
         // --- End Text Restoration --- 
 
         // --- Restore Sticker Elements (via StickerManager) ---
@@ -1404,8 +1447,30 @@ class ComicCreator {
             return; // Exit if user cancelled
         }
 
-        // Save current page state before exporting
+        // Force save current page state before exporting (including any new text elements)
+        console.log("Saving final page state before exporting project");
         this.saveCurrentPageState();
+        
+        // Make sure all text elements are recorded
+        // Refresh canvas to ensure we capture everything in the DOM
+        const canvasTextElements = document.querySelectorAll('#comic-canvas > .text-bubble');
+        console.log(`Found ${canvasTextElements.length} canvas text elements - making sure they're all saved`);
+        
+        // Get the current page object
+        const currentPage = this.pages[this.currentPageIndex];
+        if (!currentPage) {
+            console.error("Cannot save project - current page not found");
+            return;
+        }
+        
+        // Double-check if canvasTextElements in current page matches the DOM
+        if (currentPage.canvasTextElements && 
+            canvasTextElements.length > 0 && 
+            canvasTextElements.length !== currentPage.canvasTextElements.length) {
+            console.warn(`Mismatch between DOM text elements (${canvasTextElements.length}) and saved state (${currentPage.canvasTextElements.length}). Forcing state refresh.`);
+            // Force refresh the page state to capture all elements
+            this.saveCurrentPageState();
+        }
         
         // Identify custom layouts used in this project
         const customLayoutIds = new Set();
@@ -1752,7 +1817,24 @@ class ComicCreator {
             this.updateNavigationButtons();
 
             console.log('Project loaded successfully');
+            
+            // Verify text elements were loaded correctly
+            const canvasTextElements = document.querySelectorAll('#comic-canvas > .text-bubble');
+            const currentPage = this.pages[this.currentPageIndex];
+            
+            if (currentPage && currentPage.canvasTextElements) {
+                console.log(`Verification: Found ${canvasTextElements.length} canvas text elements in DOM vs ${currentPage.canvasTextElements.length} in page state`);
+                
+                // If there's a mismatch and we should have text elements but don't, try loading again
+                if (canvasTextElements.length === 0 && currentPage.canvasTextElements.length > 0) {
+                    console.warn("Text elements missing after load - attempting to reload text state");
+                    this.textManager.loadTextStates(currentPage);
+                }
+            }
+            
             // Restart the auto-save timer after successfully loading a project
+            // Reference the constant from AutoSaveManager
+            const AUTOSAVE_INTERVAL = 30000; // 30 seconds, matching the value in AutoSaveManager
             this.autoSaveManager.saveIntervalId = setInterval(this.autoSaveManager.performAutoSave, AUTOSAVE_INTERVAL);
             window.addEventListener('beforeunload', this.autoSaveManager.handleBeforeUnload);
             this.uiManager.showNotification("Project loaded successfully!", "success");

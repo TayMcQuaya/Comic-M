@@ -818,7 +818,7 @@ export class TextManager {
                                 </div>
                                 <div class="slider-group">
                                     <label for="speech-tail-inset">Position</label>
-                                    <input type="range" id="speech-tail-inset" min="20" max="80" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}" step="1">
+                                    <input type="range" id="speech-tail-inset" min="10" max="90" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}" step="1">
                                     <span class="speech-tail-inset-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}%</span>
                                 </div>
                                 <div class="slider-group">
@@ -2308,9 +2308,18 @@ export class TextManager {
     
     positionTextBox(textBox, position) {
         const panelOrCanvas = textBox.parentElement;
-        // Bounding rect might need adjustment if appending to canvas vs panel?
-        // For now, assume parent provides the boundary.
-        const parentRect = panelOrCanvas.getBoundingClientRect(); 
+        if (!panelOrCanvas) {
+            console.error("Cannot position text box: parent element not found");
+            return;
+        }
+        
+        // Record current dimensions to preserve them
+        const currentWidth = textBox.style.width || 'auto';
+        const currentHeight = textBox.style.height || 'auto';
+        
+        // Clear all existing transforms before calculating new position
+        // This ensures we're working with a clean slate
+        textBox.style.transform = '';
         
         let left, top;
         switch (position) {
@@ -2326,17 +2335,26 @@ export class TextManager {
             default: left = 50; top = 50;
         }
         
+        // Apply positioning with percentage values for consistency
         textBox.style.left = `${left}%`;
         textBox.style.top = `${top}%`;
         
+        // Calculate translation for proper alignment based on position
         const translateX = position.includes('left') ? '0%' : 
                          position.includes('right') ? '-100%' : '-50%';
         const translateY = position.includes('top') ? '0%' : 
                          position.includes('bottom') ? '-100%' : '-50%';
         
-        const rotation = this.getRotationValue(textBox); // Internal call
+        // Get rotation value
+        const rotation = this.getRotationValue(textBox);
         const rotateStyle = rotation !== 0 ? ` rotate(${rotation}deg)` : '';
+        
+        // Apply transform for alignment and rotation
         textBox.style.transform = `translate(${translateX}, ${translateY})${rotateStyle}`;
+        
+        // Restore dimensions to prevent stretching
+        textBox.style.width = currentWidth;
+        textBox.style.height = currentHeight;
         
         // Store position information for state management
         textBox.dataset.positionGrid = position;
@@ -2399,18 +2417,29 @@ export class TextManager {
      * @returns {object} Object containing arrays { panelTextStates: [], canvasTextElements: [] }
      */
     saveTextStates() {
+        console.log('TextManager.saveTextStates: Starting to save text states...');
         const panelTextStates = [];
         const canvasTextElements = [];
         const canvas = document.querySelector('#comic-canvas');
         
         // Save panel text elements
         const panels = Array.from(document.querySelectorAll('.comic-panel'));
-        panels.forEach(panel => {
+        console.log(`TextManager.saveTextStates: Found ${panels.length} panels to check for text bubbles`);
+        
+        panels.forEach((panel, panelIndex) => {
             const panelTexts = [];
-            Array.from(panel.querySelectorAll('.text-bubble')).forEach(textBubble => {
+            const textBubbles = Array.from(panel.querySelectorAll('.text-bubble'));
+            console.log(`TextManager.saveTextStates: Panel ${panelIndex} has ${textBubbles.length} text bubbles`);
+            
+            textBubbles.forEach((textBubble, bubbleIndex) => {
                 const textElement = textBubble.querySelector('.text-content');
-                if (!textElement) return;
+                if (!textElement) {
+                    console.warn(`TextManager.saveTextStates: Text bubble ${bubbleIndex} in panel ${panelIndex} has no text content element!`);
+                    return;
+                }
 
+                console.log(`TextManager.saveTextStates: Saving text bubble ${textBubble.id} from panel ${panelIndex}`);
+                
                 const bubbleClasses = Array.from(textBubble.classList)
                     .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
                                     'shout-bubble', 'whisper-bubble', 'jagged-bubble', 
@@ -2461,10 +2490,17 @@ export class TextManager {
         // Save canvas text elements
         if (canvas) {
             const canvasTextBubbles = Array.from(canvas.querySelectorAll(':scope > .text-bubble'));
+            console.log(`TextManager.saveTextStates: Found ${canvasTextBubbles.length} text bubbles directly on canvas`);
+            
             if (canvasTextBubbles.length > 0) {
-                canvasTextBubbles.forEach(textBubble => {
+                canvasTextBubbles.forEach((textBubble, bubbleIndex) => {
                     const textElement = textBubble.querySelector('.text-content');
-                    if (!textElement) return;
+                    if (!textElement) {
+                        console.warn(`TextManager.saveTextStates: Canvas text bubble ${bubbleIndex} has no text content element!`);
+                        return;
+                    }
+                    
+                    console.log(`TextManager.saveTextStates: Saving canvas text bubble ${textBubble.id}`);
 
                     const bubbleClasses = Array.from(textBubble.classList)
                         .filter(cls => ['speech-bubble', 'thought-bubble', 'caption-box', 
@@ -2513,6 +2549,9 @@ export class TextManager {
             }
         }
 
+        // Log a summary of what's being returned
+        console.log(`TextManager.saveTextStates: Returning ${panelTextStates.reduce((sum, panel) => sum + panel.length, 0)} panel text elements and ${canvasTextElements.length} canvas text elements`);
+        
         return { panelTextStates, canvasTextElements };
     }
 
@@ -2521,6 +2560,15 @@ export class TextManager {
      * @param {object} pageState - The state object for the current page.
      */
     loadTextStates(pageState) {
+        console.log("TextManager.loadTextStates: Starting text bubble restoration...");
+        console.log("TextManager.loadTextStates: PageState structure:", 
+                   JSON.stringify({
+                       hasPanelStates: !!pageState.panelStates,
+                       panelStatesLength: pageState.panelStates ? pageState.panelStates.length : 0,
+                       hasCanvasTextElements: !!pageState.canvasTextElements,
+                       canvasTextElementsLength: pageState.canvasTextElements ? pageState.canvasTextElements.length : 0
+                   }));
+        
         const panels = document.querySelectorAll('.comic-panel');
         const comicCanvas = document.querySelector('#comic-canvas');
 
@@ -2534,6 +2582,13 @@ export class TextManager {
         console.log(`TextManager.loadTextStates - Page index: ${this.comicCreator.currentPageIndex}`);
         console.log(`TextManager.loadTextStates - Existing text bubbles on canvas: ${comicCanvas.querySelectorAll('.text-bubble').length}`);
         console.log(`TextManager.loadTextStates - Total panels found: ${panels.length}`);
+
+        // IMPORTANT: Clear ALL existing text bubbles before loading to prevent duplicates
+        // and avoid any interaction between old and new text elements
+        comicCanvas.querySelectorAll(':scope > .text-bubble').forEach(element => element.remove());
+        panels.forEach(panel => {
+            panel.querySelectorAll('.text-bubble').forEach(element => element.remove());
+        });
 
         if (pageState.panelStates) {
             console.log(`TextManager.loadTextStates - Panel states in page data: ${pageState.panelStates.length}`);
@@ -2555,41 +2610,73 @@ export class TextManager {
         // Restore panel text elements
         if (pageState.panelStates && panels.length > 0) {
             const processablePanels = Math.min(panels.length, pageState.panelStates.length);
-            console.log(`TextManager: Restoring text for ${processablePanels} panels`);
+            console.log(`TextManager.loadTextStates: Restoring text for ${processablePanels} panels`);
             
             for (let index = 0; index < processablePanels; index++) {
                 const panel = panels[index];
                 
                 // Verify panel exists
                 if (!panel) {
-                    console.warn(`TextManager: Panel at index ${index} not found in DOM`);
+                    console.warn(`TextManager.loadTextStates: Panel at index ${index} not found in DOM`);
                     continue;
                 }
                 
                 const state = pageState.panelStates[index];
                 
                 if (state && state.textElements) { 
-                    console.log(`TextManager: Panel ${index} has ${state.textElements.length} text elements`);
-                    state.textElements.forEach(textState => {
-                        this.restoreTextBubble(textState, panel); // Use helper
+                    console.log(`TextManager.loadTextStates: Panel ${index} has ${state.textElements.length} text elements to restore`);
+                    
+                    state.textElements.forEach((textState, elementIndex) => {
+                        console.log(`TextManager.loadTextStates: Restoring text element ${elementIndex} (ID: ${textState.id || 'no-id'}) for panel ${index}`);
+                        
+                        // Log essential properties to debug potential issues
+                        console.log(`TextManager.loadTextStates: Text element properties: position=(${textState.style?.left || 'none'}, ${textState.style?.top || 'none'}), transform=${textState.style?.transform || 'none'}`);
+                        
+                        // Ensure the text state has all required properties
+                        if (!textState.style) {
+                            console.warn(`TextManager.loadTextStates: Missing style object for text element ${elementIndex} in panel ${index}`);
+                            textState.style = {};
+                        }
+                        
+                        const restoredElement = this.restoreTextBubble(textState, panel); // Use helper
+                        console.log(`TextManager.loadTextStates: Text element ${elementIndex} restored successfully: ${!!restoredElement}`);
                     });
                 } else {
-                    console.warn(`TextManager: Panel state or textElements missing at index ${index}.`);
+                    console.warn(`TextManager.loadTextStates: Panel state or textElements missing at index ${index}.`);
                 }
             } 
         }
 
         // Restore canvas text elements
         if (pageState.canvasTextElements && comicCanvas) {
-            console.log(`TextManager: Restoring ${pageState.canvasTextElements.length} canvas text elements`);
+            console.log(`TextManager.loadTextStates: Restoring ${pageState.canvasTextElements.length} canvas text elements`);
+            
             pageState.canvasTextElements.forEach((textState, idx) => {
-                console.log(`TextManager: Restoring canvas text element ${idx} with id ${textState.id}`);
-                this.restoreTextBubble(textState, comicCanvas); // Use helper, pass canvas as parent
+                console.log(`TextManager.loadTextStates: Restoring canvas text element ${idx} with id ${textState.id}`);
+                console.log(`TextManager.loadTextStates: Canvas text element properties: position=(${textState.style?.left || 'none'}, ${textState.style?.top || 'none'}), transform=${textState.style?.transform || 'none'}`);
+                
+                // Ensure the text state has all required properties
+                if (!textState.style) {
+                    console.warn(`TextManager.loadTextStates: Missing style object for canvas text element ${idx}`);
+                    textState.style = {};
+                }
+                
+                // IMPORTANT: Canvas text elements must be directly attached to the canvas (not inside a panel)
+                if (textState.style && !textState.style.position) {
+                    console.log(`TextManager.loadTextStates: Adding missing 'position: absolute' to canvas text element ${idx}`);
+                    textState.style.position = 'absolute';
+                }
+                
+                const restoredElement = this.restoreTextBubble(textState, comicCanvas); // Use helper, pass canvas as parent
+                console.log(`TextManager.loadTextStates: Canvas text element ${idx} restored successfully: ${!!restoredElement}`);
             });
         }
 
         // Debug: Log the final state after restoration
         console.log(`TextManager.loadTextStates - Final text bubbles on canvas: ${comicCanvas.querySelectorAll('.text-bubble').length}`);
+        
+        // Reset any internal state that might be tracking text elements
+        this.currentTextBox = null;
     }
 
     /**
@@ -2614,6 +2701,9 @@ export class TextManager {
         textBubble.dataset.previousBubbleType = textState.previousBubbleType;
         }
         
+        // IMPORTANT: Set position to absolute before setting any position properties
+        textBubble.style.position = 'absolute';
+        
         // Set position grid data
         if (textState.positionGrid) {
             textBubble.dataset.positionGrid = textState.positionGrid;
@@ -2634,6 +2724,8 @@ export class TextManager {
         textElement.className = 'text-content';
         textElement.contentEditable = true;
         textElement.innerHTML = textState.content || 'Click to edit text';
+        textElement.style.outline = 'none';
+        textElement.style.wordWrap = 'break-word';
         
         // Controls
         const dragHandle = document.createElement('div');
@@ -2658,11 +2750,16 @@ export class TextManager {
         
         // Apply styling
         if (textState.style) {
-            // Position and size
+            // Position and size - Apply these in a specific order for proper restoration
+            // Step 1: Apply position values first without any transform
             if (textState.style.left) textBubble.style.left = textState.style.left;
             if (textState.style.top) textBubble.style.top = textState.style.top;
+            
+            // Step 2: Apply dimensions
             if (textState.style.width) textBubble.style.width = textState.style.width;
             if (textState.style.height) textBubble.style.height = textState.style.height;
+            
+            // Step 3: Apply transform and z-index last
             if (textState.style.transform) textBubble.style.transform = textState.style.transform;
             if (textState.style.zIndex) textBubble.style.zIndex = textState.style.zIndex;
             
@@ -2714,11 +2811,31 @@ export class TextManager {
         textBubble.appendChild(deleteButton);
         parentElement.appendChild(textBubble);
 
-        // Make draggable
-            this.comicCreator.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
+        // Make draggable - Ensure drag functionality is applied after all styles
+        console.log(`TextManager.restoreTextBubble: Making text bubble ${textBubble.id} draggable and resizable`);
         
-        // Make resizable
-        this.comicCreator.dragAndDropManager.makeTextResizable(textBubble, resizeHandle); 
+        try {
+            if (!this.comicCreator) {
+                console.error("TextManager.restoreTextBubble: comicCreator reference is missing!");
+            } else if (!this.comicCreator.dragAndDropManager) {
+                console.error("TextManager.restoreTextBubble: dragAndDropManager is missing from comicCreator!");
+            } else {
+                this.comicCreator.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
+                console.log(`TextManager.restoreTextBubble: Successfully made text bubble ${textBubble.id} draggable`);
+            }
+        } catch (error) {
+            console.error(`TextManager.restoreTextBubble: Error making text bubble ${textBubble.id} draggable:`, error);
+        }
+        
+        // Make resizable - Ensure resize functionality is applied after all styles
+        try {
+            if (this.comicCreator && this.comicCreator.dragAndDropManager) {
+                this.comicCreator.dragAndDropManager.makeTextResizable(textBubble, resizeHandle);
+                console.log(`TextManager.restoreTextBubble: Successfully made text bubble ${textBubble.id} resizable`);
+            }
+        } catch (error) {
+            console.error(`TextManager.restoreTextBubble: Error making text bubble ${textBubble.id} resizable:`, error);
+        } 
 
         // Setup delete functionality
         deleteButton.addEventListener('click', () => {
@@ -2774,6 +2891,12 @@ export class TextManager {
         // Apply bubble tail if specified
         if (textState.tailPosition && textState.tailPosition !== 'none') {
             this.updateBubbleTail(textBubble, textState.tailPosition);
+        }
+        
+        // If this is a grid-positioned element, reapply positioning to ensure 
+        // proper transform and position calculation
+        if (textState.positionGrid && textState.positionGrid !== 'custom') {
+            this.positionTextBox(textBubble, textState.positionGrid);
         }
         
         return textBubble;
@@ -2835,16 +2958,38 @@ export class TextManager {
             textBox.classList.add('positioned-custom');
         }
         
+        // Get current dimensions before transform modification
+        const rect = textBox.getBoundingClientRect();
+        const currentWidth = textBox.style.width || `${rect.width}px`;
+        const currentHeight = textBox.style.height || `${rect.height}px`;
+        
+        // Get the parent element
+        const parentElement = textBox.parentElement;
+        if (!parentElement) return;
+        
+        const parentRect = parentElement.getBoundingClientRect();
+        
+        // Get visual position (before transform changes)
+        const visualLeft = rect.left - parentRect.left;
+        const visualTop = rect.top - parentRect.top;
+        
         // If there's a transform with translate but no rotation, clear it
         if (textBox.style.transform && 
             textBox.style.transform.includes('translate') && 
             !textBox.style.transform.includes('rotate')) {
+            // Set position based on current visual position
+            textBox.style.left = `${visualLeft}px`;
+            textBox.style.top = `${visualTop}px`;
             textBox.style.transform = '';
         }
         // If there's both translate and rotate, keep only the rotate part
         else if (textBox.style.transform && 
                 textBox.style.transform.includes('translate') && 
                 textBox.style.transform.includes('rotate')) {
+            // Set position based on current visual position
+            textBox.style.left = `${visualLeft}px`;
+            textBox.style.top = `${visualTop}px`;
+            
             const rotation = this.getRotationValue(textBox);
             if (rotation !== 0) {
                 textBox.style.transform = `rotate(${rotation}deg)`;
@@ -2852,6 +2997,10 @@ export class TextManager {
                 textBox.style.transform = '';
             }
         }
+        
+        // Restore dimensions to prevent stretching
+        textBox.style.width = currentWidth;
+        textBox.style.height = currentHeight;
     }
 
     // New methods for handling default font settings and custom text styles

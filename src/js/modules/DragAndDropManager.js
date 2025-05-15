@@ -397,19 +397,22 @@ export class DragAndDropManager {
 
     // --- Canvas Text Dragging (Pixel-based, Canvas Relative) ---
     makeCanvasTextDraggable(element, handle) {
+        // Reuse the universal makeTextDraggable method
+        return this.makeTextDraggable(element, handle);
+    }
+
+    // --- Text Bubble Dragging (Works for text in panels AND canvas) ---
+    makeTextDraggable(element, handle) {
         let isDragging = false;
         let startX, startY;
-        let originalX, originalY; // Store initial style.left/top in pixels
-        const canvas = document.querySelector('#comic-canvas');
-        let canvasPaddingBoxWidth, canvasPaddingBoxHeight; // Store canvas client dimensions
+        let originalLeft, originalTop; // Element initial left/top positions
+        let parentContainer;  // The parent container (panel or canvas)
         let hasTransform;
 
         const onMouseDown = (e) => {
-            // Check if canvas exists
-            if (!canvas) {
-                console.error("Cannot drag: canvas not found");
-                return;
-            }
+            // Get the parent container (either panel or canvas)
+            parentContainer = element.parentElement;
+            if (!parentContainer) return;
             
             // Check if drag should start
             if (e.button !== 0) return;
@@ -417,27 +420,30 @@ export class DragAndDropManager {
             const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
             if (!isHandle && !isBubbleBorder) return;
 
+            e.preventDefault(); // Prevent text selection during drag
+            e.stopPropagation(); // Stop click from propagating to parent elements
+            
             // Start dragging state
             isDragging = true;
             element.style.cursor = 'grabbing';
             element.dataset.originalZIndex = element.style.zIndex || '100';
             element.style.zIndex = '1000';
 
-            // Record initial positions and dimensions
+            // Record initial positions
             startX = e.clientX;
             startY = e.clientY;
             
             // Check if this element has transforms applied
             hasTransform = element.style.transform && element.style.transform.includes('translate');
             
+            // Get current visual rect and container rect
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = parentContainer.getBoundingClientRect();
+            
             if (hasTransform) {
-                // Get the element's VISUAL position using getBoundingClientRect, which accounts for transforms
-                const rect = element.getBoundingClientRect();
-                const canvasRect = canvas.getBoundingClientRect();
-                
                 // Calculate the position relative to the container in pixels
-                const relativeLeft = rect.left - canvasRect.left;
-                const relativeTop = rect.top - canvasRect.top;
+                const relativeLeft = elementRect.left - containerRect.left;
+                const relativeTop = elementRect.top - containerRect.top;
                 
                 // Store original transform and clear it
                 element.dataset.originalTransform = element.style.transform;
@@ -448,17 +454,13 @@ export class DragAndDropManager {
                 element.style.top = `${relativeTop}px`;
                 
                 // Update original position values for drag calculation
-                originalX = relativeLeft;
-                originalY = relativeTop;
+                originalLeft = relativeLeft;
+                originalTop = relativeTop;
             } else {
-                // Use current style values for origin, fallback if not set
-                originalX = parseFloat(element.style.left) || 0;
-                originalY = parseFloat(element.style.top) || 0;
+                // Use current style values (parsing as float handles both px and % values)
+                originalLeft = parseFloat(element.style.left) || 0;
+                originalTop = parseFloat(element.style.top) || 0;
             }
-            
-            // Get canvas client dimensions (includes padding, excludes border)
-            canvasPaddingBoxWidth = canvas.clientWidth;
-            canvasPaddingBoxHeight = canvas.clientHeight;
 
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('mouseup', onMouseUp, { once: true });
@@ -468,37 +470,31 @@ export class DragAndDropManager {
             if (!isDragging) return;
             e.preventDefault();
 
-            // Calculate mouse movement delta
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
-            // Get current element dimensions (use offsetWidth/Height for reliable size)
+            
+            // Calculate new position
+            const newLeft = originalLeft + dx;
+            const newTop = originalTop + dy;
+            
+            // Get containerRect for boundary checking
+            const containerRect = parentContainer.getBoundingClientRect();
             const elementWidth = element.offsetWidth;
             const elementHeight = element.offsetHeight;
-
-            // Calculate the element's desired new position relative to the canvas padding box
-            let desiredCanvasX = originalX + dx;
-            let desiredCanvasY = originalY + dy;
-
-            // Clamp the desired position to stay within the canvas padding box boundaries
-            const clampedCanvasX = Math.max(
-                0, // Min X relative to padding box
-                Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth) // Max X relative to padding box
-            );
-            const clampedCanvasY = Math.max(
-                0, // Min Y relative to padding box
-                Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight) // Max Y relative to padding box
-            );
-
-            // Apply the clamped, canvas-relative position
-            element.style.left = `${clampedCanvasX}px`;
-            element.style.top = `${clampedCanvasY}px`;
             
-            // Update start position for continuous dragging
+            // Clamp to container boundaries
+            const clampedLeft = Math.max(0, Math.min(newLeft, containerRect.width - elementWidth));
+            const clampedTop = Math.max(0, Math.min(newTop, containerRect.height - elementHeight));
+
+            // Apply the position in pixels
+            element.style.left = `${clampedLeft}px`;
+            element.style.top = `${clampedTop}px`;
+            
+            // Update values for continuous dragging
             startX = e.clientX;
             startY = e.clientY;
-            originalX = clampedCanvasX;
-            originalY = clampedCanvasY;
+            originalLeft = clampedLeft;
+            originalTop = clampedTop;
         };
 
         const onMouseUp = () => {
@@ -508,151 +504,19 @@ export class DragAndDropManager {
             element.style.zIndex = element.dataset.originalZIndex || '100';
             document.removeEventListener('mousemove', onMouseMove);
             
-            // Reset the grid position in TextManager
-            try {
-                if (this.comicCreator && this.comicCreator.textManager) {
-                    this.comicCreator.textManager.resetTextPositionGrid(element);
+            // If we had a rotation in the original transform, reapply it
+            if (hasTransform && element.dataset.originalTransform) {
+                const rotateMatch = element.dataset.originalTransform.match(/rotate\(([^)]+)\)/);
+                if (rotateMatch) {
+                    // Extract the rotation component
+                    const rotation = rotateMatch[0];
+                    // Apply rotation while keeping the new position
+                    element.style.transform = rotation;
                 }
-            } catch (e) {
-                console.warn("Could not reset text position grid:", e);
+                // Clean up the stored transform data
+                delete element.dataset.originalTransform;
             }
-            
-            this.comicCreator.saveCurrentPageState();
-        };
 
-        // Initialize cursor and add mousedown listeners
-        handle.style.cursor = 'grab';
-        handle.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('mousedown', onMouseDown);
-        element.addEventListener('dragstart', (e) => e.preventDefault());
-    }
-
-    // --- Text Bubble Dragging (Pixel-based, Panel Relative) ---
-    makeTextDraggable(element, handle) {
-        let isDragging = false;
-        let startX, startY;
-        let originalElementX_panel, originalElementY_panel; // Element initial style.left/top relative to panel
-        let panelOffsetX, panelOffsetY; // Panel offset relative to canvas padding box
-        let canvasPaddingBoxWidth, canvasPaddingBoxHeight;
-        const canvas = document.querySelector('#comic-canvas');
-        let hasTransform;
-
-        const onMouseDown = (e) => {
-            const panel = element.parentElement;
-            if (!panel || !panel.classList.contains('comic-panel') || !canvas) return;
-
-            // Check if drag should start
-            if (e.button !== 0) return;
-            const isHandle = e.target === handle || e.target.closest('.drag-handle');
-            const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
-            if (!isHandle && !isBubbleBorder) return;
-
-            // Start dragging state
-            isDragging = true;
-            element.style.cursor = 'grabbing';
-            element.dataset.originalZIndex = element.style.zIndex || '10';
-            element.style.zIndex = '1000';
-
-            // Record initial positions and dimensions
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            // Check if this element has transforms applied
-            hasTransform = element.style.transform && element.style.transform.includes('translate');
-            
-            if (hasTransform) {
-                // Get the element's VISUAL position using getBoundingClientRect
-                const rect = element.getBoundingClientRect();
-                const panelRect = panel.getBoundingClientRect();
-                
-                // Calculate the position relative to the panel in pixels
-                const relativeLeft = rect.left - panelRect.left;
-                const relativeTop = rect.top - panelRect.top;
-                
-                // Store original transform and clear it
-                element.dataset.originalTransform = element.style.transform;
-                element.style.transform = '';
-                
-                // Apply pixel-based left/top that visually matches the previous transformed position
-                element.style.left = `${relativeLeft}px`;
-                element.style.top = `${relativeTop}px`;
-                
-                // Update original position values for drag calculation
-                originalElementX_panel = relativeLeft;
-                originalElementY_panel = relativeTop;
-            } else {
-                // Use current style values
-                originalElementX_panel = parseFloat(element.style.left) || 0;
-                originalElementY_panel = parseFloat(element.style.top) || 0;
-            }
-            
-            // Get panel offset relative to canvas padding box
-            // Use getBoundingClientRect for robust calculation
-            const panelRect = panel.getBoundingClientRect();
-            const canvasRect = canvas.getBoundingClientRect();
-            const canvasStyle = window.getComputedStyle(canvas);
-            const canvasBorderLeft = parseFloat(canvasStyle.borderLeftWidth) || 0;
-            const canvasBorderTop = parseFloat(canvasStyle.borderTopWidth) || 0;
-            const canvasPaddingLeft = parseFloat(canvasStyle.paddingLeft) || 0;
-            const canvasPaddingTop = parseFloat(canvasStyle.paddingTop) || 0;
-            
-            panelOffsetX = panelRect.left - (canvasRect.left + canvasBorderLeft + canvasPaddingLeft);
-            panelOffsetY = panelRect.top - (canvasRect.top + canvasBorderTop + canvasPaddingTop);
-
-            // Get canvas client dimensions (content area, excluding padding/border)
-            canvasPaddingBoxWidth = canvas.clientWidth;
-            canvasPaddingBoxHeight = canvas.clientHeight;
-
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        };
-
-        const onMouseMove = (e) => {
-            if (!isDragging) return;
-            e.preventDefault();
-
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-
-            const elementWidth = element.offsetWidth;
-            const elementHeight = element.offsetHeight;
-
-            // Calculate element's desired new position relative to the CANVAS padding box
-            let desiredCanvasX = panelOffsetX + originalElementX_panel + dx;
-            let desiredCanvasY = panelOffsetY + originalElementY_panel + dy;
-
-            // Clamp the desired CANVAS position to stay within the CANVAS padding box boundaries
-            const clampedCanvasX = Math.max(
-                0, 
-                Math.min(desiredCanvasX, canvasPaddingBoxWidth - elementWidth)
-            );
-            const clampedCanvasY = Math.max(
-                0, 
-                Math.min(desiredCanvasY, canvasPaddingBoxHeight - elementHeight)
-            );
-
-            // Convert the clamped CANVAS position back to a position relative to the PANEL padding box
-            const finalPanelX = clampedCanvasX - panelOffsetX;
-            const finalPanelY = clampedCanvasY - panelOffsetY;
-
-            // Apply the clamped, PANEL-relative position
-            element.style.left = `${finalPanelX}px`;
-            element.style.top = `${finalPanelY}px`;
-            
-            // Update start position for continuous dragging
-            startX = e.clientX;
-            startY = e.clientY;
-            originalElementX_panel = finalPanelX;
-            originalElementY_panel = finalPanelY;
-        };
-
-        const onMouseUp = () => {
-            if (!isDragging) return;
-            isDragging = false;
-            element.style.cursor = 'grab';
-            element.style.zIndex = element.dataset.originalZIndex || '10';
-            document.removeEventListener('mousemove', onMouseMove);
-            
             // Reset the grid position in TextManager
             try {
                 if (this.comicCreator && this.comicCreator.textManager) {
@@ -671,7 +535,7 @@ export class DragAndDropManager {
         element.addEventListener('mousedown', onMouseDown);
         element.addEventListener('dragstart', (e) => e.preventDefault());
     }
-    
+
     // --- Sticker Dragging --- 
     makeStickerDraggable(element, options = {}) {
         let isDragging = false;

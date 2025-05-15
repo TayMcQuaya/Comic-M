@@ -515,30 +515,6 @@ body {
     position: sticky; /* Make header stick to top */
     top: 0;
     z-index: 100; /* Ensure it appears above other content */
-    position: relative;
-    overflow: hidden;
-}
-
-.editor-header::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    transition: background 0.3s ease;
-}
-
-body[data-mode="panels"] .editor-header::after {
-    background: var(--primary-color);
-}
-
-body[data-mode="backgrounds"] .editor-header::after {
-    background: var(--secondary-color);
-}
-
-body[data-mode="stickers"] .editor-header::after {
-    background: var(--accent-color);
 }
 
 .editor-tools {
@@ -860,7 +836,6 @@ img[draggable="false"] {
     align-items: center;
     margin-bottom: 0.4rem;
     transition: all 0.3s ease;
-    border: 2px solid var(--border-color);
 }
 
 .editor-sidebar .thumbnail-container.in-use {
@@ -948,45 +923,23 @@ img[draggable="false"] {
 .text-controls {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .text-controls select,
 .text-controls input {
     width: 100%;
     padding: 0.5rem;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
     background: var(--input-bg);
     color: var(--text-color);
     font-family: 'Comic Sans MS', 'Comic Neue', cursive;
-    transition: all 0.2s ease;
-}
-
-.text-controls select:hover,
-.text-controls input:hover {
-    border-color: var(--accent-color);
 }
 
 input:focus, select:focus, textarea:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-    outline: none;
-}
-
-/* Control group layout */
-.control-group {
-    margin-bottom: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.control-group h4 {
-    margin: 0;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-color);
+    box-shadow: 3px 3px 0 var(--shadow-color);
 }
 
 /* Buttons */
@@ -2529,50 +2482,32 @@ label {
 /* Text Formatting Popup */
 .text-format-popup {
     position: fixed;
-    width: 320px;
-    max-height: calc(100vh - 80px);
+    width: 300px;
+    height: calc(100vh - 100px); /* Match the height of properties panel */
     overflow-y: auto;
     background-color: var(--card-bg);
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     z-index: 1000;
     font-family: 'Arial', sans-serif;
     color: var(--text-color);
     border: 1px solid var(--border-color);
-    scrollbar-width: thin;
-}
-
-.text-format-popup::-webkit-scrollbar {
-    width: 6px;
-}
-
-.text-format-popup::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.text-format-popup::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
 }
 
 .popup-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 16px;
+    padding: 12px 15px;
     border-bottom: 1px solid var(--border-color);
     background-color: var(--primary-color);
-    border-radius: 11px 11px 0 0;
-    position: sticky;
-    top: 0;
-    z-index: 5;
+    border-radius: 8px 8px 0 0;
 }
 
 .popup-header h3 {
     margin: 0;
     font-size: 16px;
     color: white;
-    font-weight: 600;
 }
 
 .close-popup {
@@ -2581,24 +2516,15 @@ label {
     color: white;
     font-size: 16px;
     cursor: pointer;
-    padding: 6px;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
-}
-
-.close-popup:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    padding: 0;
 }
 
 .popup-content {
-    padding: 16px;
+    padding: 15px;
 }
 
 .popup-section {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
 }
 
 .popup-section h4 {
@@ -2606,31 +2532,26 @@ label {
     font-size: 14px;
     color: var(--text-color);
     border-bottom: 1px solid var(--border-color);
-    padding-bottom: 8px;
-    font-weight: 600;
+    padding-bottom: 5px;
 }
 
-/* Bubble Toggle and Grid */
 .bubble-toggle {
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .bubble-toggle label {
     display: flex;
     align-items: center;
     cursor: pointer;
-    font-size: 14px;
 }
 
 .bubble-toggle input {
     margin-right: 8px;
-    width: 16px;
-    height: 16px;
 }
 
 .bubble-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr); /* Changed from 3 to 2 columns */
     gap: 8px;
     margin-top: 10px;
 }
@@ -2639,9 +2560,9 @@ label {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 8px 4px;
+    padding: 8px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -2649,7 +2570,6 @@ label {
 .bubble-option:hover {
     background-color: var(--hover-color);
     transform: translateY(-2px);
-    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
 }
 
 .bubble-option.selected {
@@ -2658,638 +2578,1745 @@ label {
 }
 
 .bubble-preview {
-    width: 54px;
-    height: 36px;
-    margin-bottom: 4px;
+    width: 60px;
+    height: 40px;
+    margin-bottom: 5px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
 }
 
-.bubble-option span {
-    font-size: 12px;
-    text-align: center;
-    white-space: nowrap;
+.speech-bubble-preview {
+    border-radius: 15px;
+    position: relative;
+    background-color: inherit;
 }
 
-/* Style for text controls */
-#text-format-popup {
-    padding: 0 0 16px 0;
+.speech-bubble-preview:after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 10px;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+    border-top-color: black;
+    border-bottom: 0;
+    transform: rotate(15deg);
+    margin-left: 0;
+    margin-bottom: 0;
 }
 
-.text-style-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+.thought-bubble-preview {
+    border-radius: 50%;
+    background-color: inherit;
+    position: relative;
 }
 
-.text-style-buttons {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-
-.style-btn {
-    width: 36px;
-    height: 36px;
+/* Thought Bubble Preview Small Circle */
+.thought-bubble-preview-small {
+    width: 8px;
+    height: 8px;
+    position: absolute;
+    background: inherit;
     border: 1px solid var(--border-color);
-    background: var(--card-bg);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    border-radius: 50%;
+    bottom: -9px;
+    left: 10px;
 }
 
-.style-btn:hover {
-    background-color: var(--hover-color);
-    transform: translateY(-1px);
+/* Thought Bubble Preview Tiny Circle */
+.thought-bubble-preview-tiny {
+    width: 5px;
+    height: 5px;
+    position: absolute;
+    background: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    bottom: -14px;
+    left: 15px;
 }
 
-.style-btn.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+.thought-bubble-preview:before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -9px;
+    left: 10px;
+    background: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
 }
 
-/* Font section */
+.thought-bubble-preview:after {
+    content: '';
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    bottom: -14px;
+    left: 15px;
+    background: inherit;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+}
+
+/* Thought bubble preview positions */
+/* Bottom positions */
+.thought-preview-tail-bottom-left:before {
+    left: 8px;
+    bottom: -9px;
+    right: auto;
+    top: auto;
+}
+
+.thought-preview-tail-bottom-left:after {
+    left: 12px;
+    bottom: -14px;
+    right: auto;
+    top: auto;
+}
+
+.thought-preview-tail-bottom-center:before {
+    left: 50%;
+    bottom: -9px;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+}
+
+.thought-preview-tail-bottom-center:after {
+    left: 50%;
+    bottom: -14px;
+    right: auto;
+    top: auto;
+    transform: translateX(-50%);
+}
+
+.thought-preview-tail-bottom-right:before {
+    left: auto;
+    right: 8px;
+    bottom: -9px;
+    top: auto;
+}
+
+.thought-preview-tail-bottom-right:after {
+    left: auto;
+    right: 12px;
+    bottom: -14px;
+    top: auto;
+}
+
+/* Left positions */
+.thought-preview-tail-left-center:before {
+    top: 52%;
+    left: -9px;
+    right: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+}
+
+.thought-preview-tail-left-center:after {
+    top: 50%;
+    left: -14px;
+    right: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+}
+
+/* Right positions */
+.thought-preview-tail-right-center:before {
+    top: 52%;
+    right: -9px;
+    left: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+}
+
+.thought-preview-tail-right-center:after {
+    top: 50%;
+    right: -14px;
+    left: auto;
+    bottom: auto;
+    transform: translateY(-50%);
+}
+
+/* Top positions */
+.thought-preview-tail-top-left:before {
+    left: 16px;
+    top: -9px;
+    right: auto;
+    bottom: auto;
+}
+
+.thought-preview-tail-top-left:after {
+    left: 12px;
+    top: -14px;
+    right: auto;
+    bottom: auto;
+}
+
+.thought-preview-tail-top-center:before {
+    left: 50%;
+    top: -9px;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+}
+
+.thought-preview-tail-top-center:after {
+    left: 50%;
+    top: -14px;
+    right: auto;
+    bottom: auto;
+    transform: translateX(-50%);
+}
+
+.thought-preview-tail-top-right:before {
+    right: 16px;
+    top: -9px;
+    left: auto;
+    bottom: auto;
+}
+
+.thought-preview-tail-top-right:after {
+    right: 12px;
+    top: -14px;
+    left: auto;
+    bottom: auto;
+}
+
+.caption-box-preview {
+    border-radius: 0;
+    background-color: #f8f8f8;
+}
+
+.shout-bubble-preview {
+    background-color: #ffeb3b;
+    border-radius: 4px;
+    transform: rotate(-2deg);
+}
+
+.whisper-bubble-preview {
+    background-color: #f5f5f5;
+    border: 2px dotted #999;
+    box-shadow: 1px 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.jagged-bubble-preview {
+    background-color: #ff5252;
+    clip-path: polygon(
+        0% 15%, 15% 0%, 85% 0%, 100% 15%, 
+        100% 85%, 85% 100%, 15% 100%, 0% 85%,
+        0% 60%, 5% 50%, 0% 40%
+    );
+}
+
 .text-font-section {
-    margin-bottom: 12px;
+    margin-bottom: 15px;
 }
 
 .text-font-section label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    font-size: 13px;
+    margin-bottom: 5px;
+    font-size: 12px;
+    font-weight: bold;
 }
 
+.text-style-grid {
+    display: grid; /* Keep using grid */
+    grid-template-columns: 1fr; /* Ensure single column */
+    gap: 15px; /* Increase gap slightly */
+}
+
+.style-control {
+    /* Remove any flex behavior that might cause side-by-side */
+    display: block; /* Ensure controls stack vertically */
+}
+
+/* Adjust label/control layout within style-control if needed */
+.style-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+/* Ensure slider controls still look okay */
+.style-control .font-size-control,
+.style-control .line-height-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.style-control input[type="range"] {
+    flex-grow: 1;
+}
+
+.color-section {
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 15px; /* Increase gap */
+}
+
+.color-control { /* Assuming this class wraps label + input */
+     display: block; /* Ensure they stack */
+}
+.color-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.effects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.effect-control {
+    display: block; /* Stack sections vertically */
+}
+
+.effect-control label.group-label { /* Style the Effect section label */
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.effect-control > div { /* The div containing checkbox/inputs */
+    display: flex;
+    flex-direction: column; /* Stack internal controls vertically */
+    align-items: flex-start; /* Align to the left */
+    gap: 8px;
+}
+
+/* Style the outline/shadow specific inner controls */
+.effect-control > div > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.outline-control,
+.shadow-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.outline-thickness {
+    width: 60px;
+    padding: 2px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.outline-thickness:disabled {
+    background-color: var(--disabled-bg);
+    cursor: not-allowed;
+}
+
+/* Ensure text remains smooth when scaled */
+.text-content {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.position-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.position-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    width: 150px;
+    margin: 0 auto;
+}
+
+.position-grid-btn {
+    width: 40px;
+    height: 40px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.position-grid-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.rotation-control {
+    margin-top: 10px;
+}
+
+.rotation-control label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.rotation-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rotation-slider input {
+    flex-grow: 1;
+}
+
+/* Google Fonts Integration */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
+
+/* Font preview styles for dropdown */
+.font-option {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    cursor: pointer;
+    margin: 2px 0;
+}
+
+.font-option:hover {
+    background-color: var(--hover-color);
+}
+
+.font-preview {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+    line-height: 1.5;
+    padding: 4px 0;
+}
+
+.font-family option {
+    min-height: 30px;
+}
+
+.font-category {
+    font-weight: bold;
+    color: #666;
+    padding: 8px;
+    background-color: #f5f5f5;
+    margin-top: 5px;
+    border-bottom: 1px solid #ddd;
+    pointer-events: none;
+}
+
+/* Font family specific preview styling */
+.font-arial { font-family: Arial, sans-serif; }
+.font-comic-sans { font-family: 'Comic Sans MS', cursive; }
+.font-times { font-family: 'Times New Roman', serif; }
+.font-impact { font-family: Impact, Haettenschweiler, sans-serif; font-size: 18px; font-weight: bold; }
+.font-bangers { font-family: 'Bangers', cursive; font-size: 18px; letter-spacing: 1px; }
+.font-luckiest-guy { font-family: 'Luckiest Guy', cursive; font-size: 18px; }
+.font-permanent-marker { font-family: 'Permanent Marker', cursive; }
+.font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
+.font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
+.font-comic-neue { font-family: 'Comic Neue', cursive; }
+.font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
+.font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
+.font-fredoka-one { font-family: 'Fredoka One', cursive; }
+.font-gloria-hallelujah { font-family: 'Gloria Hallelujah', cursive; font-size: 15px; }
+.font-architects-daughter { font-family: 'Architects Daughter', cursive; }
+.font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
+.font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
+
+/* Custom Select styling */
 .custom-select {
     position: relative;
+    display: inline-block;
     width: 100%;
 }
 
 .custom-select select {
     width: 100%;
-    padding: 8px 12px;
+    padding: 8px 30px 8px 10px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 4px;
+    background-color: var(--card-bg);
     appearance: none;
-    background-color: var(--input-bg);
-    font-size: 14px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     cursor: pointer;
 }
 
 .custom-select::after {
-    content: "\f0d7";
-    font-family: "Font Awesome 5 Free";
+    content: '\f0d7';
+    font-family: 'Font Awesome 5 Free';
     font-weight: 900;
     position: absolute;
-    right: 12px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
-    color: var(--text-color);
+    color: #555;
 }
 
-/* Color picker improvements */
-.color-picker-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-
-.color-picker-container input[type="color"] {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: transparent;
-    padding: 2px;
-    cursor: pointer;
-}
-
-.hex-display {
-    flex: 1;
-    padding: 6px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 13px;
-    background-color: var(--input-bg);
-    cursor: text;
-    transition: all 0.2s;
-}
-
-.hex-display:hover {
-    border-color: var(--accent-color);
-}
-
-/* Slider improvements */
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: #ddd;
+.custom-select select:focus {
     outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: none;
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: none;
-}
-
-/* Tail settings container */
-.tail-settings-container {
-    margin-top: 12px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.02);
-}
-
-.slider-group {
-    margin-bottom: 10px;
-}
-
-.slider-group label {
-    display: block;
-    font-size: 12px;
-    margin-bottom: 4px;
-    font-weight: 500;
-}
-
-.slider-group span {
-    display: inline-block;
-    margin-left: 8px;
-    font-size: 12px;
-    color: var(--text-color);
-    min-width: 36px;
-    text-align: right;
-}
-
-/* Setup grid for speech bubble tail settings */
-.speech-tail-settings,
-.thought-tail-settings {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-}
-
-.speech-tail-settings .tail-control,
-.thought-tail-settings .slider-group:last-child {
-    grid-column: span 2;
-}
-
-/* Text alignment buttons */
-.text-align-buttons {
-    display: flex;
-    gap: 6px;
-}
-
-.text-align-btn {
-    flex: 1;
-    height: 36px;
-    border: 1px solid var(--border-color);
-    background: var(--card-bg);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-
-.text-align-btn:hover {
-    background-color: var(--hover-color);
-}
-
-.text-align-btn.active {
-    background-color: var(--primary-color);
-    color: white;
     border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
 }
 
-/* Custom styles section */
-.custom-styles-container {
-    margin-bottom: 16px;
+/* Custom select for the text formatting panel */
+.text-font-section {
+    margin-bottom: 15px;
 }
 
-.custom-styles-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
+.text-font-section select {
+    width: 100%;
+    max-width: 100%;
 }
 
-.custom-styles-actions {
-    display: flex;
-    gap: 8px;
-}
-
-.custom-styles-actions button {
-    font-size: 12px;
+/* Style the font preview dropdown */
+select.font-family option {
     padding: 8px;
-    flex: 1;
 }
 
-/* Text Formatting Popup */
-.text-format-popup {
+/* Make the preview more visible */
+.font-family option[value] {
+    padding: 10px;
+    min-height: 40px;
+}
+
+/* Firefox specific styles */
+@-moz-document url-prefix() {
+    .font-option {
+        height: auto;
+        min-height: 30px;
+    }
+}
+
+/* Export mode - hide all editing UI elements */
+.exporting .comic-panel {
+    border: 3px solid #000000 !important;
+    background: transparent !important;
+    box-shadow: none !important; /* Remove any shadow during export */
+    transform: none !important; /* Ensure no scaling during export */
+}
+
+.exporting .comic-panel::before {
+    display: none !important; /* Ensure pseudo-element is hidden during export */
+}
+
+.exporting .comic-panel:not(.has-image) {
+    background: #E0E0E0 !important;
+}
+
+.exporting .comic-panel.selected {
+    border: 3px solid #000000 !important;
+}
+
+.exporting .comic-panel img {
+    min-width: calc(100% + 2px) !important; /* Force image to slightly overflow */
+    min-height: calc(100% + 2px) !important;
+    object-fit: cover !important;
+}
+
+/* Special handling for comic panels during export */
+.exporting .comic-panel:focus,
+.exporting .comic-panel:focus-visible {
+    outline: none !important;
+    border: 3px solid #000000 !important;
+    box-shadow: none !important;
+}
+
+/* Remove any hover effects during export */
+.exporting .comic-panel:hover {
+    box-shadow: none !important;
+}
+
+/* Modal Styles */
+.modal-overlay {
     position: fixed;
-    width: 320px;
-    max-height: calc(100vh - 80px);
-    overflow-y: auto;
-    background-color: var(--card-bg);
-    border-radius: 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-    z-index: 1000;
-    font-family: 'Arial', sans-serif;
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    scrollbar-width: thin;
-}
-
-.text-format-popup::-webkit-scrollbar {
-    width: 6px;
-}
-
-.text-format-popup::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.text-format-popup::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
-}
-
-.popup-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
-    background-color: var(--primary-color);
-    border-radius: 11px 11px 0 0;
-    position: sticky;
     top: 0;
-    z-index: 5;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    display: none; /* Hidden by default */
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-.popup-header h3 {
-    margin: 0;
-    font-size: 16px;
-    color: white;
-    font-weight: 600;
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    width: 90%;
+    max-width: 400px;
+    display: none; /* Hidden by default */
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.close-popup {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    padding: 6px;
+.modal.active .modal-overlay,
+.modal.active {
+    display: block;
+    opacity: 1;
+}
+
+.modal.active {
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.modal h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    text-align: center;
+    color: var(--primary-color); /* Keep title color primary */
+}
+
+.modal input[type="text"] {
+    width: 100%;
+    padding: 0.8rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #ccc;
     border-radius: 4px;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.modal-buttons {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.2s;
+    justify-content: flex-end;
+    gap: 1rem;
 }
 
-.close-popup:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
-.popup-content {
-    padding: 16px;
-}
-
-.popup-section {
-    margin-bottom: 16px;
-}
-
-.popup-section h4 {
-    margin: 0 0 10px 0;
-    font-size: 14px;
-    color: var(--text-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 8px;
-    font-weight: 600;
-}
-
-/* Bubble Toggle and Grid */
-.bubble-toggle {
-    margin-bottom: 12px;
-}
-
-.bubble-toggle label {
-    display: flex;
-    align-items: center;
+/* Reuse existing button styles if possible, or define secondary */
+.secondary-btn {
+    background-color: #6c757d; /* Example secondary color */
+    color: white;
+    padding: 0.7rem 1.2rem;
+    border: none;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
 }
 
-.bubble-toggle input {
-    margin-right: 8px;
+.secondary-btn:hover {
+    background-color: #5a6268;
+}
+
+.modal-buttons button {
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Reorder Pages Modal Specific Styles */
+#reorder-modal p {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #555;
+}
+
+.reorder-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.5rem 0;
+    max-height: 60vh; /* Prevent modal from getting too tall */
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.reorder-list li {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    background-color: #f9f9f9;
+    border-bottom: 1px solid #ddd;
+    cursor: grab;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    user-select: none; /* Prevent text selection during drag */
+}
+
+.reorder-list li:last-child {
+    border-bottom: none;
+}
+
+.reorder-list li:hover {
+    background-color: #f1f1f1;
+}
+
+.reorder-list li i {
+    margin-right: 0.8rem;
+    color: #777;
+    cursor: grab;
+}
+
+.reorder-list li span {
+    flex-grow: 1;
+}
+
+/* Dragging Styles */
+.reorder-list li.dragging {
+    opacity: 0.5;
+    background-color: #e0e0e0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+/* Style for the drop target area */
+.reorder-list li.drag-over {
+    background-color: #d0eaff; /* Light blue highlight */
+    border-top: 2px solid #007bff; /* Blue line to indicate drop position */
+    margin-top: -2px; /* Compensate for border */
+}
+
+/* Set default text color for modal content */
+.modal,
+.modal p,
+.modal input[type="text"],
+#reorder-modal .reorder-list li span /* Target specific list text */
+{
+    color: #333; /* Dark gray for readability */
+}
+
+/* Style for line height control */
+.line-height-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.line-height {
+    flex-grow: 1;
+    accent-color: var(--primary-color);
+    height: 6px; /* Match zoom slider */
+    cursor: pointer;
+}
+
+.line-height-value {
+    min-width: 30px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+/* Apply similar thumb style as zoom */
+.line-height::-webkit-slider-thumb {
+    -webkit-appearance: none;
     width: 16px;
     height: 16px;
-}
-
-.bubble-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.bubble-option {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 4px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+    background: var(--primary-color);
+    border-radius: 50%;
     cursor: pointer;
-    transition: all 0.2s;
+    border: 2px solid var(--text-color);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+    margin-top: -5px; /* Adjust vertical centering */
 }
 
-.bubble-option:hover {
-    background-color: var(--hover-color);
-    transform: translateY(-2px);
-    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1);
+.line-height::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid var(--text-color);
+    box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
 }
 
-.bubble-option.selected {
-    border-color: var(--primary-color);
-    background-color: rgba(0, 123, 255, 0.1);
-}
-
-.bubble-preview {
-    width: 54px;
-    height: 36px;
-    margin-bottom: 4px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-}
-
-.bubble-option span {
-    font-size: 12px;
-    text-align: center;
-    white-space: nowrap;
-}
-
-/* Style for text controls */
+/* Style adjustments for Text Formatting Popup */
 #text-format-popup {
-    padding: 0 0 16px 0;
+    padding: 15px 15px 50px 15px; /* Slightly reduce horizontal padding, keep bottom padding for buttons */
 }
 
 .text-style-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 12px; /* Adjust gap for vertical stacking */
 }
 
-.text-style-buttons {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
+.style-control {
+    /* Minor adjustments if needed, but single column grid handles stacking */
 }
 
-.style-btn {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border-color);
-    background: var(--card-bg);
-    border-radius: 6px;
+/* Ensure slider controls take full width */
+.style-control .font-size-control,
+.style-control .line-height-control {
     display: flex;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    gap: 8px; /* Slightly reduce gap */
+}
+.style-control input[type="range"] {
+    flex-grow: 1;
 }
 
-.style-btn:hover {
-    background-color: var(--hover-color);
-    transform: translateY(-1px);
+.color-section {
+    display: grid;
+    grid-template-columns: 1fr; /* Force single column */
+    gap: 15px; /* Increase gap */
 }
 
-.style-btn.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
+.color-control { /* Assuming this class wraps label + input */
+     display: block; /* Ensure they stack */
 }
-
-/* Font section */
-.text-font-section {
-    margin-bottom: 12px;
-}
-
-.text-font-section label {
+.color-control label {
     display: block;
-    margin-bottom: 6px;
-    font-weight: 500;
-    font-size: 13px;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
+.effects-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+}
+
+.effect-control {
+    display: block; /* Stack sections vertically */
+}
+
+.effect-control label.group-label { /* Style the Effect section label */
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.effect-control > div { /* The div containing checkbox/inputs */
+    display: flex;
+    flex-direction: column; /* Stack internal controls vertically */
+    align-items: flex-start; /* Align to the left */
+    gap: 8px;
+}
+
+/* Style the outline/shadow specific inner controls */
+.effect-control > div > div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.outline-control,
+.shadow-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.outline-thickness {
+    width: 60px;
+    padding: 2px 4px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+.outline-thickness:disabled {
+    background-color: var(--disabled-bg);
+    cursor: not-allowed;
+}
+
+/* Ensure text remains smooth when scaled */
+.text-content {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+.position-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.position-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    width: 150px;
+    margin: 0 auto;
+}
+
+.position-grid-btn {
+    width: 40px;
+    height: 40px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+}
+
+.position-grid-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.rotation-control {
+    margin-top: 10px;
+}
+
+.rotation-control label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.rotation-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.rotation-slider input {
+    flex-grow: 1;
+}
+
+/* Google Fonts Integration */
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
+
+/* Font preview styles for dropdown */
+.font-option {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    cursor: pointer;
+    margin: 2px 0;
+}
+
+.font-option:hover {
+    background-color: var(--hover-color);
+}
+
+.font-preview {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    width: 100%;
+    line-height: 1.5;
+    padding: 4px 0;
+}
+
+.font-family option {
+    min-height: 30px;
+}
+
+.font-category {
+    font-weight: bold;
+    color: #666;
+    padding: 8px;
+    background-color: #f5f5f5;
+    margin-top: 5px;
+    border-bottom: 1px solid #ddd;
+    pointer-events: none;
+}
+
+/* Font family specific preview styling */
+.font-arial { font-family: Arial, sans-serif; }
+.font-comic-sans { font-family: 'Comic Sans MS', cursive; }
+.font-times { font-family: 'Times New Roman', serif; }
+.font-impact { font-family: Impact, Haettenschweiler, sans-serif; font-size: 18px; font-weight: bold; }
+.font-bangers { font-family: 'Bangers', cursive; font-size: 18px; letter-spacing: 1px; }
+.font-luckiest-guy { font-family: 'Luckiest Guy', cursive; font-size: 18px; }
+.font-permanent-marker { font-family: 'Permanent Marker', cursive; }
+.font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
+.font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
+.font-comic-neue { font-family: 'Comic Neue', cursive; }
+.font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
+.font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
+.font-fredoka-one { font-family: 'Fredoka One', cursive; }
+.font-gloria-hallelujah { font-family: 'Gloria Hallelujah', cursive; font-size: 15px; }
+.font-architects-daughter { font-family: 'Architects Daughter', cursive; }
+.font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
+.font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
+
+/* Custom Select styling */
 .custom-select {
     position: relative;
+    display: inline-block;
     width: 100%;
 }
 
 .custom-select select {
     width: 100%;
-    padding: 8px 12px;
+    padding: 8px 30px 8px 10px;
     border: 1px solid var(--border-color);
-    border-radius: 6px;
+    border-radius: 4px;
+    background-color: var(--card-bg);
     appearance: none;
-    background-color: var(--input-bg);
-    font-size: 14px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     cursor: pointer;
 }
 
 .custom-select::after {
-    content: "\f0d7";
-    font-family: "Font Awesome 5 Free";
+    content: '\f0d7';
+    font-family: 'Font Awesome 5 Free';
     font-weight: 900;
     position: absolute;
-    right: 12px;
+    right: 10px;
     top: 50%;
     transform: translateY(-50%);
     pointer-events: none;
+    color: #555;
+}
+
+.custom-select select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+}
+
+/* Custom select for the text formatting panel */
+.text-font-section {
+    margin-bottom: 15px;
+}
+
+.text-font-section select {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Style the font preview dropdown */
+select.font-family option {
+    padding: 8px;
+}
+
+/* Make the preview more visible */
+.font-family option[value] {
+    padding: 10px;
+    min-height: 40px;
+}
+
+/* Firefox specific styles */
+@-moz-document url-prefix() {
+    .font-option {
+        height: auto;
+        min-height: 30px;
+    }
+}
+
+/* Export mode - hide all editing UI elements */
+.exporting .comic-panel {
+    font-weight: normal;
     color: var(--text-color);
 }
 
-/* Color picker improvements */
+/* Thought Bubble */
+.thought-bubble {
+    border-radius: 50%;
+    background-color: var(--bubble-background-color, white);
+    position: relative;
+}
+
+.thought-bubble::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bubble-background-color, white);
+    border-radius: inherit;
+    z-index: 1;
+    opacity: var(--bubble-opacity);
+}
+
+/* Thought bubble tails */
+/* Add a third bubble using a custom property with attr() */
+.thought-tail-bottom-left,
+.thought-tail-bottom-center,
+.thought-tail-bottom-right,
+.thought-tail-left-center,
+.thought-tail-right-center,
+.thought-tail-top-left,
+.thought-tail-top-center,
+.thought-tail-top-right {
+    --bubble-trail-color: var(--bubble-background-color, white);
+}
+
+/* Bottom tails */
+.thought-tail-bottom-left::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -15px;
+    left: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.thought-tail-bottom-left::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -32px;
+    left: 17px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.thought-tail-bottom-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-bottom-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.thought-tail-bottom-right::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: -18px;
+    right: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+    box-shadow: none;
+}
+
+.thought-tail-bottom-right::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    bottom: -32px;
+    right: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+/* Left positions */
+.thought-tail-left-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: -14px 3px 0 -4px var(--bubble-trail-color), -14px 3px 0 -2px #000;
+}
+
+.thought-tail-left-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    left: -32px;
+    top: 52%;
+    transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+/* Right positions */
+.thought-tail-right-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    right: -15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 14px 3px 0 -4px var(--bubble-trail-color), 14px 3px 0 -2px #000;
+}
+
+.thought-tail-right-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    right: -32px;
+    top: 52%;
+    transform: translateY(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+/* Top positions */
+.thought-tail-top-left::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -15px;
+    left: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: -3px -14px 0 -4px var(--bubble-trail-color), -3px -14px 0 -2px #000;
+}
+
+.thought-tail-top-left::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    left: 17px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.thought-tail-top-center::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 0 -14px 0 -4px var(--bubble-trail-color), 0 -14px 0 -2px #000;
+}
+
+.thought-tail-top-center::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+.thought-tail-top-right::after {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: -15px;
+    right: 20px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+    box-shadow: 3px -14px 0 -4px var(--bubble-trail-color), 3px -14px 0 -2px #000;
+}
+
+.thought-tail-top-right::before {
+    content: '';
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    top: -32px;
+    right: 17px;
+    background-color: var(--bubble-trail-color);
+    border: 2px solid #000;
+    border-radius: 50%;
+    z-index: 1;
+}
+
+/* Sidebar Tabs */
+.sidebar-tabs {
+    display: flex;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 0.5rem 0.2rem; /* Further reduced padding */
+    background: var(--card-bg);
+    border: none;
+    border-bottom: 2px solid transparent; /* Slightly thinner active border */
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.75rem; /* Slightly smaller font */
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+
+.tab-btn:hover {
+    color: var(--text-color);
+    background: var(--hover-color);
+}
+
+.tab-btn.active {
+    color: var(--text-bright);
+    background: var(--input-bg);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Style the content area within the sidebar */
+.sidebar-content {
+    /* Add styles if needed to manage content switching, for now it's simple */
+    /* Example: display: block; or display: none; based on active tab */
+}
+
+/* Ensure the H3 and grid are styled correctly within the sidebar content */
+.sidebar-content h3 {
+    margin-bottom: 1rem;
+    color: var(--text-bright);
+    text-transform: uppercase;
+    text-shadow: 2px 2px 0 var(--shadow-color);
+    font-size: 1.2rem; /* Slightly adjusted size */
+    text-align: center;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.sidebar-content .thumbnails-grid {
+    /* Inherits most styles, ensure max-height is appropriate */
+    max-height: calc(100vh - 280px); /* Adjust based on header/tabs height */
+    padding-bottom: 20px; /* Add extra padding at bottom */
+}
+
+/* Sticker Image Styles */
+.canvas-sticker-image {
+    position: absolute; /* Ensure positioning context */
+    display: block; /* Ensure it's displayed */
+    z-index: 100 !important; /* Force high z-index */
+    cursor: grab;
+    border: 2px dashed transparent; /* Add transparent border for spacing */
+    transition: border-color 0.2s ease;
+}
+
+.canvas-sticker-image.selected-sticker {
+    border-color: var(--primary-color); /* Highlight selected sticker */
+    box-shadow: 0 0 5px var(--primary-color);
+}
+
+.color-control {
+    display: block;
+}
+
+.color-control label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+/* Enhanced color control with hex display */
 .color-picker-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-
-.color-picker-container input[type="color"] {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    background: transparent;
-    padding: 2px;
-    cursor: pointer;
-}
-
-.hex-display {
-    flex: 1;
-    padding: 6px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-family: monospace;
-    font-size: 13px;
-    background-color: var(--input-bg);
-    cursor: text;
-    transition: all 0.2s;
-}
-
-.hex-display:hover {
-    border-color: var(--accent-color);
-}
-
-/* Slider improvements */
-input[type="range"] {
-    -webkit-appearance: none;
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: #ddd;
-    outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: none;
-}
-
-input[type="range"]::-moz-range-thumb {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    cursor: pointer;
-    border: none;
-}
-
-/* Tail settings container */
-.tail-settings-container {
-    margin-top: 12px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.02);
-}
-
-.slider-group {
-    margin-bottom: 10px;
-}
-
-.slider-group label {
-    display: block;
-    font-size: 12px;
-    margin-bottom: 4px;
-    font-weight: 500;
-}
-
-.slider-group span {
-    display: inline-block;
-    margin-left: 8px;
-    font-size: 12px;
-    color: var(--text-color);
-    min-width: 36px;
-    text-align: right;
-}
-
-/* Setup grid for speech bubble tail settings */
-.speech-tail-settings,
-.thought-tail-settings {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
 }
 
-.speech-tail-settings .tail-control,
-.thought-tail-settings .slider-group:last-child {
-    grid-column: span 2;
-}
-
-/* Text alignment buttons */
-.text-align-buttons {
-    display: flex;
-    gap: 6px;
-}
-
-.text-align-btn {
-    flex: 1;
-    height: 36px;
+.color-picker-container input[type="color"] {
+    width: 40px;
+    height: 30px;
     border: 1px solid var(--border-color);
-    background: var(--card-bg);
-    border-radius: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.hex-display {
+    flex-grow: 1;
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: #fff;
+    font-family: monospace;
+    font-size: 14px;
+    text-align: center;
+    min-width: 70px;
+}
+
+/* Color picker styling with hex input */
+.color-picker-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.color-hex {
+    min-width: 70px;
+    background: #f5f5f5;
+    padding: 2px 4px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+    cursor: text;
+}
+
+.color-hex[contenteditable="false"],
+.color-hex.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #e0e0e0;
+}
+
+/* Make sure color inputs have a fixed width */
+input[type="color"] {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+}
+
+/* Button styles */
+.primary-btn {
+    background-color: var(--primary-color);
+    color: var(--accent-text-color);
+    border: none;
+    border-radius: 5px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.primary-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.primary-btn i {
+    margin-right: 8px;
+}
+
+.action-btn {
+    background-color: var(--primary-color);
+    color: var(--accent-text-color);
+    border: none;
+    border-radius: 5px;
+    padding: 10px 15px;
+    cursor: pointer;
+    font-size: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.15s ease;
+    gap: 8px;
+    transition: all 0.2s ease;
 }
 
-.text-align-btn:hover {
-    background-color: var(--hover-color);
+.action-btn:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
-.text-align-btn.active {
-    background-color: var(--primary-color);
+.action-btn:active {
+    transform: translateY(0px);
+}
+
+.action-btn:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.secondary-btn {
+    background-color: #6c757d; /* Example secondary color */
     color: white;
-    border-color: var(--primary-color);
+    padding: 0.7rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease;
 }
 
-/* Custom styles section */
-.custom-styles-container {
-    margin-bottom: 16px;
+.secondary-btn:hover {
+    background-color: #5a6268;
 }
 
-.custom-styles-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
+.modal-buttons button {
+    min-width: 80px;
+    text-align: center;
 }
 
-.custom-styles-actions {
+/* Notification styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 4px;
+    background-color: #333;
+    color: #fff;
+    font-size: 14px;
+    max-width: 300px;
+    z-index: 9999;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-20px);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.notification-success {
+    background-color: #28a745;
+    border-left: 4px solid #1e7e34;
+}
+
+.notification-info {
+    background-color: #17a2b8;
+    border-left: 4px solid #117a8b;
+}
+
+.notification-warning {
+    background-color: #ffc107;
+    border-left: 4px solid #d39e00;
+    color: #333;
+}
+
+.notification-error {
+    background-color: #dc3545;
+    border-left: 4px solid #bd2130;
+}
+
+/* Editable slider value styles */
+.editable-slider-value {
+    cursor: text;
+    padding: 2px 4px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    min-width: 40px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.editable-slider-value:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: var(--border-color);
+}
+
+.editable-slider-value:focus {
+    outline: none;
+    background-color: #000;
+    border-color: var(--primary-color, #0275d8);
+    box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb, 2, 117, 216), 0.25);
+}
+
+.zoom-group,
+.rotation-group {
+    margin-bottom: 15px;
+    background: var(--input-bg);
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.zoom-group label,
+.rotation-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: var(--text-bright);
+}
+
+.zoom-control,
+.rotation-control {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.zoom-value,
+.rotation-value {
+    display: inline-block;
+    font-weight: bold;
+    background: var(--card-bg);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-left: 10px;
+    color: var(--text-bright);
+}
+
+.reset-zoom-btn,
+.reset-rotation-btn {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
     display: flex;
+    align-items: center;
     gap: 8px;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    width: 100%;
+    justify-content: center;
+    margin-top: 10px;
 }
 
-.custom-styles-actions button {
-    font-size: 12px;
-    padding: 8px;
-    flex: 1;
+.reset-zoom-btn:hover,
+.reset-rotation-btn:hover {
+    background: var(--hover-color);
+    color: var(--text-bright);
+}
+
+/* Export-specific styles */
+.exporting {
+    /* Remove any styling that might interfere with clean export */
+    outline: none !important;
+}
+
+.exporting .comic-panel {
+    border: 3px solid #000 !important; /* Match the 3px border used in editor view */
+    box-shadow: none !important;
+}
+
+.exporting .comic-panel.selected {
+    border: 3px solid #000 !important; /* Match the 3px border used in editor view */
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Add specific rules for stickers during export */
+.exporting .canvas-sticker-image {
+    box-shadow: none !important;
+    outline: none !important; /* Ensure no outlines are used during export, only borders */
+    box-sizing: border-box !important; /* Ensure the border is flush with the image */
+}
+
+.exporting .canvas-sticker-image[data-outline-enabled="true"] {
+    /* Use border instead of outline for better HTML2Canvas compatibility */
+    /* Border will be applied via JavaScript in the ExportManager.js file */
+    /* This ensures the border rotates with the image for better PDF rendering */
+    transform-origin: center center !important; /* Ensure rotation happens from center */
+}
+
+.exporting .text-bubble {
+    /* Ensure text bubbles render correctly in exported PDF */
+    border: 2px solid rgba(0, 0, 0, 0.7) !important; /* Increase from 1px to 2px for better visibility */
+    /* Set minimum opacity to ensure visibility */
+    opacity: 1 !important;
+}
+
+/* Fix for speech bubble tails in export mode */
+.exporting .speech-bubble::after {
+    border-top-color: black !important;
+    border-width: 15px !important;
+}
+
+/* Fix for thought bubble tails in export mode */
+.exporting .thought-bubble::before,
+.exporting .thought-bubble::after,
+.exporting .thought-tail-bottom-left::before,
+.exporting .thought-tail-bottom-left::after,
+.exporting .thought-tail-bottom-center::before,
+.exporting .thought-tail-bottom-center::after,
+.exporting .thought-tail-bottom-right::before,
+.exporting .thought-tail-bottom-right::after,
+.exporting .thought-tail-left-center::before,
+.exporting .thought-tail-left-center::after,
+.exporting .thought-tail-right-center::before,
+.exporting .thought-tail-right-center::after,
+.exporting .thought-tail-top-left::before,
+.exporting .thought-tail-top-left::after,
+.exporting .thought-tail-top-center::before,
+.exporting .thought-tail-top-center::after,
+.exporting .thought-tail-top-right::before,
+.exporting .thought-tail-top-right::after {
+    border-width: 2px !important;
+    border-color: #000 !important;
+}
+
+/* Special handling for no-bubble text elements during export */
+.exporting .text-bubble.no-bubble {
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+}
+
+.exporting .resize-handle,
+.exporting .drag-handle,
+.exporting .format-buttons,
+.exporting .delete-text-btn,
+.exporting .text-bubble-controls {
+    /* Hide editor controls during export */
+    display: none !important;
+}
+
+/* Force font visibility during export */
+.exporting .text-bubble * {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Ensure no-bubble text elements don't show speech/thought bubble tails or other decorative elements */
+.exporting .text-bubble.no-bubble::before,
+.exporting .text-bubble.no-bubble::after {
+    display: none !important;
+    content: none !important;
 }
 
 /* Mobile and small screen adjustments */
@@ -3760,256 +4787,3 @@ input[type="range"]::-moz-range-thumb {
 }
 
 /* End of stylesheet */
-
-/* Sidebar Tabs - Mode Selection */
-.sidebar-tabs {
-    display: flex;
-    gap: 2px;
-    background: var(--card-bg);
-    padding: 8px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    border: 2px solid var(--border-color);
-}
-
-.tab-btn {
-    flex: 1;
-    padding: 12px 10px;
-    background: var(--input-bg);
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-weight: bold;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-}
-
-.tab-btn i {
-    font-size: 18px;
-    margin-bottom: 3px;
-}
-
-.tab-btn:hover {
-    background: var(--hover-color);
-    transform: translateY(-2px);
-}
-
-.tab-btn.active {
-    background: var(--primary-color);
-    color: var(--text-bright);
-    border-color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(255, 59, 59, 0.4);
-}
-
-/* Remove the ::before pseudo-element that's not needed anymore */
-.tab-btn::before {
-    content: none;
-}
-
-.tab-btn.active {
-    padding-top: 12px;
-    padding-bottom: 12px;
-}
-
-/* Mode indicator icon for each tab */
-.tab-btn::before {
-    content: '';
-    font-family: "Font Awesome 5 Free";
-    font-weight: 900;
-    position: absolute;
-    top: -20px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 14px;
-    transition: all 0.2s ease;
-    opacity: 0;
-}
-
-.tab-btn[data-tab="panels"]::before {
-    content: '\f00a'; /* Grid/Panel icon */
-}
-
-.tab-btn[data-tab="backgrounds"]::before {
-    content: '\f03e'; /* Image icon */
-}
-
-.tab-btn[data-tab="stickers"]::before {
-    content: '\f005'; /* Star icon for stickers */
-}
-
-.tab-btn.active::before {
-    top: 6px;
-    opacity: 1;
-}
-
-.tab-btn.active {
-    padding-top: 25px;
-    padding-bottom: 5px;
-}
-
-/* Mode-specific visual cues for the editor */
-.editor-container {
-    position: relative;
-}
-
-.editor-container::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 5px;
-    background: transparent;
-    z-index: 10;
-}
-
-/* Panel mode indicator */
-body[data-mode="panels"] .editor-container::before {
-    background: linear-gradient(to right, var(--primary-color), transparent);
-    box-shadow: 0 0 15px rgba(255, 59, 59, 0.6);
-}
-
-/* Background mode indicator */
-body[data-mode="backgrounds"] .editor-container::before {
-    background: linear-gradient(to right, var(--secondary-color), transparent);
-    box-shadow: 0 0 15px rgba(255, 138, 0, 0.6);
-}
-
-/* Stickers mode indicator */
-body[data-mode="stickers"] .editor-container::before {
-    background: linear-gradient(to right, var(--accent-color), transparent);
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-}
-
-/* Mode indicator in editor header */
-.mode-indicator {
-    padding: 8px 15px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #fff;
-    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
-    margin-left: auto;
-    margin-right: 10px;
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    border: 2px solid rgba(255, 255, 255, 0.2);
-}
-
-.mode-indicator i {
-    font-size: 16px;
-}
-
-.mode-indicator::before {
-    content: '';
-    position: absolute;
-    top: -15px;
-    left: -15px;
-    right: -15px;
-    bottom: -15px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.3) 100%);
-    animation: shine 3s infinite linear;
-    z-index: 1;
-    opacity: 0.5;
-}
-
-/* Panel mode indicator */
-.mode-indicator.panel-mode {
-    background-color: var(--primary-color);
-    box-shadow: 0 0 15px rgba(255, 59, 59, 0.6);
-}
-
-/* Background mode indicator */
-.mode-indicator.background-mode {
-    background-color: var(--secondary-color);
-    box-shadow: 0 0 15px rgba(255, 138, 0, 0.6);
-}
-
-/* Sticker mode indicator */
-.mode-indicator.sticker-mode {
-    background-color: var(--accent-color);
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
-}
-
-/* Mode-specific cursor styles */
-body[data-mode="panels"] .comic-panel {
-    cursor: pointer;
-}
-
-body[data-mode="panels"] .comic-panel:hover {
-    outline: 2px dashed var(--primary-color);
-    outline-offset: -2px;
-}
-
-body[data-mode="backgrounds"] #comic-canvas {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="%23FF8A00"><path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>'), auto;
-}
-
-body[data-mode="stickers"] #comic-canvas {
-    cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="%23FFD700"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>'), auto;
-}
-
-/* Add color to thumbnails in sidebar based on mode */
-body[data-mode="panels"] .editor-sidebar .thumbnail-container {
-    border-color: var(--primary-color);
-    box-shadow: 0 3px 5px rgba(255, 59, 59, 0.3);
-}
-
-body[data-mode="backgrounds"] .editor-sidebar .thumbnail-container {
-    border-color: var(--secondary-color);
-    box-shadow: 0 3px 5px rgba(255, 138, 0, 0.3);
-}
-
-body[data-mode="stickers"] .editor-sidebar .thumbnail-container {
-    border-color: var(--accent-color);
-    box-shadow: 0 3px 5px rgba(255, 215, 0, 0.3);
-}
-
-/* Add mode description text below tabs */
-.mode-description {
-    margin: -8px 0 15px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--text-bright);
-    background: var(--input-bg);
-    border-radius: 0 0 8px 8px;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-    border-top: none;
-    font-weight: bold;
-}
-
-.mode-description.panels-desc {
-    display: none;
-}
-
-.mode-description.backgrounds-desc {
-    display: none;
-}
-
-.mode-description.stickers-desc {
-    display: none;
-}
-
-body[data-mode="panels"] .mode-description.panels-desc {
-    display: block;
-}
-
-body[data-mode="backgrounds"] .mode-description.backgrounds-desc {
-    display: block;
-}
-
-body[data-mode="stickers"] .mode-description.stickers-desc {
-    display: block;
-}
