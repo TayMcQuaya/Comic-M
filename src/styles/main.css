@@ -2000,18 +2000,6 @@ label {
     background-color: var(--bubble-background-color, white);   
 }
 
-.speech-bubble::after {
-    content: '';
-    position: absolute;
-    bottom: -15px;
-    left: 30px;
-    border: 15px solid transparent;
-    border-top-color: black;
-    border-bottom: 0;
-    border-left: 5px;
-    z-index: 1;
-}
-
 /* Thought Bubble */
 .thought-bubble {
     border-radius: 50%;
@@ -4705,5 +4693,97 @@ input[type="color"] {
 }
 
 /* Additional fonts and customizations can be added below */
+
+/* End of stylesheet */
+
+/* SVG Tail Settings */
+.tail-settings-container {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.tail-control {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.tail-control label {
+    margin-left: 5px;
+    margin-right: 8px;
+}
+
+.tail-control .color-picker-container {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+}
+
+.speech-tail-settings,
+.thought-tail-settings {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border-color);
+}
+
+.slider-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 8px;
+}
+
+.slider-group label {
+    margin-bottom: 3px;
+    font-size: 0.9em;
+}
+
+.slider-group input[type="range"] {
+    flex-grow: 1;
+    margin-right: 8px;
+}
+
+.slider-group span {
+    font-size: 0.9em;
+    width: 40px;
+    text-align: right;
+    color: var(--text-bright);
+}
+
+/* Ensure the bubble-tail-svg is properly positioned */
+.bubble-tail-svg {
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Make sure SVG tails match the bubble style */
+.speech-bubble .bubble-tail-svg {
+    /* Speech bubble specific SVG tail styles */
+    fill: var(--bubble-background-color, white);
+}
+
+.thought-bubble .bubble-tail-svg {
+    /* Thought bubble specific SVG tail styles */
+    fill: var(--bubble-background-color, white);
+}
+
+/* SVG path stroke color should match the bubble border */
+.bubble-tail-svg path[stroke] {
+    stroke: #000;
+    stroke-width: 2px;
+}
+
+/* Ensure SVG tails have proper opacity if bubble has opacity set */
+.text-bubble[style*="opacity"] .bubble-tail-svg {
+    opacity: inherit;
+}
+
+/* Hide SVG tails when exporting if needed */
+.exporting .text-bubble .bubble-tail-svg {
+    display: block; /* Ensure visible for export */
+}
 
 /* End of stylesheet */

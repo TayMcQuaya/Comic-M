@@ -22,13 +22,37 @@ export class TextManager {
             bubbleType: 'speech-bubble'
         };
         
+        // Default SVG tail settings for speech bubbles
+        this.defaultSpeechTailSettings = {
+            useSvgTail: true,
+            tailColor: '#ffffff', // Match bubble background by default
+            tailPosition: 'bottom',
+            speechTailLength: 20,
+            speechTailWidth: 15,
+            speechTailInset: 50, // percent
+            speechTailShear: 0, // percent
+            speechTailOutline: true
+        };
+        
+        // Default SVG tail settings for thought bubbles
+        this.defaultThoughtTailSettings = {
+            useSvgTail: true,
+            tailColor: '#ffffff', // Match bubble background by default
+            tailPosition: 'bottom',
+            thoughtTailInset: 50, // percent
+            thoughtNumCircles: 3,
+            thoughtCircleRadius: 5,
+            thoughtCircleSpacing: 5,
+            thoughtTailOffset: 0
+        };
+        
         // Array to store custom text styles
         this.customTextStyles = [];
         
         // Load saved settings
         this.loadTextSettings();
 
-        console.log("TextManager initialized");
+        console.log("TextManager initialized with SVG tails support");
     }
 
     // Methods related to text bubble creation, selection, styling, 
@@ -758,6 +782,89 @@ export class TextManager {
                 </div>
                 
                 <div class="popup-section">
+                    <h4>Bubble Tail</h4>
+                    <div class="effect-control">
+                        <label for="bubble-tail-position">Tail Position</label>
+                        <select id="bubble-tail-position" ${textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box' ? 'disabled' : ''}>
+                            <option value="none" ${textBox.dataset.tailPosition === 'none' ? 'selected' : ''}>None</option>
+                            <option value="bottom" ${textBox.dataset.tailPosition === 'bottom' ? 'selected' : ''}>Bottom</option>
+                            <option value="top" ${textBox.dataset.tailPosition === 'top' ? 'selected' : ''}>Top</option>
+                            <option value="left" ${textBox.dataset.tailPosition === 'left' ? 'selected' : ''}>Left</option>
+                            <option value="right" ${textBox.dataset.tailPosition === 'right' ? 'selected' : ''}>Right</option>
+                        </select>
+                        
+                        <!-- SVG Tail Settings -->
+                        <div class="tail-settings-container" ${textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box' || textBox.dataset.tailPosition === 'none' ? 'style="display: none;"' : ''}>
+                            <!-- Common tail settings for both bubble types -->
+                            <div class="tail-control">
+                                <label for="tail-color">Tail Color</label>
+                                <div class="color-picker-container">
+                                    <input type="color" id="tail-color" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"tailColor":"#ffffff"}').tailColor : this.getBubbleBackgroundColor(textBox)}">
+                                    <div class="hex-display tail-color-hex">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"tailColor":"#ffffff"}').tailColor.toUpperCase() : this.getBubbleBackgroundColor(textBox).toUpperCase()}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Speech bubble tail specific settings -->
+                            <div class="speech-tail-settings" ${textBox.dataset.bubbleType !== 'speech-bubble' ? 'style="display: none;"' : ''} style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                <div class="slider-group">
+                                    <label for="speech-tail-length">Length</label>
+                                    <input type="range" id="speech-tail-length" min="10" max="60" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailLength":20}').speechTailLength : 20}" step="1">
+                                    <span class="speech-tail-length-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailLength":20}').speechTailLength : 20}px</span>
+                                </div>
+                                <div class="slider-group">
+                                    <label for="speech-tail-width">Width</label>
+                                    <input type="range" id="speech-tail-width" min="5" max="40" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailWidth":15}').speechTailWidth : 15}" step="1">
+                                    <span class="speech-tail-width-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailWidth":15}').speechTailWidth : 15}px</span>
+                                </div>
+                                <div class="slider-group">
+                                    <label for="speech-tail-inset">Position</label>
+                                    <input type="range" id="speech-tail-inset" min="10" max="90" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}" step="1">
+                                    <span class="speech-tail-inset-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailInset":50}').speechTailInset : 50}%</span>
+                                </div>
+                                <div class="slider-group">
+                                    <label for="speech-tail-shear">Shear</label>
+                                    <input type="range" id="speech-tail-shear" min="-50" max="50" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailShear":0}').speechTailShear || 0 : 0}" step="1">
+                                    <span class="speech-tail-shear-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"speechTailShear":0}').speechTailShear || 0 : 0}</span>
+                                </div>
+                                <div class="tail-control" style="grid-column: span 2;">
+                                    <input type="checkbox" id="speech-tail-outline" ${!textBox.dataset.tailSettings || JSON.parse(textBox.dataset.tailSettings || '{"speechTailOutline":true}').speechTailOutline ? 'checked' : ''}>
+                                    <label for="speech-tail-outline">Tail Outline</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Thought bubble tail specific settings -->
+                            <div class="thought-tail-settings" ${textBox.dataset.bubbleType !== 'thought-bubble' ? 'style="display: none;"' : ''} style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                                <div class="slider-group">
+                                    <label for="thought-tail-inset">Position</label>
+                                    <input type="range" id="thought-tail-inset" min="10" max="90" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtTailInset":50}').thoughtTailInset || 50 : 50}" step="1">
+                                    <span class="thought-tail-inset-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtTailInset":50}').thoughtTailInset || 50 : 50}%</span>
+                                </div>
+                                <div class="slider-group">
+                                    <label for="thought-num-circles">Circles</label>
+                                    <input type="range" id="thought-num-circles" min="1" max="5" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtNumCircles":3}').thoughtNumCircles : 3}" step="1">
+                                    <span class="thought-num-circles-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtNumCircles":3}').thoughtNumCircles : 3}</span>
+                                </div>
+                                <div class="slider-group">
+                                    <label for="thought-circle-radius">Radius</label>
+                                    <input type="range" id="thought-circle-radius" min="2" max="10" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtCircleRadius":5}').thoughtCircleRadius : 5}" step="1">
+                                    <span class="thought-circle-radius-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtCircleRadius":5}').thoughtCircleRadius : 5}px</span>
+                                </div>
+                                <div class="slider-group">
+                                    <label for="thought-circle-spacing">Spacing</label>
+                                    <input type="range" id="thought-circle-spacing" min="2" max="15" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtCircleSpacing":5}').thoughtCircleSpacing : 5}" step="1">
+                                    <span class="thought-circle-spacing-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtCircleSpacing":5}').thoughtCircleSpacing : 5}px</span>
+                                </div>
+                                <div class="slider-group" style="grid-column: span 2;">
+                                    <label for="thought-tail-offset">Offset</label>
+                                    <input type="range" id="thought-tail-offset" min="-50" max="50" value="${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtTailOffset":0}').thoughtTailOffset : 0}" step="1">
+                                    <span class="thought-tail-offset-value">${textBox.dataset.tailSettings ? JSON.parse(textBox.dataset.tailSettings || '{"thoughtTailOffset":0}').thoughtTailOffset : 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="popup-section">
                     <h4>Text Style</h4>
                     <div class="text-font-section">
                         <label for="font-family">Font</label>
@@ -931,21 +1038,6 @@ export class TextManager {
                                 </label>
                             </div>
                         </div>
-                        
-                        <div class="effect-control">
-                            <label for="bubble-tail-position">Bubble Tail</label>
-                            <select id="bubble-tail-position" ${textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box' ? 'disabled' : ''}>
-                                <option value="none" ${textBox.dataset.tailPosition === 'none' ? 'selected' : ''}>None</option>
-                                <option value="bottom-left" ${textBox.dataset.tailPosition === 'bottom-left' ? 'selected' : ''}>Bottom Left</option>
-                                <option value="bottom-center" ${textBox.dataset.tailPosition === 'bottom-center' ? 'selected' : ''}>Bottom Center</option>
-                                <option value="bottom-right" ${textBox.dataset.tailPosition === 'bottom-right' ? 'selected' : ''}>Bottom Right</option>
-                                <option value="left-center" ${textBox.dataset.tailPosition === 'left-center' ? 'selected' : ''}>Left Center</option>
-                                <option value="right-center" ${textBox.dataset.tailPosition === 'right-center' ? 'selected' : ''}>Right Center</option>
-                                <option value="top-left" ${textBox.dataset.tailPosition === 'top-left' ? 'selected' : ''}>Top Left</option>
-                                <option value="top-center" ${textBox.dataset.tailPosition === 'top-center' ? 'selected' : ''}>Top Center</option>
-                                <option value="top-right" ${textBox.dataset.tailPosition === 'top-right' ? 'selected' : ''}>Top Right</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
                 
@@ -1114,11 +1206,13 @@ export class TextManager {
             const isItalic = textElement.style.fontStyle === 'italic';
             textElement.style.fontStyle = isItalic ? 'normal' : 'italic';
             popup.querySelector('.italic-btn').classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
         });
         popup.querySelector('.underline-btn').addEventListener('click', () => {
             const isUnderline = textElement.style.textDecoration === 'underline';
             textElement.style.textDecoration = isUnderline ? 'none' : 'underline';
             popup.querySelector('.underline-btn').classList.toggle('active');
+            this.comicCreator.saveCurrentPageState(); // Use comicCreator
         });
         
         // All Caps toggle
@@ -1375,8 +1469,291 @@ export class TextManager {
 
         // Bubble tail position listener (calling internal helper)
         popup.querySelector('#bubble-tail-position').addEventListener('change', (e) => {
-            this.updateBubbleTail(textBox, e.target.value); // Internal call
-            // No immediate save needed?
+            const newPosition = e.target.value;
+            console.log(`Changing tail position to: ${newPosition}`);
+            
+            // Update the tail position in the text box
+            this.updateBubbleTail(textBox, newPosition);
+            
+            // Show/hide tail settings based on position
+            const tailSettingsContainer = popup.querySelector('.tail-settings-container');
+            if (newPosition === 'none' || textBox.dataset.bubbleType === 'no-bubble' || textBox.dataset.bubbleType === 'caption-box') {
+                tailSettingsContainer.style.display = 'none';
+            } else {
+                tailSettingsContainer.style.display = '';
+                
+                // Show appropriate bubble type settings
+                const speechTailSettings = popup.querySelector('.speech-tail-settings');
+                const thoughtTailSettings = popup.querySelector('.thought-tail-settings');
+                
+                if (textBox.dataset.bubbleType === 'speech-bubble') {
+                    speechTailSettings.style.display = '';
+                    thoughtTailSettings.style.display = 'none';
+                } else if (textBox.dataset.bubbleType === 'thought-bubble') {
+                    speechTailSettings.style.display = 'none';
+                    thoughtTailSettings.style.display = '';
+                }
+            }
+            
+            // Save state after changing tail position
+            this.comicCreator.saveCurrentPageState();
+        });
+        
+        // SVG Tail Settings Event Handlers
+        
+        // Use SVG Tail toggle
+        const useSvgTailCheckbox = popup.querySelector('#use-svg-tail');
+        if (useSvgTailCheckbox) {
+            useSvgTailCheckbox.addEventListener('change', () => {
+                const settings = {
+                    useSvgTail: useSvgTailCheckbox.checked
+                };
+                this.updateSvgTailSettings(textBox, settings);
+                this.comicCreator.saveCurrentPageState();
+            });
+        }
+        
+        // Tail Color Picker
+        const tailColorPicker = popup.querySelector('#tail-color');
+        const tailColorHex = popup.querySelector('.tail-color-hex');
+        if (tailColorPicker && tailColorHex) {
+            tailColorPicker.addEventListener('input', () => {
+                const settings = {
+                    tailColor: tailColorPicker.value
+                };
+                tailColorHex.textContent = tailColorPicker.value.toUpperCase();
+                this.updateSvgTailSettings(textBox, settings);
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make hex display editable
+            tailColorHex.contentEditable = true;
+            tailColorHex.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const hexValue = tailColorHex.textContent.trim();
+                    if (/^#[0-9A-Fa-f]{6}$/.test(hexValue)) {
+                        tailColorPicker.value = hexValue;
+                        const settings = {
+                            tailColor: hexValue
+                        };
+                        this.updateSvgTailSettings(textBox, settings);
+                        this.comicCreator.saveCurrentPageState();
+                    } else {
+                        tailColorHex.textContent = tailColorPicker.value.toUpperCase();
+                    }
+                }
+            });
+        }
+        
+        // Speech Bubble Tail Settings
+        
+        // Speech Tail Length Slider
+        const speechTailLengthSlider = popup.querySelector('#speech-tail-length');
+        const speechTailLengthValue = popup.querySelector('.speech-tail-length-value');
+        if (speechTailLengthSlider && speechTailLengthValue) {
+            speechTailLengthSlider.addEventListener('input', () => {
+                const value = speechTailLengthSlider.value;
+                speechTailLengthValue.textContent = `${value}px`;
+                const settings = {
+                    speechTailLength: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            speechTailLengthSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(speechTailLengthSlider, speechTailLengthValue, 'px', 0);
+        }
+        
+        // Speech Tail Width Slider
+        const speechTailWidthSlider = popup.querySelector('#speech-tail-width');
+        const speechTailWidthValue = popup.querySelector('.speech-tail-width-value');
+        if (speechTailWidthSlider && speechTailWidthValue) {
+            speechTailWidthSlider.addEventListener('input', () => {
+                const value = speechTailWidthSlider.value;
+                speechTailWidthValue.textContent = `${value}px`;
+                const settings = {
+                    speechTailWidth: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            speechTailWidthSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(speechTailWidthSlider, speechTailWidthValue, 'px', 0);
+        }
+        
+        // Speech Tail Inset Slider
+        const speechTailInsetSlider = popup.querySelector('#speech-tail-inset');
+        const speechTailInsetValue = popup.querySelector('.speech-tail-inset-value');
+        if (speechTailInsetSlider && speechTailInsetValue) {
+            speechTailInsetSlider.addEventListener('input', () => {
+                const value = speechTailInsetSlider.value;
+                speechTailInsetValue.textContent = `${value}%`;
+                const settings = {
+                    speechTailInset: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            speechTailInsetSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(speechTailInsetSlider, speechTailInsetValue, '%', 0);
+        }
+        
+        // Speech Tail Shear Slider
+        const speechTailShearSlider = popup.querySelector('#speech-tail-shear');
+        const speechTailShearValue = popup.querySelector('.speech-tail-shear-value');
+        if (speechTailShearSlider && speechTailShearValue) {
+            speechTailShearSlider.addEventListener('input', () => {
+                const value = speechTailShearSlider.value;
+                speechTailShearValue.textContent = `${value}%`;
+                const settings = {
+                    speechTailShear: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            speechTailShearSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(speechTailShearSlider, speechTailShearValue, '%', 0);
+        }
+        
+        // Speech Tail Outline Toggle
+        const speechTailOutlineCheckbox = popup.querySelector('#speech-tail-outline');
+        if (speechTailOutlineCheckbox) {
+            speechTailOutlineCheckbox.addEventListener('change', () => {
+                const settings = {
+                    speechTailOutline: speechTailOutlineCheckbox.checked
+                };
+                this.updateSvgTailSettings(textBox, settings);
+                this.comicCreator.saveCurrentPageState();
+            });
+        }
+        
+        // Thought Bubble Tail Settings
+        
+        // Thought Number of Circles Slider
+        const thoughtNumCirclesSlider = popup.querySelector('#thought-num-circles');
+        const thoughtNumCirclesValue = popup.querySelector('.thought-num-circles-value');
+        if (thoughtNumCirclesSlider && thoughtNumCirclesValue) {
+            thoughtNumCirclesSlider.addEventListener('input', () => {
+                const value = thoughtNumCirclesSlider.value;
+                thoughtNumCirclesValue.textContent = value;
+                const settings = {
+                    thoughtNumCircles: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            thoughtNumCirclesSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(thoughtNumCirclesSlider, thoughtNumCirclesValue, '', 0);
+        }
+        
+        // Thought Circle Radius Slider
+        const thoughtCircleRadiusSlider = popup.querySelector('#thought-circle-radius');
+        const thoughtCircleRadiusValue = popup.querySelector('.thought-circle-radius-value');
+        if (thoughtCircleRadiusSlider && thoughtCircleRadiusValue) {
+            thoughtCircleRadiusSlider.addEventListener('input', () => {
+                const value = thoughtCircleRadiusSlider.value;
+                thoughtCircleRadiusValue.textContent = `${value}px`;
+                const settings = {
+                    thoughtCircleRadius: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            thoughtCircleRadiusSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(thoughtCircleRadiusSlider, thoughtCircleRadiusValue, 'px', 0);
+        }
+        
+        // Thought Circle Spacing Slider
+        const thoughtCircleSpacingSlider = popup.querySelector('#thought-circle-spacing');
+        const thoughtCircleSpacingValue = popup.querySelector('.thought-circle-spacing-value');
+        if (thoughtCircleSpacingSlider && thoughtCircleSpacingValue) {
+            thoughtCircleSpacingSlider.addEventListener('input', () => {
+                const value = thoughtCircleSpacingSlider.value;
+                thoughtCircleSpacingValue.textContent = `${value}px`;
+                const settings = {
+                    thoughtCircleSpacing: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            thoughtCircleSpacingSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(thoughtCircleSpacingSlider, thoughtCircleSpacingValue, 'px', 0);
+        }
+        
+        // Thought Tail Offset Slider
+        const thoughtTailOffsetSlider = popup.querySelector('#thought-tail-offset');
+        const thoughtTailOffsetValue = popup.querySelector('.thought-tail-offset-value');
+        if (thoughtTailOffsetSlider && thoughtTailOffsetValue) {
+            thoughtTailOffsetSlider.addEventListener('input', () => {
+                const value = thoughtTailOffsetSlider.value;
+                thoughtTailOffsetValue.textContent = value;
+                const settings = {
+                    thoughtTailOffset: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            thoughtTailOffsetSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(thoughtTailOffsetSlider, thoughtTailOffsetValue, '', 0);
+        }
+        
+        // Update bubble type listeners to show/hide the appropriate tail settings
+        popup.querySelectorAll('.bubble-option').forEach(option => {
+            option.addEventListener('click', () => {
+                const bubbleType = option.dataset.type;
+                const tailSettingsContainer = popup.querySelector('.tail-settings-container');
+                const speechTailSettings = popup.querySelector('.speech-tail-settings');
+                const thoughtTailSettings = popup.querySelector('.thought-tail-settings');
+                
+                // Show/hide tail settings based on bubble type
+                if (bubbleType === 'no-bubble' || bubbleType === 'caption-box' || textBox.dataset.tailPosition === 'none') {
+                    tailSettingsContainer.style.display = 'none';
+                } else {
+                    tailSettingsContainer.style.display = '';
+                    
+                    // Show appropriate bubble type settings
+                    if (bubbleType === 'speech-bubble') {
+                        speechTailSettings.style.display = '';
+                        thoughtTailSettings.style.display = 'none';
+                    } else if (bubbleType === 'thought-bubble') {
+                        speechTailSettings.style.display = 'none';
+                        thoughtTailSettings.style.display = '';
+                    }
+                }
+            });
         });
         
         // Position grid buttons listeners (calling internal helper)
@@ -1453,6 +1830,27 @@ export class TextManager {
         this.comicCreator.uiManager.makeSliderValueEditable(shadowOffsetXSlider, shadowOffsetXValue, 'px', 0); // Corrected call
         this.comicCreator.uiManager.makeSliderValueEditable(shadowOffsetYSlider, shadowOffsetYValue, 'px', 0); // Corrected call
         this.comicCreator.uiManager.makeSliderValueEditable(shadowBlurSlider, shadowBlurValue, 'px', 0); // Corrected call
+
+        // Thought Tail Inset Slider 
+        const thoughtTailInsetSlider = popup.querySelector('#thought-tail-inset');
+        const thoughtTailInsetValue = popup.querySelector('.thought-tail-inset-value');
+        if (thoughtTailInsetSlider && thoughtTailInsetValue) {
+            thoughtTailInsetSlider.addEventListener('input', () => {
+                const value = thoughtTailInsetSlider.value;
+                thoughtTailInsetValue.textContent = `${value}%`;
+                const settings = {
+                    thoughtTailInset: parseInt(value)
+                };
+                this.updateSvgTailSettings(textBox, settings);
+            });
+            
+            thoughtTailInsetSlider.addEventListener('change', () => {
+                this.comicCreator.saveCurrentPageState();
+            });
+            
+            // Make value editable
+            this.comicCreator.uiManager.makeSliderValueEditable(thoughtTailInsetSlider, thoughtTailInsetValue, '%', 0);
+        }
     }
 
     // --- Helper methods for text formatting ---
@@ -1530,16 +1928,382 @@ export class TextManager {
     }
     
     updateBubbleTail(textBox, position) {
+        console.log(`Updating bubble tail to position: ${position}`);
+        
+        // Remove old tail classes
         textBox.className = textBox.className.replace(/(?:speech|thought)-tail-\S+/g, '').trim();
-        const bubbleType = textBox.dataset.bubbleType;
-        if (position !== 'none') {
-            if (bubbleType === 'speech-bubble') {
-                textBox.classList.add(`speech-tail-${position}`);
-            } else if (bubbleType === 'thought-bubble') {
-                textBox.classList.add(`thought-tail-${position}`);
-            }
+        
+        // Remove existing SVG tail if present
+        const existingSvgTail = textBox.querySelector('.bubble-tail-svg');
+        if (existingSvgTail) {
+            existingSvgTail.remove();
         }
+        
+        // Store position in dataset for future reference
         textBox.dataset.tailPosition = position;
+        
+        // If position is none, we're done
+        if (position === 'none') {
+            return;
+        }
+        
+        const bubbleType = textBox.dataset.bubbleType;
+        
+        // Get or create tail settings
+        let tailSettings;
+        if (textBox.dataset.tailSettings) {
+            try {
+                tailSettings = JSON.parse(textBox.dataset.tailSettings);
+            } catch (e) {
+                console.error("Error parsing tail settings", e);
+                tailSettings = bubbleType === 'speech-bubble' ? 
+                    { ...this.defaultSpeechTailSettings } : 
+                    { ...this.defaultThoughtTailSettings };
+            }
+        } else {
+            // Use default settings
+            tailSettings = bubbleType === 'speech-bubble' ? 
+                { ...this.defaultSpeechTailSettings } : 
+                { ...this.defaultThoughtTailSettings };
+        }
+        
+        // Always update the tailPosition in settings to match the new position
+        tailSettings.tailPosition = position;
+        
+        // Store updated settings in dataset
+        textBox.dataset.tailSettings = JSON.stringify(tailSettings);
+        
+        // Create SVG tail based on bubbleType
+            if (bubbleType === 'speech-bubble') {
+            this.createSpeechBubbleSvgTail(textBox, tailSettings);
+            } else if (bubbleType === 'thought-bubble') {
+            this.createThoughtBubbleSvgTail(textBox, tailSettings);
+        }
+    }
+    
+    /**
+     * Creates an SVG tail for speech bubbles using the provided settings
+     * @param {HTMLElement} textBox - The textbox element to add the tail to
+     * @param {Object} settings - The tail settings object
+     */
+    createSpeechBubbleSvgTail(textBox, settings) {
+        console.log(`Creating speech bubble SVG tail for position: ${settings.tailPosition}`);
+        
+        const position = settings.tailPosition || 'bottom';
+        const bubbleColor = settings.tailColor || this.getBubbleBackgroundColor(textBox);
+        const tailLength = settings.speechTailLength || 20;
+        const tailWidth = settings.speechTailWidth || 15;
+        const tailInset = settings.speechTailInset || 50; // percentage
+        const shear = settings.speechTailShear || 0; // percentage, positive moves right, negative moves left
+        const useOutline = settings.speechTailOutline !== false; // default to true
+        
+        // Create SVG element
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.classList.add('bubble-tail-svg');
+        svg.style.position = 'absolute';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '-1';
+        
+        // Get bubble dimensions
+        const bubbleRect = textBox.getBoundingClientRect();
+        const bubbleWidth = bubbleRect.width;
+        const bubbleHeight = bubbleRect.height;
+        
+        // Get outline color and thickness from the bubble if needed
+        let outlineColor = '#000000';
+        let outlineThickness = 2; // Default 2px
+        
+        if (useOutline) {
+            // Get computed style of the bubble
+            const computedStyle = window.getComputedStyle(textBox);
+            outlineColor = computedStyle.borderColor || '#000000';
+            outlineThickness = parseInt(computedStyle.borderWidth) || 2;
+            
+            // Normalize thickness to be reasonable
+            outlineThickness = Math.min(Math.max(outlineThickness, 1), 3);
+        }
+        
+        // Apply shear as offset from center point (-50 to +50)
+        // Convert percentage to actual pixels based on tail width
+        const maxShearPixels = tailWidth; // Full width of tail
+        const shearOffset = (shear / 50) * (maxShearPixels / 2); // Convert -50 to +50 range to pixel offset
+        
+        let pathPoints = [];
+        let svgWidth, svgHeight;
+        let svgTop, svgLeft;
+        
+        // Configure SVG dimensions and position based on tail position
+        switch(position) {
+            case 'bottom':
+                svgWidth = tailWidth;
+                svgHeight = tailLength;
+                svgLeft = `calc(${tailInset}% - ${tailWidth/2}px)`;
+                svgTop = '100%';
+                
+                pathPoints = [
+                    [0, 0], // Left point on bubble edge
+                    [tailWidth, 0], // Right point on bubble edge
+                    [tailWidth/2 + shearOffset, tailLength] // Tip of tail
+                ];
+                break;
+                
+            case 'top':
+                svgWidth = tailWidth;
+                svgHeight = tailLength;
+                svgLeft = `calc(${tailInset}% - ${tailWidth/2}px)`;
+                svgTop = `calc(0% - ${tailLength}px)`;
+                
+                pathPoints = [
+                    [0, tailLength], // Left point on bubble edge
+                    [tailWidth, tailLength], // Right point on bubble edge
+                    [tailWidth/2 + shearOffset, 0] // Tip of tail
+                ];
+                break;
+                
+            case 'left':
+                svgWidth = tailLength;
+                svgHeight = tailWidth;
+                svgLeft = `calc(0% - ${tailLength}px)`;
+                svgTop = `calc(${tailInset}% - ${tailWidth/2}px)`;
+                
+                pathPoints = [
+                    [tailLength, 0], // Top point on bubble edge
+                    [tailLength, tailWidth], // Bottom point on bubble edge
+                    [0, tailWidth/2 + shearOffset] // Tip of tail
+                ];
+                break;
+                
+            case 'right':
+                svgWidth = tailLength;
+                svgHeight = tailWidth;
+                svgLeft = '100%';
+                svgTop = `calc(${tailInset}% - ${tailWidth/2}px)`;
+                
+                pathPoints = [
+                    [0, 0], // Top point on bubble edge
+                    [0, tailWidth], // Bottom point on bubble edge
+                    [tailLength, tailWidth/2 + shearOffset] // Tip of tail
+                ];
+                break;
+                
+            default:
+                // Default to bottom if the position is invalid
+                console.warn(`Invalid tail position: ${position}, defaulting to bottom`);
+                svgWidth = tailWidth;
+                svgHeight = tailLength;
+                svgLeft = `calc(${tailInset}% - ${tailWidth/2}px)`;
+                svgTop = '100%';
+                
+                pathPoints = [
+                    [0, 0], // Left point on bubble edge
+                    [tailWidth, 0], // Right point on bubble edge
+                    [tailWidth/2 + shearOffset, tailLength] // Tip of tail
+                ];
+                break;
+        }
+        
+        console.log(`SVG dimensions: ${svgWidth}x${svgHeight}, position: ${svgLeft}, ${svgTop}`);
+        
+        // Set SVG dimensions and position
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+        svg.style.top = svgTop;
+        svg.style.left = svgLeft;
+        
+        // Create the filled path
+        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        path.setAttribute('fill', bubbleColor);
+        
+        // Build the SVG path string
+        let d = `M ${pathPoints[0][0]} ${pathPoints[0][1]}`;
+        for (let i = 1; i < pathPoints.length; i++) {
+            d += ` L ${pathPoints[i][0]} ${pathPoints[i][1]}`;
+        }
+        d += ' Z'; // Close the path
+        path.setAttribute('d', d);
+        
+        // Add the path to the SVG
+        svg.appendChild(path);
+        
+        // Add outline if needed
+        if (useOutline) {
+            // Create outline path for the edges
+            const outlinePath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            outlinePath.setAttribute('fill', 'none');
+            outlinePath.setAttribute('stroke', outlineColor);
+            outlinePath.setAttribute('stroke-width', outlineThickness);
+            
+            // Build the outline path
+            const outlineD = `M ${pathPoints[0][0]} ${pathPoints[0][1]} L ${pathPoints[2][0]} ${pathPoints[2][1]} L ${pathPoints[1][0]} ${pathPoints[1][1]}`;
+            outlinePath.setAttribute('d', outlineD);
+            svg.appendChild(outlinePath);
+        }
+        
+        // Add the SVG to the text box
+        textBox.appendChild(svg);
+    }
+    
+    /**
+     * Creates an SVG tail for thought bubbles using provided settings
+     * @param {HTMLElement} textBox - The textbox element to add the tail to
+     * @param {Object} settings - The tail settings object
+     */
+    createThoughtBubbleSvgTail(textBox, settings) {
+        console.log(`Creating thought bubble SVG tail for position: ${settings.tailPosition}`);
+        
+        const position = settings.tailPosition || 'bottom';
+        const bubbleColor = settings.tailColor || this.getBubbleBackgroundColor(textBox);
+        const numCircles = settings.thoughtNumCircles || 3;
+        const maxRadius = settings.thoughtCircleRadius || 5;
+        const spacing = settings.thoughtCircleSpacing || 5;
+        const offset = settings.thoughtTailOffset || 0;
+        const tailInset = settings.thoughtTailInset || 50; // percentage
+        
+        // Create SVG element
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.classList.add('bubble-tail-svg');
+        svg.style.position = 'absolute';
+        svg.style.pointerEvents = 'none';
+        svg.style.zIndex = '-1';
+        
+        // Get bubble dimensions
+        const bubbleRect = textBox.getBoundingClientRect();
+        const bubbleWidth = bubbleRect.width;
+        const bubbleHeight = bubbleRect.height;
+        
+        // Calculate dimensions for SVG container
+        // The total width/height depends on orientation (horizontal vs vertical tail)
+        const isHorizontal = position === 'left' || position === 'right';
+        const padding = 10; // Add padding to prevent cut-off
+
+        // Add extra space based on offset value and increased padding
+        const svgWidth = isHorizontal ? 
+            spacing * numCircles + maxRadius * 2 + padding * 2 : 
+            maxRadius * 2 + Math.abs(offset) + padding * 2;
+        const svgHeight = isHorizontal ? 
+            maxRadius * 2 + Math.abs(offset) + padding * 2 : 
+            spacing * numCircles + maxRadius * 2 + padding * 2;
+        
+        // Set SVG dimensions
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+        
+        // Calculate position based on tail position
+        let svgTop, svgLeft;
+        
+        switch(position) {
+            case 'bottom':
+                svgLeft = `calc(${tailInset}% - ${svgWidth/2}px)`;
+                svgTop = '100%';
+                break;
+                
+            case 'top':
+                svgLeft = `calc(${tailInset}% - ${svgWidth/2}px)`;
+                svgTop = `calc(0% - ${svgHeight}px)`;
+                break;
+                
+            case 'left':
+                svgLeft = `calc(0% - ${svgWidth}px)`;
+                svgTop = `calc(${tailInset}% - ${svgHeight/2}px)`;
+                break;
+                
+            case 'right':
+                svgLeft = '100%';
+                svgTop = `calc(${tailInset}% - ${svgHeight/2}px)`;
+                break;
+                
+            default:
+                console.warn(`Invalid tail position: ${position}, defaulting to bottom`);
+                svgLeft = `calc(${tailInset}% - ${svgWidth/2}px)`;
+                svgTop = '100%';
+                break;
+        }
+        
+        console.log(`Thought tail SVG dimensions: ${svgWidth}x${svgHeight}, position: ${svgLeft}, ${svgTop}`);
+        
+        // Set SVG position
+        svg.style.top = svgTop;
+        svg.style.left = svgLeft;
+        
+        // Calculate starting positions with padding
+        const startX = isHorizontal ? padding : svgWidth / 2;
+        const startY = isHorizontal ? svgHeight / 2 : padding;
+
+        // Create circles for the thought bubble tail
+        for (let i = 0; i < numCircles; i++) {
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            
+            // Calculate radius - circles get smaller as they move away from the bubble
+            const radius = maxRadius * (1 - (i / numCircles) * 0.5);
+            
+            // Calculate position based on orientation and circle index
+            let cx, cy;
+            
+            if (position === 'bottom') {
+                cx = startX + (offset * (i / numCircles));
+                cy = startY + i * spacing;
+            } else if (position === 'top') {
+                cx = startX + (offset * (i / numCircles));
+                cy = svgHeight - (padding + i * spacing);
+            } else if (position === 'left') {
+                cx = svgWidth - (padding + i * spacing);
+                cy = startY + (offset * (i / numCircles));
+            } else if (position === 'right') {
+                cx = padding + i * spacing;
+                cy = startY + (offset * (i / numCircles));
+            }
+            
+            // Set attributes for the circle
+            circle.setAttribute('cx', cx);
+            circle.setAttribute('cy', cy);
+            circle.setAttribute('r', radius);
+            circle.setAttribute('fill', bubbleColor);
+            
+            // Add 2px black outline to each circle
+            circle.setAttribute('stroke', '#000000');
+            circle.setAttribute('stroke-width', '2');
+            
+            // Add circle to SVG
+            svg.appendChild(circle);
+        }
+        
+        // Add the SVG to the text box
+        textBox.appendChild(svg);
+    }
+    
+    /**
+     * Updates the SVG tail settings for a text bubble
+     * @param {HTMLElement} textBox - The textbox element
+     * @param {Object} newSettings - The new settings to apply
+     */
+    updateSvgTailSettings(textBox, newSettings) {
+        // Get current settings or default if none exist
+        let currentSettings;
+        const bubbleType = textBox.dataset.bubbleType;
+        
+        if (textBox.dataset.tailSettings) {
+            try {
+                currentSettings = JSON.parse(textBox.dataset.tailSettings);
+            } catch (e) {
+                console.error("Error parsing tail settings", e);
+                currentSettings = bubbleType === 'speech-bubble' ? 
+                    { ...this.defaultSpeechTailSettings } : 
+                    { ...this.defaultThoughtTailSettings };
+            }
+        } else {
+            currentSettings = bubbleType === 'speech-bubble' ? 
+                { ...this.defaultSpeechTailSettings } : 
+                { ...this.defaultThoughtTailSettings };
+        }
+        
+        // Merge new settings with current
+        const mergedSettings = { ...currentSettings, ...newSettings };
+        
+        // Save to dataset
+        textBox.dataset.tailSettings = JSON.stringify(mergedSettings);
+        
+        // Update the tail
+        this.updateBubbleTail(textBox, mergedSettings.tailPosition);
     }
     
     positionTextBox(textBox, position) {
@@ -1659,6 +2423,7 @@ export class TextManager {
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
                     previousBubbleType: textBubble.dataset.previousBubbleType || '',
                     tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                    tailSettings: textBubble.dataset.tailSettings || '',
                     positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                     content: textElement.innerHTML,
                     style: {
@@ -1713,6 +2478,7 @@ export class TextManager {
                         bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
                         previousBubbleType: textBubble.dataset.previousBubbleType || '',
                         tailPosition: textBubble.dataset.tailPosition || (tailPositionClass ? tailPositionClass.replace(/(?:speech|thought)-tail-/, '') : ''),
+                        tailSettings: textBubble.dataset.tailSettings || '',
                         positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                         content: textElement.innerHTML,
                         style: {
@@ -1834,100 +2600,42 @@ export class TextManager {
     restoreTextBubble(textState, parentElement) {
         const textBubble = document.createElement('div');
         textBubble.className = 'text-bubble';
-        textBubble.id = textState.id;
-        textBubble.dataset.bubbleType = textState.bubbleType;
-        textBubble.dataset.previousBubbleType = textState.previousBubbleType;
-        textBubble.dataset.tailPosition = textState.tailPosition;
         
-        // Set grid position attribute if it exists in the state
+        // Set bubble ID
+        textBubble.id = textState.id || `text_${Date.now()}`;
+        
+        // Add bubble type
+        const bubbleType = textState.bubbleType || 'speech-bubble';
+        textBubble.classList.add(bubbleType);
+        textBubble.dataset.bubbleType = bubbleType;
+        
+        // Set previous bubble type if present
+        if (textState.previousBubbleType) {
+        textBubble.dataset.previousBubbleType = textState.previousBubbleType;
+        }
+        
+        // Set position grid data
         if (textState.positionGrid) {
             textBubble.dataset.positionGrid = textState.positionGrid;
             textBubble.classList.add(`positioned-${textState.positionGrid}`);
-        } else {
-            textBubble.dataset.positionGrid = 'custom';
-            textBubble.classList.add('positioned-custom');
         }
         
-        const textContent = document.createElement('div');
-        textContent.className = 'text-content';
-        textContent.contentEditable = true;
-        textContent.innerHTML = textState.content;
-        textContent.style.outline = 'none';
-        textContent.style.wordWrap = 'break-word';
-        textContent.style.color = '#000000';
-        textContent.style.padding = '2.5px 2px 5px 2px'; // Default/reduced padding
-        
-        // Apply bubble styling
-        textBubble.classList.add(textState.bubbleType || 'speech-bubble');
+        // Set tail position and tail settings if present
         if (textState.tailPosition) {
-            const tailClass = `${textState.bubbleType.split('-')[0]}-tail-${textState.tailPosition}`;
-            textBubble.classList.add(tailClass);
+            textBubble.dataset.tailPosition = textState.tailPosition;
         }
         
-        // Apply styles (use helper for position?)
-        const bubbleStyle = textState.style || {};
+        if (textState.tailSettings) {
+            textBubble.dataset.tailSettings = textState.tailSettings;
+        }
         
-        // Decide whether to use predefined grid positioning or custom positioning
-        if (textState.positionGrid && textState.positionGrid !== 'custom') {
-            // Apply positioning via our positioning method instead of direct style application
-            this.positionTextBox(textBubble, textState.positionGrid);
-        } else {
-            // Apply custom positioning from saved state
-            let leftValue = bubbleStyle.left || '10px';
-            let topValue = bubbleStyle.top || '10px';
-    
-            // Convert percentage to pixels if needed (relative to parent)
-            if (leftValue.endsWith('%')) {
-                const parentWidth = parentElement.offsetWidth;
-                leftValue = `${(parseFloat(leftValue) / 100) * parentWidth}px`;
-            }
-            if (topValue.endsWith('%')) {
-                const parentHeight = parentElement.offsetHeight;
-                topValue = `${(parseFloat(topValue) / 100) * parentHeight}px`;
-            }
-    
-            Object.assign(textBubble.style, {
-                position: 'absolute',
-                left: leftValue,
-                top: topValue,
-                width: bubbleStyle.width || 'auto',
-                height: bubbleStyle.height || 'auto',
-                transform: bubbleStyle.transform || 'none',
-                zIndex: bubbleStyle.zIndex || '100', // Restore z-index, default to 100 for both panel/canvas
-                padding: bubbleStyle.padding || '10px' // Restore padding
-            });
-        }
-
-        // Apply text content styles
-        Object.assign(textContent.style, {
-            fontFamily: bubbleStyle.fontFamily,
-            fontSize: bubbleStyle.fontSize,
-            fontWeight: bubbleStyle.fontWeight,
-            fontStyle: bubbleStyle.fontStyle,
-            textDecoration: bubbleStyle.textDecoration,
-            textAlign: bubbleStyle.textAlign,
-            textTransform: bubbleStyle.textTransform,
-            color: bubbleStyle.color,
-            opacity: bubbleStyle.opacity,
-            textShadow: bubbleStyle.textShadow,
-            lineHeight: bubbleStyle.lineHeight || 'normal',
-            padding: bubbleStyle.textContentPadding || '2.5px 2px 5px 2px'
-        });
-
-        // Restore bubble background and opacity
-        textBubble.style.setProperty('--bubble-background-color',
-            bubbleStyle.bubbleBackgroundColor || bubbleStyle.backgroundColor || 'white');
-        if (bubbleStyle.bubbleOpacity) {
-            textBubble.style.setProperty('--bubble-opacity', bubbleStyle.bubbleOpacity);
-        }
-
-        // Apply outline if it had one
-        if (bubbleStyle.hasOutline) {
-            // Apply outline with saved color
-            this.applyTextOutline(textContent, bubbleStyle.outlineColor || '#000000');
-        }
-
-        // Add handles and buttons
+        // Add content
+        const textElement = document.createElement('div');
+        textElement.className = 'text-content';
+        textElement.contentEditable = true;
+        textElement.innerHTML = textState.content || 'Click to edit text';
+        
+        // Controls
         const dragHandle = document.createElement('div');
         dragHandle.className = 'drag-handle';
         dragHandle.innerHTML = '<i class="fas fa-grip-lines"></i>';
@@ -1947,58 +2655,128 @@ export class TextManager {
         deleteButton.className = 'delete-text-btn';
         deleteButton.innerHTML = '<i class="fas fa-times"></i>';
         deleteButton.title = 'Delete text';
+        
+        // Apply styling
+        if (textState.style) {
+            // Position and size
+            if (textState.style.left) textBubble.style.left = textState.style.left;
+            if (textState.style.top) textBubble.style.top = textState.style.top;
+            if (textState.style.width) textBubble.style.width = textState.style.width;
+            if (textState.style.height) textBubble.style.height = textState.style.height;
+            if (textState.style.transform) textBubble.style.transform = textState.style.transform;
+            if (textState.style.zIndex) textBubble.style.zIndex = textState.style.zIndex;
+            
+            // Bubble styling
+            if (textState.style.backgroundColor) textBubble.style.backgroundColor = textState.style.backgroundColor;
+            if (textState.style.bubbleBackgroundColor) {
+                textBubble.style.setProperty('--bubble-background-color', textState.style.bubbleBackgroundColor);
+            }
+            if (textState.style.bubbleOpacity) {
+                textBubble.style.setProperty('--bubble-opacity', textState.style.bubbleOpacity);
+            }
+            if (textState.style.padding) textBubble.style.padding = textState.style.padding;
+            
+            // Padding data attributes
+            if (textState.style.paddingVertical) textBubble.dataset.paddingVertical = textState.style.paddingVertical;
+            if (textState.style.paddingHorizontal) textBubble.dataset.paddingHorizontal = textState.style.paddingHorizontal;
+            if (textState.style.bubblePadding) textBubble.dataset.bubblePadding = textState.style.bubblePadding;
+            
+            // Text styling
+            if (textState.style.color) textElement.style.color = textState.style.color;
+            if (textState.style.fontSize) textElement.style.fontSize = textState.style.fontSize;
+            if (textState.style.fontFamily) textElement.style.fontFamily = textState.style.fontFamily;
+            if (textState.style.fontWeight) textElement.style.fontWeight = textState.style.fontWeight;
+            if (textState.style.fontStyle) textElement.style.fontStyle = textState.style.fontStyle;
+            if (textState.style.textDecoration) textElement.style.textDecoration = textState.style.textDecoration;
+            if (textState.style.lineHeight) textElement.style.lineHeight = textState.style.lineHeight;
+            if (textState.style.textAlign) textElement.style.textAlign = textState.style.textAlign;
+            if (textState.style.textTransform) textElement.style.textTransform = textState.style.textTransform;
+            
+            // Text shadow/outline effects
+            if (textState.style.textShadow) textElement.style.textShadow = textState.style.textShadow;
+            if (textState.style.hasOutline) {
+                textElement.setAttribute('data-has-outline', 'true');
+                // Apply outline color if present
+                if (textState.style.outlineColor) {
+                    textElement.setAttribute('data-outline-color', textState.style.outlineColor);
+                    this.applyTextOutline(textElement, textState.style.outlineColor);
+                } else {
+                    this.applyTextOutline(textElement, '#000000');
+                }
+            }
+        }
 
         // Append elements
-        textBubble.appendChild(textContent);
+        textBubble.appendChild(textElement);
         textBubble.appendChild(dragHandle);
         textBubble.appendChild(resizeHandle);
         textBubble.appendChild(formatButton);
         textBubble.appendChild(deleteButton);
         parentElement.appendChild(textBubble);
 
-        // Add event listeners (using comicCreator for DragDrop)
-        if (parentElement.id === 'comic-canvas') {
-            this.comicCreator.dragAndDropManager.makeCanvasTextDraggable(textBubble, dragHandle);
-        } else {
+        // Make draggable
             this.comicCreator.dragAndDropManager.makeTextDraggable(textBubble, dragHandle);
-        }
+        
+        // Make resizable
         this.comicCreator.dragAndDropManager.makeTextResizable(textBubble, resizeHandle); 
 
+        // Setup delete functionality
         deleteButton.addEventListener('click', () => {
             textBubble.remove();
+            
+            // Hide the formatting popup if open
             const popup = document.getElementById('text-format-popup');
-            if (popup) popup.style.display = 'none';
-            if (this.currentTextBox === textBubble) {
-                this.currentTextBox = null;
-                // Maybe call comicCreator.updateRightSidebarView() ?
-            }
-            this.comicCreator.saveCurrentPageState(); // Use comicCreator
+            if (popup) popup.remove();
+            
+            // Hide properties panel
+            this.comicCreator.deselectAll();
+            
+            // Save state
+            this.comicCreator.saveCurrentPageState();
         });
-
+        
+        // Setup formatting button
         formatButton.addEventListener('click', (e) => {
-            this.showTextFormatPopup(textBubble, e); // Internal call
+            this.showTextFormatPopup(textBubble, e);
         });
 
+        // Setup text selection
         textBubble.addEventListener('click', (e) => {
-             if (e.target.closest('.drag-handle, .resize-handle, .format-text-btn, .delete-text-btn')) return; 
-             if (e.target === textBubble || e.target === textBubble.querySelector('.text-content-outline')) {
-                 this.selectTextBox(textBubble); // Internal call
+            // Only select if not clicking on controls or text content
+            if (e.target !== textElement && 
+                !e.target.closest('.format-text-btn') && 
+                !e.target.closest('.resize-handle') && 
+                !e.target.closest('.delete-text-btn') &&
+                !e.target.closest('.drag-handle')) {
+                this.selectTextBox(textBubble);
+                
+                // Prevent propagation to avoid deselection
                  e.stopPropagation();
              }
         });
 
-        textContent.addEventListener('click', (e) => {
-            this.selectTextBox(textBubble); // Internal call
-         });
-
-         textContent.addEventListener('blur', () => {
-             // Maybe save state on blur?
-             // this.comicCreator.saveCurrentPageState();
-         });
-
-         textContent.addEventListener('input', () => {
-             this.updateOutlineText(textContent); // Internal call
-         });
+        // Setup text element edge click
+        textElement.addEventListener('click', (e) => {
+            // Calculate if click is near edge
+            const rect = textElement.getBoundingClientRect();
+            const isNearEdge = 
+                e.clientX - rect.left < 10 || 
+                rect.right - e.clientX < 10 || 
+                e.clientY - rect.top < 10 || 
+                rect.bottom - e.clientY < 10;
+                
+            if (isNearEdge) {
+                this.selectTextBox(textBubble);
+                // Don't prevent default
+            }
+        });
+        
+        // Apply bubble tail if specified
+        if (textState.tailPosition && textState.tailPosition !== 'none') {
+            this.updateBubbleTail(textBubble, textState.tailPosition);
+        }
+        
+        return textBubble;
     }
 
     // --- Event Handling ---
