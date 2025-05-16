@@ -422,7 +422,7 @@ export class DragAndDropManager {
 
             e.preventDefault(); // Prevent text selection during drag
             e.stopPropagation(); // Stop click from propagating to parent elements
-            
+
             // Start dragging state
             isDragging = true;
             element.style.cursor = 'grabbing';
@@ -472,7 +472,7 @@ export class DragAndDropManager {
 
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-            
+
             // Calculate new position
             const newLeft = originalLeft + dx;
             const newTop = originalTop + dy;
@@ -481,7 +481,7 @@ export class DragAndDropManager {
             const containerRect = parentContainer.getBoundingClientRect();
             const elementWidth = element.offsetWidth;
             const elementHeight = element.offsetHeight;
-            
+
             // Clamp to container boundaries
             const clampedLeft = Math.max(0, Math.min(newLeft, containerRect.width - elementWidth));
             const clampedTop = Math.max(0, Math.min(newTop, containerRect.height - elementHeight));
@@ -516,7 +516,7 @@ export class DragAndDropManager {
                 // Clean up the stored transform data
                 delete element.dataset.originalTransform;
             }
-
+            
             // Reset the grid position in TextManager
             try {
                 if (this.comicCreator && this.comicCreator.textManager) {
@@ -535,7 +535,7 @@ export class DragAndDropManager {
         element.addEventListener('mousedown', onMouseDown);
         element.addEventListener('dragstart', (e) => e.preventDefault());
     }
-
+    
     // --- Sticker Dragging --- 
     makeStickerDraggable(element, options = {}) {
         let isDragging = false;

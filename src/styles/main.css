@@ -1,3 +1,5 @@
+/* Google Fonts Integration - Moved to top of file */
+
 :root {
     /* Main theme colors - Manga/Comic inspired */
     --primary-color: #FF3B3B;      /* Vibrant red for emphasis */
@@ -2977,7 +2979,7 @@ label {
 }
 
 /* Google Fonts Integration */
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&family=Creepster&family=Bowlby+One+SC&family=Bungee&family=Freckle+Face&family=Ceviche+One&family=Finger+Paint&family=Kablammo&family=Rubik+Puddles&family=Londrina+Sketch&family=Rock+Salt&display=swap');
 
 /* Font preview styles for dropdown */
 .font-option {
@@ -3027,6 +3029,7 @@ label {
 .font-permanent-marker { font-family: 'Permanent Marker', cursive; }
 .font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
 .font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
+.font-sherlock { font-family: 'Holtwood One SC', serif; font-size: 16px; /* Sherlock's Poodle custom font */ }
 .font-comic-neue { font-family: 'Comic Neue', cursive; }
 .font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
 .font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
@@ -3035,6 +3038,24 @@ label {
 .font-architects-daughter { font-family: 'Architects Daughter', cursive; }
 .font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
 .font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
+.font-creepster { font-family: 'Creepster', cursive; font-size: 18px; }
+.font-bowlby-one-sc { font-family: 'Bowlby One SC', cursive; font-size: 16px; }
+.font-bungee { font-family: 'Bungee', cursive; font-size: 16px; }
+.font-freckle-face { font-family: 'Freckle Face', cursive; font-size: 17px; }
+.font-ceviche-one { font-family: 'Ceviche One', cursive; font-size: 18px; }
+.font-finger-paint { font-family: 'Finger Paint', cursive; font-size: 16px; }
+.font-kablammo { font-family: 'Kablammo', cursive; font-size: 16px; }
+.font-rubik-puddles { font-family: 'Rubik Puddles', cursive; font-size: 16px; }
+.font-londrina-sketch { font-family: 'Londrina Sketch', cursive; font-size: 18px; }
+.font-rock-salt { font-family: 'Rock Salt', cursive; font-size: 14px; }
+.font-bungee { font-family: 'Bungee', cursive; font-size: 16px; }
+.font-freckle-face { font-family: 'Freckle Face', cursive; font-size: 17px; }
+.font-ceviche-one { font-family: 'Ceviche One', cursive; font-size: 18px; }
+.font-finger-paint { font-family: 'Finger Paint', cursive; font-size: 16px; }
+.font-kablammo { font-family: 'Kablammo', cursive; font-size: 16px; }
+.font-rubik-puddles { font-family: 'Rubik Puddles', cursive; font-size: 16px; }
+.font-londrina-sketch { font-family: 'Londrina Sketch', cursive; font-size: 18px; }
+.font-rock-salt { font-family: 'Rock Salt', cursive; font-size: 14px; }
 
 /* Custom Select styling */
 .custom-select {
@@ -3491,7 +3512,7 @@ select.font-family option {
 }
 
 /* Google Fonts Integration */
-@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&family=Creepster&family=Bowlby+One+SC&family=Bungee&family=Freckle+Face&family=Ceviche+One&family=Finger+Paint&family=Kablammo&family=Rubik+Puddles&family=Londrina+Sketch&family=Rock+Salt&display=swap');
 
 /* Font preview styles for dropdown */
 .font-option {
@@ -3541,6 +3562,7 @@ select.font-family option {
 .font-permanent-marker { font-family: 'Permanent Marker', cursive; }
 .font-boogaloo { font-family: 'Boogaloo', cursive; font-size: 18px; }
 .font-acme { font-family: 'Acme', sans-serif; font-size: 17px; }
+.font-sherlock { font-family: 'Holtwood One SC', serif; font-size: 16px; /* Sherlock's Poodle custom font */ }
 .font-comic-neue { font-family: 'Comic Neue', cursive; }
 .font-anton { font-family: 'Anton', sans-serif; font-size: 18px; letter-spacing: 0.5px; }
 .font-russo-one { font-family: 'Russo One', sans-serif; font-size: 17px; }
@@ -3549,6 +3571,24 @@ select.font-family option {
 .font-architects-daughter { font-family: 'Architects Daughter', cursive; }
 .font-shadows-into-light { font-family: 'Shadows Into Light', cursive; }
 .font-press-start-2p { font-family: 'Press Start 2P', cursive; font-size: 12px; }
+.font-creepster { font-family: 'Creepster', cursive; font-size: 18px; }
+.font-bowlby-one-sc { font-family: 'Bowlby One SC', cursive; font-size: 16px; }
+.font-bungee { font-family: 'Bungee', cursive; font-size: 16px; }
+.font-freckle-face { font-family: 'Freckle Face', cursive; font-size: 17px; }
+.font-ceviche-one { font-family: 'Ceviche One', cursive; font-size: 18px; }
+.font-finger-paint { font-family: 'Finger Paint', cursive; font-size: 16px; }
+.font-kablammo { font-family: 'Kablammo', cursive; font-size: 16px; }
+.font-rubik-puddles { font-family: 'Rubik Puddles', cursive; font-size: 16px; }
+.font-londrina-sketch { font-family: 'Londrina Sketch', cursive; font-size: 18px; }
+.font-rock-salt { font-family: 'Rock Salt', cursive; font-size: 14px; }
+.font-bungee { font-family: 'Bungee', cursive; font-size: 16px; }
+.font-freckle-face { font-family: 'Freckle Face', cursive; font-size: 17px; }
+.font-ceviche-one { font-family: 'Ceviche One', cursive; font-size: 18px; }
+.font-finger-paint { font-family: 'Finger Paint', cursive; font-size: 16px; }
+.font-kablammo { font-family: 'Kablammo', cursive; font-size: 16px; }
+.font-rubik-puddles { font-family: 'Rubik Puddles', cursive; font-size: 16px; }
+.font-londrina-sketch { font-family: 'Londrina Sketch', cursive; font-size: 18px; }
+.font-rock-salt { font-family: 'Rock Salt', cursive; font-size: 14px; }
 
 /* Custom Select styling */
 .custom-select {
@@ -4258,6 +4298,23 @@ input[type="color"] {
     border: 2px solid rgba(0, 0, 0, 0.7) !important; /* Increase from 1px to 2px for better visibility */
     /* Set minimum opacity to ensure visibility */
     opacity: 1 !important;
+    /* Eliminate any extra spacing that could cause unwanted whitespace */
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+    padding-bottom: 0 !important;
+    overflow: visible !important;
+    /* Fix the layout to prevent extra space */
+    display: inline-block !important;
+    vertical-align: top !important;
+    /* Prevent any auto-height calculations that might add space */
+    box-sizing: border-box !important;
+    /* CRITICAL: Prevent any shifting during export */
+    position: absolute !important;
+    transform-origin: top left !important;
+    will-change: transform !important;
+    translate: none !important;
+    -webkit-font-smoothing: subpixel-antialiased !important;
 }
 
 /* Fix for speech bubble tails in export mode */
@@ -4756,7 +4813,10 @@ input[type="color"] {
 .bubble-tail-svg {
     position: absolute;
     pointer-events: none;
-    z-index: -1;
+    z-index: 1;  /* Changed from -1 to 1 to ensure visibility */
+    display: block;
+    visibility: visible;
+    opacity: 1;
 }
 
 /* Make sure SVG tails match the bubble style */
@@ -4774,6 +4834,13 @@ input[type="color"] {
 .bubble-tail-svg path[stroke] {
     stroke: #000;
     stroke-width: 2px;
+    stroke-opacity: 1;
+}
+
+/* Apply fill to non-stroked paths */
+.bubble-tail-svg path:not([stroke]) {
+    fill: inherit;
+    fill-opacity: 1;
 }
 
 /* Ensure SVG tails have proper opacity if bubble has opacity set */
@@ -4781,9 +4848,88 @@ input[type="color"] {
     opacity: inherit;
 }
 
-/* Hide SVG tails when exporting if needed */
+/* Make sure SVG tails are visible during export */
 .exporting .text-bubble .bubble-tail-svg {
-    display: block; /* Ensure visible for export */
+    display: block !important; 
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 5 !important;
 }
 
 /* End of stylesheet */
+
+.exporting .text-bubble * {
+    /* Force font visibility during export */
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* Fix for stickers in export mode */
+.exporting .canvas-sticker-image {
+    position: absolute !important;
+    transform-origin: center center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border-width: 0 !important;
+    /* Ensure visibility */
+    opacity: 1 !important;
+    visibility: visible !important;
+    /* Prevent any transform or translation that could cause shifting */
+    translate: none !important;
+    /* Prevent sub-pixel rounding issues */
+    will-change: transform !important;
+    /* Force hardware acceleration for better positioning */
+    -webkit-font-smoothing: subpixel-antialiased !important;
+}
+
+/* Fix text content positioning in exported PDFs */
+.exporting .text-bubble .text-content {
+    /* CRITICAL: DO NOT modify or adjust anything during export - EXACT MATCH to web preview */
+    /* NO SCALING OR TRANSFORMATIONS - preserve exactly as in preview */
+    transform: none !important;
+    transform-origin: top left !important;
+    zoom: normal !important;
+    translate: none !important;
+    scale: 1 !important;
+    
+    /* Prevent browser font adjustments */
+    -webkit-text-size-adjust: none !important;
+    text-size-adjust: none !important;
+    
+    /* Prevent the PDF generator from adjusting text */
+    letter-spacing: normal !important;
+    word-spacing: normal !important;
+    text-rendering: optimizeLegibility !important;
+    /* Preserve original styling */
+    
+    /* EXACT preservation of line spacing - force exact match to preview */
+    line-height: normal !important; /* Use computed value from preview */ 
+    white-space: pre-wrap !important;
+    vertical-align: baseline !important;
+    word-break: normal !important;
+    word-spacing: normal !important;
+    
+    /* Prevent any CSS text adjustments that browsers might apply */
+    -webkit-font-feature-settings: normal !important;
+    font-feature-settings: normal !important;
+    text-indent: 0 !important;
+    text-align-last: auto !important;
+    
+    /* Preserve EXACT padding from the preview */
+    padding: inherit !important; /* Use the computed value from the preview */
+    margin: 0 !important;
+    
+    /* Layout control */
+    display: inline-block !important;
+    height: auto !important; 
+    min-height: 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    
+    /* Force hardware acceleration for better text rendering */
+    will-change: contents !important;
+    -webkit-font-smoothing: subpixel-antialiased !important;
+}
+
+/* Ensure no-bubble text elements don't show speech/thought bubble tails or other decorative elements */

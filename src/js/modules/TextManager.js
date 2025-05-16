@@ -477,6 +477,39 @@ export class TextManager {
                             <option value="Acme" class="font-option">
                                 <span class="font-preview font-acme">Acme</span>
                             </option>
+                            <option value="Bowlby One SC" class="font-option">
+                                <span class="font-preview font-bowlby-one-sc">Bowlby One SC</span>
+                            </option>
+                            <option value="Bungee" class="font-option">
+                                <span class="font-preview font-bungee">Bungee</span>
+                            </option>
+                            <option value="Ceviche One" class="font-option">
+                                <span class="font-preview font-ceviche-one">Ceviche One</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Horror/Special Effects</option>
+                            <option value="Creepster" class="font-option">
+                                <span class="font-preview font-creepster">Creepster - SPOOKY!</span>
+                            </option>
+                            <option value="Freckle Face" class="font-option">
+                                <span class="font-preview font-freckle-face">Freckle Face</span>
+                            </option>
+                            <option value="Kablammo" class="font-option">
+                                <span class="font-preview font-kablammo">Kablammo!</span>
+                            </option>
+                            <option value="Rubik Puddles" class="font-option">
+                                <span class="font-preview font-rubik-puddles">Rubik Puddles</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Sketch/Handdrawn</option>
+                            <option value="Finger Paint" class="font-option">
+                                <span class="font-preview font-finger-paint">Finger Paint</span>
+                            </option>
+                            <option value="Londrina Sketch" class="font-option">
+                                <span class="font-preview font-londrina-sketch">Londrina Sketch</span>
+                            </option>
+                            <option value="Rock Salt" class="font-option">
+                                <span class="font-preview font-rock-salt">Rock Salt</span>
                             </option>
                     </select>
                     </div>
@@ -914,6 +947,42 @@ export class TextManager {
                             <option value="Acme" class="font-option">
                                 <span class="font-preview font-acme">Acme</span>
                             </option>
+                            <option value="Bowlby One SC" class="font-option">
+                                <span class="font-preview font-bowlby-one-sc">Bowlby One SC</span>
+                            </option>
+                            <option value="Bungee" class="font-option">
+                                <span class="font-preview font-bungee">Bungee</span>
+                            </option>
+                            <option value="Ceviche One" class="font-option">
+                                <span class="font-preview font-ceviche-one">Ceviche One</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Horror/Special Effects</option>
+                            <option value="Creepster" class="font-option">
+                                <span class="font-preview font-creepster">Creepster - SPOOKY!</span>
+                            </option>
+                            <option value="Freckle Face" class="font-option">
+                                <span class="font-preview font-freckle-face">Freckle Face</span>
+                            </option>
+                            <option value="Kablammo" class="font-option">
+                                <span class="font-preview font-kablammo">Kablammo!</span>
+                            </option>
+                            <option value="Rubik Puddles" class="font-option">
+                                <span class="font-preview font-rubik-puddles">Rubik Puddles</span>
+                            </option>
+                            
+                            <option disabled class="font-category">Sketch/Handdrawn</option>
+                            <option value="Finger Paint" class="font-option">
+                                <span class="font-preview font-finger-paint">Finger Paint</span>
+                            </option>
+                            <option value="Londrina Sketch" class="font-option">
+                                <span class="font-preview font-londrina-sketch">Londrina Sketch</span>
+                            </option>
+                            <option value="Rock Salt" class="font-option">
+                                <span class="font-preview font-rock-salt">Rock Salt</span>
+                            </option>
+                            <option value="Holtwood One SC" class="font-option">
+                                <span class="font-preview font-sherlock">Sherlock's Poodle</span>
                             </option>
                         </select>
                     </div>
@@ -2447,6 +2516,14 @@ export class TextManager {
                 const tailPositionClass = Array.from(textBubble.classList)
                     .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
 
+                // Get the absolute bounding client rect for precise positioning
+                const bubbleRect = textBubble.getBoundingClientRect();
+                const panelRect = panel.getBoundingClientRect();
+                
+                // Calculate the exact position relative to the panel
+                const exactLeft = bubbleRect.left - panelRect.left;
+                const exactTop = bubbleRect.top - panelRect.top;
+                
                 panelTexts.push({
                     id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
@@ -2455,6 +2532,13 @@ export class TextManager {
                     tailSettings: textBubble.dataset.tailSettings || '',
                     positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                     content: textElement.innerHTML,
+                    // Store the exact computed position values to help with accurate restoration
+                    originalPosition: {
+                        left: `${exactLeft}px`,
+                        top: `${exactTop}px`, 
+                        width: `${bubbleRect.width}px`,
+                        height: `${bubbleRect.height}px`
+                    },
                     style: {
                         left: textBubble.style.left,
                         top: textBubble.style.top,
@@ -2509,6 +2593,14 @@ export class TextManager {
                     const tailPositionClass = Array.from(textBubble.classList)
                         .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
                     
+                    // Get the absolute bounding client rect for precise positioning
+                    const bubbleRect = textBubble.getBoundingClientRect();
+                    const canvasRect = canvas.getBoundingClientRect();
+                    
+                    // Calculate the exact position relative to the canvas
+                    const exactLeft = bubbleRect.left - canvasRect.left;
+                    const exactTop = bubbleRect.top - canvasRect.top;
+                    
                     canvasTextElements.push({
                         id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
@@ -2517,6 +2609,13 @@ export class TextManager {
                         tailSettings: textBubble.dataset.tailSettings || '',
                         positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                         content: textElement.innerHTML,
+                        // Store the exact computed position values to help with accurate restoration
+                        originalPosition: {
+                            left: `${exactLeft}px`,
+                            top: `${exactTop}px`, 
+                            width: `${bubbleRect.width}px`,
+                            height: `${bubbleRect.height}px`
+                        },
                         style: {
                             left: textBubble.style.left,
                             top: textBubble.style.top,
@@ -2698,11 +2797,17 @@ export class TextManager {
         
         // Set previous bubble type if present
         if (textState.previousBubbleType) {
-        textBubble.dataset.previousBubbleType = textState.previousBubbleType;
+            textBubble.dataset.previousBubbleType = textState.previousBubbleType;
         }
         
         // IMPORTANT: Set position to absolute before setting any position properties
         textBubble.style.position = 'absolute';
+        
+        // Store original position data to help with anchoring
+        if (textState.originalPosition) {
+            textBubble.dataset.originalLeft = textState.originalPosition.left;
+            textBubble.dataset.originalTop = textState.originalPosition.top;
+        }
         
         // Set position grid data
         if (textState.positionGrid) {
@@ -2726,6 +2831,66 @@ export class TextManager {
         textElement.innerHTML = textState.content || 'Click to edit text';
         textElement.style.outline = 'none';
         textElement.style.wordWrap = 'break-word';
+        
+        // Apply special styles for export to prevent extra spacing
+        if (document.body.classList.contains('exporting')) {
+            // Get computed styles to preserve font properties exactly
+            const computedStyle = window.getComputedStyle(textElement);
+            
+            // Fix layout issues
+            textElement.style.paddingBottom = '0';
+            textElement.style.marginBottom = '0';
+            textElement.style.paddingTop = '2px';
+            textElement.style.marginTop = '0';
+            textElement.style.display = 'inline-block';
+            textElement.style.overflow = 'hidden';
+            
+            // Text formatting preservation
+            textElement.style.whiteSpace = 'pre-wrap';
+            textElement.style.textRendering = 'geometricPrecision';
+            
+            // CRITICAL FONT PRESERVATION SETTINGS
+            
+            // Use the original line height if available in the textState
+            if (textState.style && textState.style.lineHeight) {
+                textElement.style.lineHeight = textState.style.lineHeight;
+            } else {
+                // Use computed line height if available
+                const computedLineHeight = computedStyle.lineHeight;
+                if (computedLineHeight && computedLineHeight !== 'normal') {
+                    textElement.style.lineHeight = computedLineHeight;
+                } else {
+                    // Default preserved line height if none specified
+                    textElement.style.lineHeight = 'normal';
+                }
+            }
+            
+            // IMPORTANT - Preserve exact font size
+            if (textState.style && textState.style.fontSize) {
+                textElement.style.fontSize = textState.style.fontSize;
+            } else {
+                textElement.style.fontSize = computedStyle.fontSize;
+            }
+            
+            // Preserve exact font weight
+            if (textState.style && textState.style.fontWeight) {
+                textElement.style.fontWeight = textState.style.fontWeight;
+            } else {
+                textElement.style.fontWeight = computedStyle.fontWeight;
+            }
+            
+            // Preserve font style
+            if (textState.style && textState.style.fontStyle) {
+                textElement.style.fontStyle = textState.style.fontStyle;
+            } else {
+                textElement.style.fontStyle = computedStyle.fontStyle;
+            }
+            
+            // Apply transform to preserve exact size
+            textElement.style.transformOrigin = 'top left';
+            textElement.style.transform = 'scale(1)';
+            textElement.style.maxHeight = 'none';
+        }
         
         // Controls
         const dragHandle = document.createElement('div');
@@ -2751,16 +2916,73 @@ export class TextManager {
         // Apply styling
         if (textState.style) {
             // Position and size - Apply these in a specific order for proper restoration
-            // Step 1: Apply position values first without any transform
-            if (textState.style.left) textBubble.style.left = textState.style.left;
-            if (textState.style.top) textBubble.style.top = textState.style.top;
             
-            // Step 2: Apply dimensions
-            if (textState.style.width) textBubble.style.width = textState.style.width;
-            if (textState.style.height) textBubble.style.height = textState.style.height;
+            // PRIORITY 1: Use originalPosition if available - this is the most accurate
+            if (textState.originalPosition) {
+                console.log(`TextManager.restoreTextBubble: Using originalPosition for ${textBubble.id} - left: ${textState.originalPosition.left}, top: ${textState.originalPosition.top}`);
+                textBubble.style.left = textState.originalPosition.left;
+                textBubble.style.top = textState.originalPosition.top;
+                
+                // Store this data again for potential reuse
+                textBubble.dataset.originalLeft = textState.originalPosition.left;
+                textBubble.dataset.originalTop = textState.originalPosition.top;
+                
+                // Apply exact dimensions if available
+                if (textState.originalPosition.width) {
+                    textBubble.style.width = textState.originalPosition.width;
+                }
+                if (textState.originalPosition.height) {
+                    textBubble.style.height = textState.originalPosition.height;
+                }
+            } 
+            // PRIORITY 2: Fall back to style values otherwise
+            else {
+                // Step 1: Apply position values first without any transform
+                // Ensure we're using exact pixel values for reliable positioning
+                if (textState.style.left) {
+                    if (textState.style.left.endsWith('%')) {
+                        // Convert percentage to pixels to avoid panel size changes affecting position
+                        const percentage = parseFloat(textState.style.left);
+                        const parentWidth = parentElement.clientWidth;
+                        const pixelValue = (percentage / 100) * parentWidth;
+                        textBubble.style.left = `${pixelValue}px`;
+                    } else {
+                        textBubble.style.left = textState.style.left;
+                    }
+                }
+                
+                if (textState.style.top) {
+                    if (textState.style.top.endsWith('%')) {
+                        // Convert percentage to pixels to avoid panel size changes affecting position
+                        const percentage = parseFloat(textState.style.top);
+                        const parentHeight = parentElement.clientHeight;
+                        const pixelValue = (percentage / 100) * parentHeight;
+                        textBubble.style.top = `${pixelValue}px`;
+                    } else {
+                        textBubble.style.top = textState.style.top;
+                    }
+                }
+                
+                // Step 2: Apply dimensions - preserving exact sizes
+                if (textState.style.width) textBubble.style.width = textState.style.width;
+                if (textState.style.height) textBubble.style.height = textState.style.height;
+            }
             
             // Step 3: Apply transform and z-index last
-            if (textState.style.transform) textBubble.style.transform = textState.style.transform;
+            // Important: Keep ONLY the rotation part if we're using originalPosition 
+            if (textState.style.transform) {
+                // Extract just the rotation if there's a translate component
+                if (textState.style.transform.includes('translate')) {
+                    const rotationMatch = textState.style.transform.match(/rotate\(([-\d.]+)deg\)/);
+                    if (rotationMatch) {
+                        textBubble.style.transform = `rotate(${rotationMatch[1]}deg)`;
+                    }
+                } else {
+                    // If no translate, use the transform as is
+                    textBubble.style.transform = textState.style.transform;
+                }
+            }
+            
             if (textState.style.zIndex) textBubble.style.zIndex = textState.style.zIndex;
             
             // Bubble styling
@@ -2899,6 +3121,9 @@ export class TextManager {
             this.positionTextBox(textBubble, textState.positionGrid);
         }
         
+        // Apply final position fixing to ensure exact positioning
+        this.finalizeTextBubblePosition(textBubble, textState);
+        
         return textBubble;
     }
 
@@ -3001,6 +3226,88 @@ export class TextManager {
         // Restore dimensions to prevent stretching
         textBox.style.width = currentWidth;
         textBox.style.height = currentHeight;
+    }
+
+    /**
+     * Finalizes text bubble positioning to ensure it matches the saved position exactly
+     * @param {HTMLElement} textBubble - The text bubble element to position
+     * @param {Object} textState - The saved state for the text bubble
+     */
+    finalizeTextBubblePosition(textBubble, textState) {
+        // Skip if there's no originalPosition data
+        if (!textState.originalPosition) return;
+        
+        // Get the parent element
+        const parentElement = textBubble.parentElement;
+        if (!parentElement) return;
+        
+        // If we have dataset originalLeft/Top values, those should be the most accurate
+        // since they were applied during restore
+        if (textBubble.dataset.originalLeft && textBubble.dataset.originalTop) {
+            // Make sure we're using absolute positioning
+            textBubble.style.position = 'absolute';
+            
+            // Apply the original position
+            textBubble.style.left = textBubble.dataset.originalLeft;
+            textBubble.style.top = textBubble.dataset.originalTop;
+            
+            // Reset any additional spacing that might cause unwanted whitespace
+            textBubble.style.marginBottom = '0';
+            textBubble.style.paddingBottom = textBubble.style.padding || '0';
+            
+            // Extract any rotation value from the transform and preserve only that
+            if (textBubble.style.transform) {
+                const rotationMatch = textBubble.style.transform.match(/rotate\(([-\d.]+)deg\)/);
+                if (rotationMatch) {
+                    textBubble.style.transform = `rotate(${rotationMatch[1]}deg)`;
+                }
+            }
+            
+            // Set precise size if we have that information
+            if (textState.originalPosition.width) {
+                textBubble.style.width = textState.originalPosition.width;
+            }
+            if (textState.originalPosition.height) {
+                textBubble.style.height = textState.originalPosition.height;
+            }
+            
+            // Fix text content layout to prevent extra space
+            const textContent = textBubble.querySelector('.text-content');
+            if (textContent) {
+                // Only adjust if this is for export (when the finalizeTextBubblePosition is called during export)
+                if (document.body.classList.contains('exporting')) {
+                    textContent.style.transform = 'none';
+                    textContent.style.paddingBottom = '0';
+                    textContent.style.marginBottom = '0';
+                    textContent.style.marginTop = '0';
+                    textContent.style.paddingTop = '2px';
+                    
+                    // Preserve the original line height if it exists
+                    if (textState.style && textState.style.lineHeight) {
+                        textContent.style.lineHeight = textState.style.lineHeight;
+                    } else {
+                        // Capture computed line height if not explicitly set
+                        const computedStyle = window.getComputedStyle(textContent);
+                        const computedLineHeight = computedStyle.lineHeight;
+                        if (computedLineHeight && computedLineHeight !== 'normal') {
+                            textContent.style.lineHeight = computedLineHeight;
+                        }
+                    }
+                    
+                    textContent.style.display = 'inline-block';
+                    textContent.style.overflow = 'hidden';
+                    textContent.style.whiteSpace = 'pre-wrap';
+                    textContent.style.textRendering = 'geometricPrecision';
+                    
+                    // Apply fixed height to prevent layout shifts
+                    if (textState.originalPosition.height) {
+                        textContent.style.height = textState.originalPosition.height;
+                    }
+                }
+            }
+            
+            console.log(`TextManager.finalizeTextBubblePosition: Fixed position of ${textBubble.id} to ${textBubble.style.left}, ${textBubble.style.top}`);
+        }
     }
 
     // New methods for handling default font settings and custom text styles
