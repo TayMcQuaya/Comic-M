@@ -639,11 +639,11 @@ export const layouts = {
     },
     'vertical-thirds-centered': {
         name: "Vertical Thirds Centered",
-        description: "Three vertical panels with extra gutter space",
+        description: "Three thick vertical panels filling the page horizontally",
         panels: [
-            { x: 20, y: 10, width: 20, height: 80 },
-            { x: 45, y: 10, width: 20, height: 80 },
-            { x: 70, y: 10, width: 20, height: 80 }
+            { x: 1, y: 10, width: 32, height: 80 },
+            { x: 34, y: 10, width: 32, height: 80 },
+            { x: 67, y: 10, width: 32, height: 80 }
         ]
     },
     'horizontal-thirds-centered': {
