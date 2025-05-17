@@ -87,3 +87,7 @@ The Comic Book Maker works best in modern browsers:
 ## Support
 
 For issues, feature requests, or questions, please open an issue on the GitHub repository. 
+
+
+IF YOU ENCOUNTER ANY PROBLEM WITH THE REFACTORED TEXT MANAGER VERSION AND WANT REVERT, 
+JUST DELETE THEM AND MOVE TEXTMANAGEROLD.JS to MODULES FOLER and RENAME IT TO "TextManager.js"
