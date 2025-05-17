@@ -460,16 +460,30 @@ export class ExportManager {
                                         
                                         // Apply absolute positioning with precise offsets from canvas top-left
                                         bubble.style.position = 'absolute';
-                                        bubble.style.top = `${positionData.offset.top}px`;
-                                        bubble.style.left = `${positionData.offset.left}px`;
-                                        bubble.style.width = `${positionData.offset.width}px`;
-                                        bubble.style.height = `${positionData.offset.height}px`;
+                                        // CORRECTED: Use computedStyle top/left from the prepared original bubble
+                                        bubble.style.top = positionData.style.top; 
+                                        bubble.style.left = positionData.style.left;
+                                        
+                                        // CORRECTED: Use pre-transform width and height from computedStyle
+                                        // (positionData.style contains computedStyle values of the original bubble)
+                                        if (positionData.style.width) {
+                                            bubble.style.width = positionData.style.width;
+                                        } else {
+                                            // Fallback if not available, though it should be
+                                            bubble.style.width = `${positionData.offset.width}px`;
+                                        }
+                                        if (positionData.style.height) {
+                                            bubble.style.height = positionData.style.height;
+                                        } else {
+                                            // Fallback if not available
+                                            bubble.style.height = `${positionData.offset.height}px`;
+                                        }
                                         
                                         // Lock in additional critical styles
                                         bubble.style.margin = '0';
                                         bubble.style.marginBottom = '0'; // Explicitly remove bottom margin
                                         bubble.style.paddingBottom = '0'; // Prevent bottom padding
-                                        bubble.style.padding = positionData.style.padding || '0';
+                                        bubble.style.padding = positionData.style.padding || '0'; // Use computed padding
                                         bubble.style.zIndex = '100'; // Force high z-index to ensure visibility
                                         
                                         // Fix text content layout issues
@@ -499,8 +513,25 @@ export class ExportManager {
                                             textContent.style.verticalAlign = 'baseline'; // Ensure consistent baseline
                                         }
                                         
-                                        if (positionData.style.transform && positionData.style.transform !== 'none') {
-                                            bubble.style.transform = positionData.style.transform;
+                                        // CORRECTED: Apply transform, removing translational components
+                                        // if style.top/left already account for them (which they do here).
+                                        const originalTransform = positionData.style.transform;
+                                        if (originalTransform && originalTransform !== 'none') {
+                                            let transformToApply = originalTransform;
+                                            // If the original transform included a translation, we only want to apply
+                                            // the rotation/scale part here, because translation is in style.top/left.
+                                            // This assumes top/left from positionData.style are the final ones.
+                                            if (originalTransform.includes('translate')) {
+                                                const rotationMatch = originalTransform.match(/rotate\(([-\d.]+)deg\)/);
+                                                if (rotationMatch) {
+                                                    transformToApply = `rotate(${rotationMatch[1]}deg)`;
+                                                } else {
+                                                    transformToApply = '';
+                                                }
+                                            }
+                                            bubble.style.transform = transformToApply;
+                                        } else {
+                                            bubble.style.transform = '';
                                         }
                                         
                                         if (bubble.classList.contains('thought-bubble')) {
