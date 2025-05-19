@@ -41,9 +41,8 @@ export class TextManagerState {
                 const tailPositionClass = Array.from(textBubble.classList)
                     .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
 
-                // Get the computed style for positioning and bubble properties
+                // Get the computed style for exact values
                 const computedStyle = window.getComputedStyle(textBubble);
-                const textComputedStyle = window.getComputedStyle(textElement);
                 
                 // Store the current position values directly
                 const currentLeft = textBubble.style.left;
@@ -75,36 +74,31 @@ export class TextManagerState {
                         height: computedStyle.height
                     },
                     style: {
-                        // Position and size from computed style
                         left: exactLeft,
                         top: exactTop,
                         width: computedStyle.width,
                         height: computedStyle.height,
                         transform: textBubble.style.transform || '',
-                        
-                        // Bubble properties from computed style
                         backgroundColor: computedStyle.backgroundColor,
                         bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color') || '',
                         bubbleOpacity: textBubble.style.getPropertyValue('--bubble-opacity') || '1',
+                        color: computedStyle.color,
+                        fontSize: computedStyle.fontSize,
+                        fontFamily: computedStyle.fontFamily,
+                        fontWeight: computedStyle.fontWeight,
+                        fontStyle: computedStyle.fontStyle,
+                        textDecoration: computedStyle.textDecoration,
+                        lineHeight: computedStyle.lineHeight,
+                        textAlign: computedStyle.textAlign,
+                        textTransform: computedStyle.textTransform,
                         padding: computedStyle.padding,
                         paddingVertical: textBubble.dataset.paddingVertical,
                         paddingHorizontal: textBubble.dataset.paddingHorizontal,
                         bubblePadding: textBubble.dataset.bubblePadding,
-                        zIndex: computedStyle.zIndex,
-                        
-                        // Text properties from inline style (to preserve user-set values)
-                        color: textElement.style.color || textComputedStyle.color,
-                        fontSize: textElement.style.fontSize || textComputedStyle.fontSize,
-                        fontFamily: textElement.style.fontFamily || textComputedStyle.fontFamily,
-                        fontWeight: textElement.style.fontWeight || textComputedStyle.fontWeight,
-                        fontStyle: textElement.style.fontStyle || textComputedStyle.fontStyle,
-                        textDecoration: textElement.style.textDecoration || textComputedStyle.textDecoration,
-                        lineHeight: textElement.style.lineHeight || textComputedStyle.lineHeight,
-                        textAlign: textElement.style.textAlign || textComputedStyle.textAlign,
-                        textTransform: textElement.style.textTransform || textComputedStyle.textTransform,
-                        textShadow: textElement.style.textShadow || textComputedStyle.textShadow,
+                        textShadow: computedStyle.textShadow,
                         hasOutline: textElement.getAttribute('data-has-outline') === 'true',
-                        outlineColor: textElement.getAttribute('data-outline-color') || '#000000'
+                        outlineColor: textElement.getAttribute('data-outline-color') || '#000000',
+                        zIndex: computedStyle.zIndex
                     }
                 });
             });
@@ -455,11 +449,9 @@ export class TextManagerState {
         deleteButton.innerHTML = '<i class="fas fa-times"></i>';
         deleteButton.title = 'Delete text';
         
-        // Apply styling
+        // Apply styling in specific order to prevent overwriting
         if (textState.style) {
-            // Position and size - Apply these in a specific order for proper restoration
-            
-            // PRIORITY 1: Use originalPosition if available - this is the most accurate
+            // STEP 1: Position and size
             if (textState.originalPosition) {
                 console.log(`TextManagerState.restoreTextBubble: Using originalPosition for ${textBubble.id} - left: ${textState.originalPosition.left}, top: ${textState.originalPosition.top}`);
                 textBubble.style.left = textState.originalPosition.left;
@@ -476,58 +468,31 @@ export class TextManagerState {
                 if (textState.originalPosition.height) {
                     textBubble.style.height = textState.originalPosition.height;
                 }
-            } 
-            // PRIORITY 2: Fall back to style values otherwise
-            else {
-                // Step 1: Apply position values first without any transform
-                // Ensure we're using exact pixel values for reliable positioning
-                if (textState.style.left) {
-                    if (textState.style.left.endsWith('%')) {
-                        // Convert percentage to pixels to avoid panel size changes affecting position
-                        const percentage = parseFloat(textState.style.left);
-                        const parentWidth = parentElement.clientWidth;
-                        const pixelValue = (percentage / 100) * parentWidth;
-                        textBubble.style.left = `${pixelValue}px`;
-                    } else {
-                        textBubble.style.left = textState.style.left;
-                    }
-                }
-                
-                if (textState.style.top) {
-                    if (textState.style.top.endsWith('%')) {
-                        // Convert percentage to pixels to avoid panel size changes affecting position
-                        const percentage = parseFloat(textState.style.top);
-                        const parentHeight = parentElement.clientHeight;
-                        const pixelValue = (percentage / 100) * parentHeight;
-                        textBubble.style.top = `${pixelValue}px`;
-                    } else {
-                        textBubble.style.top = textState.style.top;
-                    }
-                }
-                
-                // Step 2: Apply dimensions - preserving exact sizes
+            } else if (textState.style) {
+                // Use style values for positioning
+                if (textState.style.left) textBubble.style.left = textState.style.left;
+                if (textState.style.top) textBubble.style.top = textState.style.top;
                 if (textState.style.width) textBubble.style.width = textState.style.width;
                 if (textState.style.height) textBubble.style.height = textState.style.height;
             }
+
+            // STEP 2: Font properties
+            if (textState.style.fontFamily) textElement.style.fontFamily = textState.style.fontFamily;
+            if (textState.style.fontSize) textElement.style.fontSize = textState.style.fontSize;
+            if (textState.style.fontWeight) textElement.style.fontWeight = textState.style.fontWeight;
+            if (textState.style.fontStyle) textElement.style.fontStyle = textState.style.fontStyle;
             
-            // Step 3: Apply transform and z-index last
-            // Important: Keep ONLY the rotation part if we're using originalPosition 
-            if (textState.style.transform) {
-                // Extract just the rotation if there's a translate component
-                if (textState.style.transform.includes('translate')) {
-                    const rotationMatch = textState.style.transform.match(/rotate\(([-\d.]+)deg\)/);
-                    if (rotationMatch) {
-                        textBubble.style.transform = `rotate(${rotationMatch[1]}deg)`;
-                    }
-                } else {
-                    // If no translate, use the transform as is
-                    textBubble.style.transform = textState.style.transform;
-                }
-            }
+            // STEP 3: Text formatting
+            if (textState.style.textAlign) textElement.style.textAlign = textState.style.textAlign;
+            if (textState.style.lineHeight) textElement.style.lineHeight = textState.style.lineHeight;
+            if (textState.style.textTransform) textElement.style.textTransform = textState.style.textTransform;
+            if (textState.style.textDecoration) textElement.style.textDecoration = textState.style.textDecoration;
             
-            if (textState.style.zIndex) textBubble.style.zIndex = textState.style.zIndex;
+            // STEP 4: Colors and effects
+            if (textState.style.color) textElement.style.color = textState.style.color;
+            if (textState.style.textShadow) textElement.style.textShadow = textState.style.textShadow;
             
-            // Bubble styling
+            // STEP 5: Bubble-specific styles
             if (textState.style.backgroundColor) textBubble.style.backgroundColor = textState.style.backgroundColor;
             if (textState.style.bubbleBackgroundColor) {
                 textBubble.style.setProperty('--bubble-background-color', textState.style.bubbleBackgroundColor);
@@ -537,41 +502,26 @@ export class TextManagerState {
             }
             if (textState.style.padding) textBubble.style.padding = textState.style.padding;
             
-            // Padding data attributes
-            if (textState.style.paddingVertical) textBubble.dataset.paddingVertical = textState.style.paddingVertical;
-            if (textState.style.paddingHorizontal) textBubble.dataset.paddingHorizontal = textState.style.paddingHorizontal;
-            if (textState.style.bubblePadding) textBubble.dataset.bubblePadding = textState.style.bubblePadding;
-            
-            // Text styling
-            if (textState.style.color) textElement.style.color = textState.style.color;
-            if (textState.style.fontSize) textElement.style.fontSize = textState.style.fontSize;
-            if (textState.style.fontFamily) textElement.style.fontFamily = textState.style.fontFamily;
-            if (textState.style.fontWeight) textElement.style.fontWeight = textState.style.fontWeight;
-            if (textState.style.fontStyle) textElement.style.fontStyle = textState.style.fontStyle;
-            if (textState.style.textDecoration) textElement.style.textDecoration = textState.style.textDecoration;
-            if (textState.style.lineHeight) textElement.style.lineHeight = textState.style.lineHeight;
-            if (textState.style.textAlign) textElement.style.textAlign = textState.style.textAlign;
-            if (textState.style.textTransform) textElement.style.textTransform = textState.style.textTransform;
-            
-            // Text shadow/outline effects
-            if (textState.style.textShadow) textElement.style.textShadow = textState.style.textShadow;
-            if (textState.style.hasOutline) {
-                textElement.setAttribute('data-has-outline', 'true');
-                // Apply outline color if present
-                if (textState.style.outlineColor) {
-                    textElement.setAttribute('data-outline-color', textState.style.outlineColor);
-                    // this.applyTextOutline(textElement, textState.style.outlineColor); // Dependency
-                    if (this.comicCreator && this.comicCreator.textManagerStyling && this.comicCreator.textManagerStyling.applyTextOutline) {
-                        this.comicCreator.textManagerStyling.applyTextOutline(textElement, textState.style.outlineColor);
-                    } else {
-                        console.warn('TextManagerState: comicCreator.textManagerStyling.applyTextOutline not found.');
+            // STEP 6: Transform and z-index
+            if (textState.style.transform) {
+                if (textState.style.transform.includes('translate')) {
+                    const rotationMatch = textState.style.transform.match(/rotate\(([-\d.]+)deg\)/);
+                    if (rotationMatch) {
+                        textBubble.style.transform = `rotate(${rotationMatch[1]}deg)`;
                     }
                 } else {
-                    // this.applyTextOutline(textElement, '#000000'); // Dependency
-                     if (this.comicCreator && this.comicCreator.textManagerStyling && this.comicCreator.textManagerStyling.applyTextOutline) {
-                        this.comicCreator.textManagerStyling.applyTextOutline(textElement, '#000000');
-                    } else {
-                        console.warn('TextManagerState: comicCreator.textManagerStyling.applyTextOutline not found.');
+                    textBubble.style.transform = textState.style.transform;
+                }
+            }
+            if (textState.style.zIndex) textBubble.style.zIndex = textState.style.zIndex;
+            
+            // STEP 7: Outline (apply last)
+            if (textState.style.hasOutline) {
+                textElement.setAttribute('data-has-outline', 'true');
+                if (textState.style.outlineColor) {
+                    textElement.setAttribute('data-outline-color', textState.style.outlineColor);
+                    if (this.comicCreator && this.comicCreator.textManagerStyling && this.comicCreator.textManagerStyling.applyTextOutline) {
+                        this.comicCreator.textManagerStyling.applyTextOutline(textElement, textState.style.outlineColor);
                     }
                 }
             }
