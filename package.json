@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.5.1",
+    "express": "^5.1.0",
+    "fs-extra": "^11.3.0",
     "jspdf": "^2.5.1",
+    "pdf-lib": "^1.17.1",
     "pdfkit": "^0.17.1"
   },
   "devDependencies": {

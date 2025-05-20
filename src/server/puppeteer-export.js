@@ -1,25 +1,108 @@
 // This file will contain the Puppeteer logic for PDF export. 
 
-import puppeteer from 'puppeteer';
-import path from 'path';
-import { promises as fsPromises } from 'fs';
-import fs from 'fs';
-import PDFDocument from 'pdfkit';
+const puppeteer = require('puppeteer');
+const fs = require('fs-extra');
+const path = require('path');
+const { PDFDocument } = require('pdf-lib'); // Added for PDF merging
 
-// Function to be called by our Vite server endpoint
-async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState) {
-  console.log(`[Puppeteer] Launching browser...`);
+// Function to create a project state for a single page
+function createSinglePageProjectState(fullProjectState, pageIndexToExport) {
+    console.log(`[SinglePageState] Creating state for page index: ${pageIndexToExport}`);
+    if (!fullProjectState || !fullProjectState.pages || pageIndexToExport < 0 || pageIndexToExport >= fullProjectState.pages.length) {
+        console.error('[SinglePageState] Invalid input or page index out of bounds.');
+        throw new Error('Invalid input for creating single page project state.');
+    }
+
+    const singlePageData = fullProjectState.pages[pageIndexToExport];
+    const imagesForThisPage = [];
+    const allImagesFromProject = fullProjectState.images || [];
+    const usedImageIdsOnThisPage = new Set(); // Use a Set to store unique image IDs
+
+    // console.log(`[SinglePageState] Page ${pageIndexToExport} data:`, JSON.stringify(singlePageData, null, 2).substring(0, 1000)); // Log first 1KB of page data
+    // console.log(`[SinglePageState] Total images in project: ${allImagesFromProject.length}`);
+
+    // Extract image IDs from panels on the current page
+    if (singlePageData.panelStates && Array.isArray(singlePageData.panelStates)) {
+        singlePageData.panelStates.forEach(panelState => {
+            if (panelState.imageId) {
+                usedImageIdsOnThisPage.add(String(panelState.imageId));
+            }
+        });
+    }
+
+    // Extract image ID from page background
+    if (singlePageData.backgroundState && singlePageData.backgroundState.imageId) {
+        usedImageIdsOnThisPage.add(String(singlePageData.backgroundState.imageId));
+    }
+
+    // Extract image IDs from stickers on the current page
+    if (singlePageData.stickerStates && Array.isArray(singlePageData.stickerStates)) {
+        singlePageData.stickerStates.forEach(stickerState => {
+            if (stickerState.imageId) {
+                usedImageIdsOnThisPage.add(String(stickerState.imageId));
+            }
+        });
+    }
+
+    console.log(`[SinglePageState] Page ${pageIndexToExport} uses image IDs:`, Array.from(usedImageIdsOnThisPage));
+
+    // Populate imagesForThisPage with actual image objects from the project's image library
+    usedImageIdsOnThisPage.forEach(imageId => {
+        const foundImage = allImagesFromProject.find(img => String(img.id) === imageId);
+        if (foundImage) {
+            imagesForThisPage.push(foundImage);
+        } else {
+            console.warn(`[SinglePageState] Image ID ${imageId} used on page ${pageIndexToExport} but not found in project images library.`);
+        }
+    });
+    
+    // Retain all custom layouts, as they might be referenced by the page layout
+    const customLayoutsToInclude = fullProjectState.customLayouts || [];
+
+    const stateForSinglePage = {
+        images: imagesForThisPage, // Only images used by this specific page
+        customLayouts: customLayoutsToInclude, 
+        // comicPanels global definition might not be needed if panel data is fully in pages[x].panelStates
+        // However, if pages[x].layoutId refers to a layout in comicPanels that defines structure, it might be.
+        // For now, let's assume ComicCreator._loadProjectFromState can reconstruct panels from page.panelStates and layout data.
+        // We can add fullProjectState.comicPanels back if it proves necessary.
+        pages: [singlePageData], // The current page being processed
+        settings: fullProjectState.settings, // Global settings
+        currentPageIndex: 0, // Since 'pages' array now has only one page
+    };
+
+    console.log(`[SinglePageState] Created state for page ${pageIndexToExport}. Images included: ${imagesForThisPage.length}. Original project images: ${allImagesFromProject.length}`);
+    return stateForSinglePage;
+}
+
+
+async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState, outputPdfPath) { // Added outputPdfPath
+  console.log(`[Puppeteer] Launching browser for output: ${outputPdfPath}`);
+  // const browser = await puppeteer.launch({ // Previous launch options
+  //   headless: false, 
+  //   devtools: true,  
+  //   args: [
+  //     '--no-sandbox',
+  //     '--disable-setuid-sandbox',
+  //     '--disable-web-security', 
+  //     '--font-render-hinting=none', 
+  //     '--force-color-profile=srgb' 
+  //   ],
+  //   userDataDir: path.join(__dirname, '..', '..', 'puppeteer_cache') 
+  // });
+  
+  // Simplified launch options for potentially more stability during chunked processing
   const browser = await puppeteer.launch({
-    headless: false,
-    devtools: true,
+    headless: "new", // Use the new headless mode
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage', // Often helps in CI/limited resource environments
       '--font-render-hinting=none',
-      '--disable-gpu',
-      '--disable-dev-shm-usage',
-      '--window-size=1920,1080'
-    ]
+      '--force-color-profile=srgb'
+    ],
+    // Consider removing userDataDir if it's causing EBUSY errors, or ensure unique dirs per browser instance
+    // userDataDir: path.join(os.tmpdir(), `puppeteer_dev_chrome_profile_${Date.now()}`) // Example for unique dir
   });
 
   let page;
@@ -191,163 +274,139 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
 
     // STEP 2: Now attempt to load the project state
     console.log('[Puppeteer] Attempting to call _loadProjectFromState via page.evaluate, using exposed function for state...');
-    const loadSuccess = await page.evaluate(async () => { // Removed state from evaluate arguments
+    const loadResult = await page.evaluate(async () => { // Renamed from loadSuccess
         console.log('[Page Eval - Load] Entered page.evaluate for _loadProjectFromState.');
+        let stateFromNode;
         try {
             console.log('[Page Eval - Load] Calling window.getPuppeteerProjectState()...');
             const projectStateJSON = await window.getPuppeteerProjectState();
-            console.log(`[Page Eval - Load] Received potential JSON string from getPuppeteerProjectState. Length: ${projectStateJSON?.length}`);
-            
+            console.log(`[Page Eval - Load] Received potential JSON string from getPuppeteerProjectState. Length: ${projectStateJSON ? projectStateJSON.length : 'null/undefined'}`);
             if (!projectStateJSON) {
-                console.error('[Page Eval - Load] Received null/empty JSON string for project state.');
-                throw new Error('Received null/empty JSON string for project state from Puppeteer.');
+                console.error('[Page Eval - Load] projectStateJSON is null or undefined after calling getPuppeteerProjectState.');
+                return { success: false, error: 'Received null/undefined projectStateJSON from getPuppeteerProjectState' };
             }
-
             console.log('[Page Eval - Load] Parsing projectStateJSON...');
-            const stateFromPuppeteer = JSON.parse(projectStateJSON);
-            console.log('[Page Eval - Load] Parsed stateFromPuppeteer. Keys:', stateFromPuppeteer ? Object.keys(stateFromPuppeteer) : null);
-            
-            console.log('[Page Eval - Load] Attempting to call window.comicCreator._loadProjectFromState with received state...');
-            const result = await window.comicCreator._loadProjectFromState(stateFromPuppeteer);
-            console.log('[Page Eval - Load] _loadProjectFromState call completed. Result:', result);
-            return { success: result, data: result };
+            stateFromNode = JSON.parse(projectStateJSON);
+            console.log('[Page Eval - Load] projectStateJSON parsed successfully.');
         } catch (e) {
-            console.error('[Page Eval - Load] Error during _loadProjectFromState execution (or getting state):', e.message, e.stack);
-            return { success: false, error: e.message, stack: e.stack };
+            console.error('[Page Eval - Load] Error calling getPuppeteerProjectState or parsing its result:', e);
+            return { success: false, error: `Error getting/parsing state: ${e.message}` };
         }
-    }); // projectState is no longer passed as a direct argument here
 
-    console.log('[Puppeteer] page.evaluate for _loadProjectFromState finished. Raw loadSuccess object:', loadSuccess);
-
-    if (!loadSuccess || !loadSuccess.success) {
-        const errorMessage = loadSuccess && loadSuccess.error ? loadSuccess.error : 'Unknown error during _loadProjectFromState';
-        const errorStack = loadSuccess && loadSuccess.stack ? loadSuccess.stack : 'No stack trace available';
-        console.error(`[Puppeteer] _loadProjectFromState in page.evaluate reported failure. Error: ${errorMessage}`, errorStack);
-        throw new Error(`Failed to load project state into the page via _loadProjectFromState: ${errorMessage}`);
-    }
-    console.log('[Puppeteer] Project state reportedly loaded by _loadProjectFromState.');
-
-    // KEEP IMAGE VERIFICATION IN PUPPETEER for an explicit check after state load
-    if (projectState.images && projectState.images.length > 0) {
-        console.log('[Puppeteer] Verifying all images are truly loaded in the DOM...');
-        const imageVerificationResults = await page.evaluate(async (imagesToVerify) => {
-            const verificationPromises = imagesToVerify.map(imgData => {
-                return new Promise((resolve) => {
-                    const imgEl = new Image();
-                    imgEl.onload = () => resolve({ src: imgData.src.substring(0,50) + "...", loaded: true });
-                    imgEl.onerror = () => resolve({ src: imgData.src.substring(0,50) + "...", loaded: false, error: true });
-                    imgEl.src = imgData.src; // Data URLs from projectState
-                });
-            });
-            return Promise.all(verificationPromises);
-        }, projectState.images);
-
-        console.log('[Puppeteer] Image verification results:', imageVerificationResults);
-        if (imageVerificationResults.some(r => !r.loaded)) {
-            throw new Error('Some images failed to verify loading after _loadProjectFromState.');
+        if (!window.comicCreator) {
+            console.error('[Page Eval - Load] window.comicCreator not found.');
+            return { success: false, error: 'window.comicCreator not found' };
         }
-        console.log('[Puppeteer] All images verified successfully.');
-    }
-    
-    // Wait for all elements to be ready after project load
-    console.log('[Puppeteer] Waiting a bit longer for rendering after project load...');
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Increased wait slightly
+        if (typeof window.comicCreator._loadProjectFromState !== 'function') {
+            console.error('[Page Eval - Load] window.comicCreator._loadProjectFromState is not a function.');
+            return { success: false, error: 'window.comicCreator._loadProjectFromState not a function' };
+        }
 
-    // Create output directory if it doesn't exist
-    await fsPromises.mkdir(outputDirectory, { recursive: true });
-
-    // Initialize PDF document
-    const pdfDoc = new PDFDocument({
-      size: [700, 700],
-      margin: 0
+        try {
+            console.log('[Page Eval - Load] Calling window.comicCreator._loadProjectFromState...');
+            await window.comicCreator._loadProjectFromState(stateFromNode);
+            console.log('[Page Eval - Load] _loadProjectFromState completed.');
+            // Add a slight delay or a more robust check to ensure rendering is complete
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 sec for rendering
+            return { success: true };
+        } catch (e) {
+            console.error('[Page Eval - Load] Error executing _loadProjectFromState:', e);
+            return { success: false, error: `Error in _loadProjectFromState: ${e.message}` };
+        }
     });
-    const pdfPath = path.join(outputDirectory, 'comic.pdf');
-    const writeStream = fs.createWriteStream(pdfPath);
-    pdfDoc.pipe(writeStream);
 
-    // Process each page
-    for (let pageIndex = 0; pageIndex < projectState.pages.length; pageIndex++) {
-      console.log(`[Puppeteer] Processing page ${pageIndex + 1} of ${projectState.pages.length}`);
+    // console.log('[Puppeteer] Load success status from page.evaluate:', loadSuccess); // old
+    console.log('[Puppeteer] Load result from page.evaluate:', loadResult);
 
-      // Load the page and ensure it's fully rendered
-      await page.evaluate(async (index) => {
-        await window.comicCreator.navigateToPage(index, true);
-        
-        // Force a redraw and wait for all elements
-        const canvas = document.querySelector('#comic-canvas');
-        if (canvas) {
-          canvas.style.display = 'none';
-          canvas.offsetHeight;
-          canvas.style.display = 'block';
-          
-          // Wait for all images in the canvas to load
-          const images = Array.from(canvas.querySelectorAll('img'));
-          await Promise.all(images.map(img => {
+
+    // if (!loadSuccess || (typeof loadSuccess === 'object' && !loadSuccess.success)) { // old
+    //     const errorMessage = typeof loadSuccess === 'object' && loadSuccess.error ? loadSuccess.error : 'Failed to load project state in Puppeteer page.';
+    //     console.error(`[Puppeteer] Project loading failed: ${errorMessage}`);
+    //     throw new Error(`Project loading failed in Puppeteer: ${errorMessage}`);
+    // }
+    if (!loadResult || !loadResult.success) {
+        const errorMessage = loadResult && loadResult.error ? loadResult.error : 'Unknown error during project state loading in Puppeteer page.';
+        console.error(`[Puppeteer] Project loading failed: ${errorMessage}`);
+        // Try to get more details from the page if possible
+        const pageError = await page.evaluate(() => {
+          return window.comicCreator ? window.comicCreator.lastError : "No specific error found on comicCreator.";
+        }).catch(e => `Could not get error from page: ${e.message}`);
+        console.error(`[Puppeteer] Page-specific error detail: ${pageError}`);
+        throw new Error(`Project loading failed in Puppeteer: ${errorMessage}. Page detail: ${pageError}`);
+    }
+
+
+    console.log('[Puppeteer] Project state loaded successfully. Waiting for any final rendering...');
+    
+    // console.log(`[Puppeteer] Waiting for element #page-0-panel-0 or #page-0-canvas-text-0...`);
+    // await page.waitForFunction(() => {
+    //     return document.querySelector('#page-0-panel-0') || document.querySelector('#page-0-canvas-text-0');
+    // }, { timeout: 30000 });
+    // console.log('[Puppeteer] At least one expected page element found.');
+    
+    // Instead of specific elements, let's wait for images to be loaded if that's a concern
+    console.log('[Puppeteer] Waiting for images to load on the page (if any)...');
+    await page.evaluate(async () => {
+        const images = Array.from(document.images);
+        const promises = images.map(img => {
             if (img.complete) return Promise.resolve();
             return new Promise((resolve, reject) => {
-              img.onload = resolve;
-              img.onerror = reject;
+                img.onload = resolve;
+                img.onerror = () => resolve(); // Resolve on error too, don't block indefinitely
             });
-          }));
-        }
-        
-        // Additional wait for rendering
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }, pageIndex);
-
-      // Get the exact bounding box
-      const boundingBox = await page.evaluate(() => {
-        const canvas = document.querySelector('#comic-canvas');
-        if (!canvas) return null;
-        const rect = canvas.getBoundingClientRect();
-        return {
-          x: Math.round(rect.left),
-          y: Math.round(rect.top),
-          width: 700,
-          height: 700
-        };
-      });
-
-      if (!boundingBox) {
-        throw new Error('Could not find #comic-canvas for screenshot.');
-      }
-
-      // Take the screenshot
-      const screenshot = await page.screenshot({
-        clip: boundingBox,
-        omitBackground: false,
-        type: 'png'
-      });
-
-      // Add to PDF
-      if (pageIndex > 0) {
-        pdfDoc.addPage({
-          size: [700, 700],
-          margin: 0
         });
-      }
-      
-      pdfDoc.image(screenshot, 0, 0, {
-        width: 700,
-        height: 700,
-        align: 'center',
-        valign: 'center'
-      });
+        await Promise.all(promises);
+    }, { timeout: 60000 }); // Extended timeout for image loading
+    console.log('[Puppeteer] All images on page considered loaded or timed out.');
 
-      console.log(`[Puppeteer] Successfully captured page ${pageIndex + 1}`);
+    // Wait for a short fixed time after image loading to allow final rendering tweaks
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Adjust as needed
+    console.log('[Puppeteer] Final rendering delay complete.');
+
+
+    const tempImageDir = path.join(outputDirectory, 'temp_export_images');
+    
+    // Create output directory if it doesn't exist
+    await fs.mkdir(tempImageDir, { recursive: true });
+
+    // Get the exact bounding box
+    const boundingBox = await page.evaluate(() => {
+      const canvas = document.querySelector('#comic-canvas');
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: 700,
+        height: 700
+      };
+    });
+
+    if (!boundingBox) {
+      throw new Error('Could not find #comic-canvas for screenshot.');
     }
 
-    // Finalize PDF
-    return new Promise((resolve, reject) => {
-      writeStream.on('finish', () => {
-        resolve({
-          pdfPath,
-          pageCount: projectState.pages.length
-        });
-      });
-      writeStream.on('error', reject);
-      pdfDoc.end();
+    console.log('[Puppeteer] Generating PDF...');
+    // const pdfPath = path.join(outputDirectory, 'comic_export.pdf'); // OLD: fixed path
+    await page.pdf({
+      path: outputPdfPath, // NEW: use dynamic path
+      format: 'A4', // Or your preferred format
+      printBackground: true,
+      // width: `${dimensions.width}px`, // Using format A4, so width/height might not be needed
+      // height: `${dimensions.height}px`,// or use page.setViewport to control this
+      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
+      scale: 1, // Ensure scale is 1 for accurate rendering based on viewport
+      timeout: 120000 // Increased timeout for PDF generation itself
     });
+    // console.log(`[Puppeteer] PDF exported successfully to ${pdfPath}`); // OLD
+    console.log(`[Puppeteer] PDF for current page exported successfully to ${outputPdfPath}`);
+
+
+    // fs.removeSync(tempImageDir); // Cleanup temp images
+    // console.log(`[Puppeteer] Cleaned up temporary image directory: ${tempImageDir}`);
+
+    // return pdfPath; // OLD
+    return outputPdfPath; // NEW
 
   } catch (error) {
     console.error('[Puppeteer] Error during export:', error);
@@ -355,7 +414,7 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
       if (page && !page.isClosed()) {
       const errorScreenshot = await page.screenshot({ fullPage: true });
       const errorScreenshotPath = path.join(outputDirectory, 'error-screenshot.png');
-      await fsPromises.writeFile(errorScreenshotPath, errorScreenshot);
+      await fs.writeFile(errorScreenshotPath, errorScreenshot);
       console.log(`[Puppeteer] Error screenshot saved to: ${errorScreenshotPath}`);
       } else {
         console.log('[Puppeteer] Could not save error screenshot because page was closed or undefined.');
@@ -365,8 +424,135 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     }
     throw error;
   } finally {
-    await browser.close();
+    if (browser) {
+      console.log('[Puppeteer] Closing browser...');
+      await browser.close();
+      console.log('[Puppeteer] Browser closed.');
+    }
   }
 }
 
-export { capturePageAsImage }; 
+async function mergePdfs(pdfFilePaths, finalOutputPath) {
+    console.log(`[PDFMerge] Starting to merge ${pdfFilePaths.length} PDF files into ${finalOutputPath}`);
+    const mergedPdf = await PDFDocument.create();
+    for (const filePath of pdfFilePaths) {
+        try {
+            console.log(`[PDFMerge] Reading PDF: ${filePath}`);
+            const pdfBytes = await fs.readFile(filePath);
+            const pdfDoc = await PDFDocument.load(pdfBytes);
+            const copiedPages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+            copiedPages.forEach((page) => {
+                mergedPdf.addPage(page);
+                console.log(`[PDFMerge] Added page from ${filePath}`);
+            });
+        } catch (err) {
+            console.error(`[PDFMerge] Error processing file ${filePath}:`, err);
+            // Optionally, decide if one failed page should stop the whole process
+        }
+    }
+    const mergedPdfBytes = await mergedPdf.save();
+    await fs.writeFile(finalOutputPath, mergedPdfBytes);
+    console.log(`[PDFMerge] Merged PDF saved successfully to ${finalOutputPath}`);
+}
+
+
+// Your Express router POST handler
+// Make sure this is how your router is defined. If it's app.post, use that.
+// Example: const router = express.Router();
+// router.post('/api/export-pdf', async (req, res) => { ... });
+// Or if it's directly on the app:
+// app.post('/api/export-pdf', async (req, res) => { ... });
+// For this example, I'll assume it's part of a router object passed to this module.
+
+export default function(router, comicCreatorUrl, outputDirBase) { // New ES Module export
+
+    router.post('/export-pdf', async (req, res) => { // Changed from '/api/export-pdf' to '/export-pdf'
+        console.log('[Vite Server/PuppeteerModule] Received POST request for /export-pdf');
+        const projectState = req.body;
+
+        if (!projectState || !projectState.pages || projectState.pages.length === 0) {
+            console.error('[Vite Server] Invalid or empty project state received.');
+            return res.status(400).send('Invalid or empty project state.');
+        }
+        console.log(`[Vite Server] Parsed projectState from request body. Number of pages: ${projectState.pages.length}`);
+
+        // Create a unique directory for this export job's temporary files
+        const exportTimestamp = Date.now();
+        const jobOutputDir = path.join(outputDirBase, `export_${exportTimestamp}`);
+        const tempPdfDir = path.join(jobOutputDir, 'temp_pages');
+
+        try {
+            await fs.ensureDir(tempPdfDir); // Ensure temp directory for individual PDFs exists
+            console.log(`[Vite Server] Temporary directory for PDF pages: ${tempPdfDir}`);
+            
+            const individualPdfPaths = [];
+            const totalPages = projectState.pages.length;
+
+            for (let i = 0; i < totalPages; i++) {
+                console.log(`[Vite Server] Processing page ${i + 1} of ${totalPages}...`);
+                const singlePageProjectState = createSinglePageProjectState(projectState, i);
+                const tempPdfPath = path.join(tempPdfDir, `page_${i + 1}.pdf`);
+
+                console.log(`[Vite Server] Calling capturePageAsImage for page ${i + 1}... Output: ${tempPdfPath}`);
+                // Pass jobOutputDir as the base for capturePageAsImage, it might create subdirs like 'temp_export_images'
+                await capturePageAsImage(comicCreatorUrl, jobOutputDir, singlePageProjectState, tempPdfPath);
+                individualPdfPaths.push(tempPdfPath);
+                console.log(`[Vite Server] Successfully captured page ${i + 1} to ${tempPdfPath}`);
+            }
+
+            console.log('[Vite Server] All pages processed. Starting PDF merge...');
+            const finalPdfPath = path.join(jobOutputDir, 'comic_export_final.pdf');
+            await mergePdfs(individualPdfPaths, finalPdfPath);
+            console.log(`[Vite Server] Final PDF merged and saved to ${finalPdfPath}`);
+
+            // Clean up temporary individual PDF files
+            // await fs.remove(tempPdfDir); // Keep for debugging for now, or remove later
+            // console.log(`[Vite Server] Cleaned up temporary PDF pages directory: ${tempPdfDir}`);
+            
+            // Send the final PDF
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename="comic_export_${exportTimestamp}.pdf"`);
+            const pdfFileStream = fs.createReadStream(finalPdfPath);
+            pdfFileStream.pipe(res);
+
+            pdfFileStream.on('end', async () => {
+                console.log('[Vite Server] Final PDF sent to client.');
+                // Optionally clean up the entire job directory after successful sending
+                try {
+                    await fs.remove(jobOutputDir);
+                    console.log(`[Vite Server] Cleaned up job output directory: ${jobOutputDir}`);
+                } catch (cleanupError) {
+                    console.error(`[Vite Server] Error cleaning up job output directory ${jobOutputDir}:`, cleanupError);
+                }
+            });
+            pdfFileStream.on('error', (err) => {
+                console.error('[Vite Server] Error streaming final PDF to client:', err);
+                // Don't try to send another response if headers already sent
+                if (!res.headersSent) {
+                    res.status(500).send('Error streaming PDF.');
+                }
+                // Consider cleanup here too, or mark for later cleanup
+            });
+
+        } catch (error) {
+            console.error('[Vite Server] Error processing /export-pdf POST request:', error);
+            // Attempt to clean up jobOutputDir on error as well
+            try {
+                if (await fs.pathExists(jobOutputDir)) {
+                    await fs.remove(jobOutputDir);
+                    console.log(`[Vite Server] Cleaned up job output directory due to error: ${jobOutputDir}`);
+                }
+            } catch (cleanupError) {
+                console.error(`[Vite Server] Error cleaning up job output directory ${jobOutputDir} after main error:`, cleanupError);
+            }
+            
+            if (!res.headersSent) {
+                return res.status(500).send(`Error exporting PDF: ${error.message}`);
+            }
+        }
+    });
+
+    // You might have other routes or helper functions here
+    // For example, a function to get Puppeteer browser options
+    // function getPuppeteerLaunchOptions() { ... }
+};
