@@ -32,6 +32,16 @@ export class AutoSaveManager {
      */
     async init() {
         console.log("[AutoSave] Initializing AutoSaveManager...");
+
+        // Check if running in Puppeteer export mode
+        if (window.IS_PUPPETEER_EXPORT) {
+            console.log("[AutoSave] Puppeteer export mode detected. Auto-save will be disabled and existing auto-save cleared.");
+            await this.openDatabase(); // Still need DB for clearing
+            await this.clearAutoSave(true); // Clear everything including the flag
+            console.log("[AutoSave] Puppeteer: Cleared any existing auto-save. Auto-save timer and unload listener will not be started.");
+            return; // Exit early, do not prompt or start timers
+        }
+
         try {
             await this.openDatabase();
             const autoSaveFlagValue = localStorage.getItem(AUTOSAVE_FLAG_KEY);
@@ -114,6 +124,19 @@ export class AutoSaveManager {
      */
     async promptLoadAutoSave() {
         try {
+            // If in Puppeteer mode, do not show any prompts
+            if (window.IS_PUPPETEER_EXPORT) {
+                console.log("[AutoSave] Puppeteer mode: Skipping auto-save load prompt.");
+                // It's crucial that we ensure a clean state for Puppeteer,
+                // so if an auto-save flag *somehow* still existed, clear it.
+                // This should already be handled by init(), but as a safeguard:
+                if (localStorage.getItem(AUTOSAVE_FLAG_KEY) === 'true') {
+                    console.warn("[AutoSave] Puppeteer: Auto-save flag was unexpectedly true in promptLoadAutoSave. Clearing.");
+                    await this.clearAutoSave(true);
+                }
+                return;
+            }
+
             const choice = await this.comicCreator.uiManager.showConfirmationModal(
                 "Restore Session?",
                 "An auto-saved session was found. Do you want to restore it?",

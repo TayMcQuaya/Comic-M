@@ -2654,6 +2654,91 @@ class ComicCreator {
             console.error('Error loading custom layouts from localStorage:', error);
         }
     }
+
+    async _loadProjectFromState(projectState) {
+        console.log('[ComicCreator Headless] Loading project from state object...');
+        await this.autoSaveManager.clearAutoSave();
+        this.autoSaveManager.stopAutoSaveTimer();
+
+        try {
+            this.loadCustomLayouts(); // Load from localStorage first
+
+            if (projectState.customLayouts) {
+                console.log('[ComicCreator Headless] Importing custom layouts from project state...');
+                Object.entries(projectState.customLayouts).forEach(([layoutId, layout]) => {
+                    this.layouts[layoutId] = layout;
+                    this.layoutBuilderManager.saveLayoutToStorage(layout.name, layout); // Also save to localStorage for consistency
+                });
+                // No need to call setupLayoutSelection() in headless, UI won't be interacted with for this
+            }
+
+            this.imageLibrary.clearImages();
+            this.pages = [];
+            this.currentPageIndex = 0;
+            this.folderStructure = { root: { type: 'folder', name: 'root', items: [], parent: null } };
+            this.currentFolderId = 'root';
+
+            const canvasElement = document.querySelector('#comic-canvas');
+            if (canvasElement) canvasElement.innerHTML = '';
+
+            if (projectState.hasOwnProperty('useGlobalBackgroundStyle')) {
+                this.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle;
+                this.backgroundManager.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle;
+            }
+            if (projectState.hasOwnProperty('globalBackgroundStyle')) {
+                this.globalBackgroundStyle = projectState.globalBackgroundStyle;
+                this.backgroundManager.globalBackgroundStyle = projectState.globalBackgroundStyle;
+            }
+
+            // Images are expected to be Data URLs from projectState for headless
+            const imagesToLoad = projectState.images.map(img => ({ ...img, isObjectURL: false })); // Ensure isObjectURL is false
+            this.imageLibrary.addImages(imagesToLoad);
+            // The image verification will happen in puppeteer-export.js if we keep it
+
+            if (projectState.folderStructure) {
+                this.folderStructure = projectState.folderStructure;
+                this.currentFolderId = projectState.currentFolderId || 'root';
+            } else {
+                this.imageLibrary.getImages().forEach(image => {
+                    if (!this.folderStructure.root.items.includes(image.id)) {
+                        this.folderStructure.root.items.push(image.id.toString());
+                    }
+                });
+            }
+            
+            this.pages = projectState.pages;
+            this.currentPageIndex = projectState.currentPageIndex || 0;
+
+            if (!this.folderStructure[this.currentFolderId]) {
+                this.currentFolderId = 'root';
+            }
+
+            // Navigate to Editor Page
+            document.querySelector('#upload-page')?.classList.remove('active');
+            document.querySelector('#layout-page')?.classList.remove('active');
+            document.querySelector('#editor-page')?.classList.add('active');
+            
+            console.log('[ComicCreator Headless] Core state loaded. Loading page content for index:', this.currentPageIndex);
+            await this.loadPageState(this.currentPageIndex); // Load the initial page
+
+            // UI updates for sidebar/nav are less critical for headless but good for consistency if loadPageState expects them
+            this.uiManager.updateRightSidebarView(); 
+            this.updatePageIndicator();
+            this.updateNavigationButtons();
+
+            // Restart auto-save timer (optional for headless, but part of loadProject)
+            // const AUTOSAVE_INTERVAL = 30000; 
+            // this.autoSaveManager.saveIntervalId = setInterval(this.autoSaveManager.performAutoSave, AUTOSAVE_INTERVAL);
+            // window.addEventListener('beforeunload', this.autoSaveManager.handleBeforeUnload);
+            // Or better: await this.autoSaveManager.init(); if it handles restart logic
+
+            console.log('[ComicCreator Headless] Project from state object loaded successfully.');
+            return true; // Indicate success
+        } catch (error) {
+            console.error('[ComicCreator Headless] Error loading project from state object:', error);
+            return false; // Indicate failure
+        }
+    }
 }
 
 // Initialize the comic creator when the DOM is loaded
