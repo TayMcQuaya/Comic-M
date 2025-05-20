@@ -123,7 +123,7 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     await page.setViewport({ 
       width: 1920, 
       height: 1080,
-      deviceScaleFactor: 1
+      deviceScaleFactor: 2
     });
 
     // Enable request interception to ensure all resources load
@@ -363,50 +363,153 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     await new Promise(resolve => setTimeout(resolve, 1500)); // Adjust as needed
     console.log('[Puppeteer] Final rendering delay complete.');
 
+    // Temporarily hide all elements except the comic canvas and its parents/ancestors
+    // to ensure only the canvas is captured.
+    await page.evaluate(() => {
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) return;
 
-    const tempImageDir = path.join(outputDirectory, 'temp_export_images');
-    
-    // Create output directory if it doesn't exist
-    await fs.mkdir(tempImageDir, { recursive: true });
+        // Function to apply style to an element and store its original style
+        const setStyle = (element, styleProperty, value) => {
+            if (!element.dataset.originalInlineStyle) {
+                element.dataset.originalInlineStyle = element.getAttribute('style') || '';
+            }
+            element.style.setProperty(styleProperty, value, 'important');
+        };
 
-    // Get the exact bounding box
+        // Hide all direct children of body initially
+        const bodyChildren = Array.from(document.body.children);
+        bodyChildren.forEach(child => {
+            // Check if the child is the canvas itself or contains the canvas
+            if (child !== canvas && !child.contains(canvas)) {
+                setStyle(child, 'display', 'none');
+            } else {
+                // If it's an ancestor or the canvas itself, ensure it's visible
+                // and remove any transformations that might affect its position for capture
+                let current = child;
+                while (current && current !== document.body) {
+                    setStyle(current, 'display', 'block'); // Or initial, or revert to original display
+                    setStyle(current, 'transform', 'none');
+                    setStyle(current, 'position', 'static'); // Temporarily make static if it helps isolate
+                    if (current === canvas.parentElement) {
+                         setStyle(current, 'position', 'relative'); // Ensure parent is relative for absolute children if any
+                    }
+                    current = current.parentElement;
+                }
+            }
+        });
+        // Ensure the canvas itself is correctly positioned and sized for capture
+        setStyle(canvas, 'position', 'absolute'); 
+        setStyle(canvas, 'top', '0px');
+        setStyle(canvas, 'left', '0px');
+        setStyle(canvas, 'margin', '0');
+        setStyle(canvas, 'transform', 'none'); // Remove any transforms
+        
+        // Ensure body and html have no margin/padding that could offset the canvas
+        setStyle(document.body, 'margin', '0');
+        setStyle(document.body, 'padding', '0');
+        setStyle(document.documentElement, 'margin', '0');
+        setStyle(document.documentElement, 'padding', '0');
+    });
+    console.log('[Puppeteer] Temporarily hid non-canvas elements.');
+
+    // Get the exact bounding box of the comic-canvas AFTER applying styles
     const boundingBox = await page.evaluate(() => {
-      const canvas = document.querySelector('#comic-canvas');
-      if (!canvas) return null;
-      const rect = canvas.getBoundingClientRect();
-      return {
-        x: Math.round(rect.left),
-        y: Math.round(rect.top),
-        width: 700,
-        height: 700
-      };
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) return null;
+        // Force a reflow to ensure styles are applied and dimensions are correct
+        canvas.offsetHeight;
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: Math.round(rect.left),
+            y: Math.round(rect.top),
+            // Use explicit 700x700 as per user request, but ensure rect.width/height are logged
+            width: 700, // Forcing to 700 as requested
+            height: 700, // Forcing to 700 as requested
+            actualWidth: Math.round(rect.width),
+            actualHeight: Math.round(rect.height)
+        };
     });
 
     if (!boundingBox) {
-      throw new Error('Could not find #comic-canvas for screenshot.');
+        console.error('[Puppeteer] Could not find #comic-canvas for bounding box after style changes.');
+        // Attempt to restore styles before throwing error
+        await page.evaluate(() => { /* ... style restoration logic ... */ });
+        throw new Error('Could not find #comic-canvas for screenshot bounding box.');
     }
+    console.log(`[Puppeteer] Canvas bounding box for PDF: x=${boundingBox.x}, y=${boundingBox.y}, width=${boundingBox.width}, height=${boundingBox.height}. Actual on-page w/h: ${boundingBox.actualWidth}x${boundingBox.actualHeight}`);
 
-    console.log('[Puppeteer] Generating PDF...');
-    // const pdfPath = path.join(outputDirectory, 'comic_export.pdf'); // OLD: fixed path
-    await page.pdf({
-      path: outputPdfPath, // NEW: use dynamic path
-      format: 'A4', // Or your preferred format
-      printBackground: true,
-      // width: `${dimensions.width}px`, // Using format A4, so width/height might not be needed
-      // height: `${dimensions.height}px`,// or use page.setViewport to control this
-      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
-      scale: 1, // Ensure scale is 1 for accurate rendering based on viewport
-      timeout: 120000 // Increased timeout for PDF generation itself
+    // const tempImageDir = path.join(outputDirectory, 'temp_export_images'); // Not used for PDF
+    // await fs.mkdir(tempImageDir, { recursive: true }); // Not used for PDF
+
+    // console.log('[Puppeteer] Generating PDF for #comic-canvas...'); // Old log
+    // await page.pdf({ // OLD METHOD
+    //     path: outputPdfPath,
+    //     // format: 'A4', // Remove format to use width/height
+    //     printBackground: true,
+    //     width: `${boundingBox.width}px`, // Use canvas width
+    //     height: `${boundingBox.height}px`, // Use canvas height
+    //     margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
+    //     scale: 1,
+    //     clip: {
+    //         x: boundingBox.x,
+    //         y: boundingBox.y,
+    //         width: boundingBox.width,
+    //         height: boundingBox.height
+    //     },
+    //     timeout: 120000
+    // });
+    // console.log(`[Puppeteer] PDF for current page's canvas exported successfully to ${outputPdfPath}`); // Old log
+
+    console.log('[Puppeteer] Taking screenshot of #comic-canvas...');
+    const pngScreenshotBuffer = await page.screenshot({
+        clip: {
+            x: boundingBox.x,
+            y: boundingBox.y,
+            width: boundingBox.width,
+            height: boundingBox.height
+        },
+        type: 'png',
+        omitBackground: false // Set to false to include canvas background; true if it should be transparent and handled by PDF bg
     });
-    // console.log(`[Puppeteer] PDF exported successfully to ${pdfPath}`); // OLD
-    console.log(`[Puppeteer] PDF for current page exported successfully to ${outputPdfPath}`);
+    console.log('[Puppeteer] Screenshot taken.');
+
+    console.log('[Puppeteer] Creating PDF with embedded screenshot...');
+    const pdfDoc = await PDFDocument.create();
+    const pageOfPdf = pdfDoc.addPage([boundingBox.width, boundingBox.height]); // Page size from boundingBox
+    
+    const pngImage = await pdfDoc.embedPng(pngScreenshotBuffer);
+
+    pageOfPdf.drawImage(pngImage, {
+        x: 0,
+        y: 0, // In pdf-lib, for a page of H, drawing at y=0 places it at the bottom. 
+             // Since page height IS image height, y=0 works.
+        width: boundingBox.width,
+        height: boundingBox.height,
+    });
+
+    const pdfBytes = await pdfDoc.save();
+    await fs.writeFile(outputPdfPath, pdfBytes);
+    console.log(`[Puppeteer] PDF with screenshot for current page saved to ${outputPdfPath}`);
 
 
-    // fs.removeSync(tempImageDir); // Cleanup temp images
-    // console.log(`[Puppeteer] Cleaned up temporary image directory: ${tempImageDir}`);
+    // Restore visibility of hidden elements
+    await page.evaluate(() => {
+        const elementsWithOriginalStyle = document.querySelectorAll('[data-original-inline-style]');
+        elementsWithOriginalStyle.forEach(el => {
+            el.setAttribute('style', el.dataset.originalInlineStyle);
+            el.removeAttribute('data-original-inline-style');
+        });
+        // Also restore body and html if modified directly and not via dataset
+        document.body.style.margin = ''; 
+        document.body.style.padding = ''; 
+        document.documentElement.style.margin = '';
+        document.documentElement.style.padding = '';
 
-    // return pdfPath; // OLD
-    return outputPdfPath; // NEW
+    });
+    console.log('[Puppeteer] Restored non-canvas element visibility.');
+
+    return outputPdfPath;
 
   } catch (error) {
     console.error('[Puppeteer] Error during export:', error);
