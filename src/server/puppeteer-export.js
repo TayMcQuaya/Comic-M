@@ -9,14 +9,22 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
   console.log(`[Puppeteer] Launching browser...`);
   const browser = await puppeteer.launch({
     headless: true, // Run in headless mode (no visible browser window)
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'] // Added font hinting
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--font-render-hinting=none',
+      '--disable-gpu', // May help with consistency if GPU rendering differs
+      '--disable-dev-shm-usage', // Often needed in CI/server environments
+      '--force-color-profile=srgb', // Standard color profile
+      '--disable-features=IsolateOrigins,site-per-process' // Can simplify rendering paths
+    ]
   });
   console.log(`[Puppeteer] Browser launched.`);
 
   const page = await browser.newPage();
-  // Set a default viewport that should be large enough for the canvas
-  await page.setViewport({ width: 1280, height: 1024 }); // Slightly larger viewport
-  console.log(`[Puppeteer] New page created and viewport set.`);
+  // Set a much wider viewport to ensure the canvas is always fully visible
+  await page.setViewport({ width: 1600, height: 1200, deviceScaleFactor: 1 }); 
+  console.log(`[Puppeteer] New page created and viewport set with deviceScaleFactor: 1.`);
 
   // Log what projectState Puppeteer received (first few keys for brevity)
   if (projectState) {
@@ -149,12 +157,33 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     console.log('[Puppeteer] Frontend signaled project load complete.');
     
     console.log('[Puppeteer] Waiting for network idle after project load...');
-    await page.waitForNetworkIdle({ idleTime: 750, timeout: 25000 }); // Increased idleTime and timeout
+    await page.waitForNetworkIdle({ idleTime: 750, timeout: 25000 });
     console.log('[Puppeteer] Network is idle.');
 
-    // await page.waitForTimeout(2000); // Increased forced delay for rendering - REPLACED
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('[Puppeteer] Additional 2s delay complete.');
+    await new Promise(resolve => setTimeout(resolve, 2500));
+    console.log('[Puppeteer] Additional 2.5s delay complete.');
+
+    // Inject CSS to force the canvas to the top-left and remove margin before screenshot
+    await page.evaluate(() => {
+      const canvas = document.getElementById('comic-canvas');
+      if (canvas) {
+        // Hide all siblings of the canvas
+        Array.from(document.body.children).forEach(child => {
+          if (child !== canvas && !child.contains(canvas)) {
+            child.style.display = 'none';
+          }
+        });
+        // Make sure the canvas is on top
+        canvas.style.margin = '0';
+        canvas.style.left = '0';
+        canvas.style.right = 'auto';
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.zIndex = '9999';
+        canvas.style.background = 'white'; // or your desired background
+      }
+    });
+    console.log('[Puppeteer] Hid all UI except #comic-canvas and forced it to top-left for screenshot.');
 
     console.log(`[Puppeteer] Final check for #comic-canvas readiness...`);
     await page.waitForFunction(() => {
@@ -162,21 +191,18 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         if (!canvas) return false;
         const rect = canvas.getBoundingClientRect();
         if (!(rect.width > 0 && rect.height > 0)) return false;
-
         const panels = canvas.querySelectorAll('.comic-panel');
         if (panels.length > 0) {
             const firstPanel = panels[0];
             const firstPanelImage = firstPanel.querySelector('img');
             if (firstPanelImage) {
-                return firstPanelImage.complete && firstPanelImage.naturalWidth > 0; // Check naturalWidth too
+                return firstPanelImage.complete && firstPanelImage.naturalWidth > 0;
             }
-            return true; // Panel exists, no image, considered ready
+            return true; 
         }
-        // If no panels (e.g. empty canvas layout), and dimensions are good, assume ready
-        // This might need adjustment if an empty canvas should wait for a background or something else
-        return document.readyState === 'complete'; // Fallback to document ready if no panels
+        return document.readyState === 'complete';
       },
-      { timeout: 25000 } // Increased timeout
+      { timeout: 25000 }
     );
     console.log(`[Puppeteer] #comic-canvas is confirmed ready.`);
 
@@ -184,22 +210,19 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     if (!canvasElement) throw new Error('#comic-canvas not found after all waits');
 
     const boundingBox = await canvasElement.boundingBox();
-    console.log('[Puppeteer] #comic-canvas bounding box:', boundingBox);
+    console.log('[Puppeteer] #comic-canvas bounding box after CSS injection:', boundingBox);
     if (!boundingBox || boundingBox.width === 0 || boundingBox.height === 0) {
         console.warn('[Puppeteer] #comic-canvas has no dimensions. Screenshot might be empty.');
     }
     
-    // Clip the screenshot to the comic canvas dimensions, but ensure it's on screen.
-    // Forcing scroll into view if needed.
-    await canvasElement.scrollIntoViewIfNeeded?.(); // Optional chaining for older Puppeteer
-    // await page.waitForTimeout(100); // Brief pause after scroll - REPLACED
-    await new Promise(resolve => setTimeout(resolve, 100));
-    console.log('[Puppeteer] Brief 100ms delay after scroll complete.');
+    await canvasElement.scrollIntoViewIfNeeded?.();
+    await new Promise(resolve => setTimeout(resolve, 200));
+    console.log('[Puppeteer] Brief 200ms delay after scroll complete.');
 
     const clip = boundingBox ? {
         x: boundingBox.x,
         y: boundingBox.y,
-        width: Math.max(1, boundingBox.width), // Ensure width/height are at least 1
+        width: Math.max(1, boundingBox.width),
         height: Math.max(1, boundingBox.height)
     } : undefined;
 
@@ -207,11 +230,9 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     await page.screenshot({ path: fullPageScreenshotPath, fullPage: true });
     console.log(`[Puppeteer] Full page diagnostic screenshot saved: ${fullPageScreenshotPath}`);
 
-    // Ensure the output directory exists for the main screenshot
     await fs.mkdir(outputDirectory, { recursive: true });
     const screenshotPath = path.join(outputDirectory, 'page.png');
-    console.log(`[Puppeteer] Taking screenshot of #comic-canvas (clipped) to ${screenshotPath}...`);
-    // Take screenshot of the element itself, Puppeteer handles clipping if element is given
+    console.log(`[Puppeteer] Taking screenshot of #comic-canvas (element) to ${screenshotPath}...`);
     await canvasElement.screenshot({ path: screenshotPath }); 
     console.log(`[Puppeteer] Screenshot of #comic-canvas saved.`);
 

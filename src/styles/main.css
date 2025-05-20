@@ -578,12 +578,11 @@ body {
     position: relative;
     background: var(--card-bg);
     box-shadow: 8px 8px 0 var(--shadow-color);
-    margin: 20px auto 0;
+    margin: -60px auto 0; /* Changed from transform to negative margin */
     width: 700px;
     height: 700px;
-
     border: 3px solid var(--border-color);
-    transform: translateY(-80px);
+    /* Removed transform */
 }
 
 /* Add a subtle paper texture effect to the comic canvas */
