@@ -682,8 +682,63 @@ class ComicCreator {
         });
 
         // Update download button event listener
-        document.querySelector('#download-btn')?.addEventListener('click', () => {
-            this.exportManager.downloadComic(); // Call method on the manager instance
+        document.querySelector('#download-btn')?.addEventListener('click', async () => {
+            // this.exportManager.downloadComic(); // Old method, commented out
+            console.log('[Frontend] Download button clicked, requesting PDF export...');
+            try {
+                // Get the current project state
+                const projectState = await this.getCurrentProjectState();
+                if (!projectState) {
+                    alert('Could not retrieve project state for export.');
+                    return;
+                }
+
+                const response = await fetch('/api/export-pdf', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(projectState),
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `Error fetching PDF: ${response.status} ${response.statusText}`;
+                    try {
+                        const errDetails = await response.json();
+                        errorMsg += ` - ${errDetails.error || 'Unknown server error'}`;
+                    } catch (e) { /* Ignore if error response is not JSON */ }
+                    console.error(errorMsg);
+                    alert(errorMsg); // Inform the user
+                    return;
+                }
+
+                // For Phase 1, we expect an image back
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                // Get filename from Content-Disposition header if available, else default
+                const disposition = response.headers.get('content-disposition');
+                let filename = 'captured_page.png'; // Default filename
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"])(?<filename>.*?)\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches.groups && matches.groups.filename) {
+                        filename = matches.groups.filename;
+                    }
+                }
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                a.remove();
+                console.log('[Frontend] Captured image download initiated.');
+
+            } catch (error) {
+                console.error('[Frontend] Error during PDF export request:', error);
+                alert(`An error occurred while trying to export: ${error.message}`);
+            }
         });
 
         // Custom Layout Upload - File input listener
@@ -1586,6 +1641,77 @@ class ComicCreator {
         await this.autoSaveManager.clearAutoSave();
         console.log("Manual save successful, cleared auto-save data.");
          this.uiManager.showNotification("Project saved successfully!", "success");
+    }
+
+    async getCurrentProjectState() {
+        console.log("[getCurrentProjectState] Getting current project state for export...");
+        // Force save current page state before exporting (including any new text elements)
+        this.saveCurrentPageState();
+
+        // Make sure all text elements are recorded
+        const canvasTextElements = document.querySelectorAll('#comic-canvas > .text-bubble');
+        console.log(`[getCurrentProjectState] Found ${canvasTextElements.length} canvas text elements - ensuring they're saved.`);
+        
+        const currentPage = this.pages[this.currentPageIndex];
+        if (currentPage && currentPage.canvasTextElements && canvasTextElements.length > 0 && canvasTextElements.length !== currentPage.canvasTextElements.length) {
+            console.warn(`[getCurrentProjectState] Mismatch in canvas text elements. Forcing state refresh.`);
+            this.saveCurrentPageState();
+        }
+        
+        const customLayoutIds = new Set();
+        this.pages.forEach(page => {
+            const layoutId = page.layout;
+            if (layoutId && typeof layoutId === 'string' && layoutId.startsWith('custom-')) {
+                customLayoutIds.add(layoutId);
+            }
+        });
+        
+        const customLayouts = {};
+        customLayoutIds.forEach(layoutId => {
+            if (this.layouts[layoutId]) {
+                customLayouts[layoutId] = this.layouts[layoutId];
+            }
+        });
+        
+        const imageProcessingPromises = this.imageLibrary.getImages().map(async (img) => {
+            if (img.isObjectURL && img.src && img.src.startsWith('blob:')) {
+                try {
+                    const response = await fetch(img.src);
+                    if (!response.ok) throw new Error(`Failed to fetch blob URL for ${img.name}`);
+                    const blob = await response.blob();
+                    const dataUrl = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(blob);
+                    });
+                    return { id: img.id, name: img.name, width: img.width, height: img.height, src: dataUrl };
+                } catch (error) {
+                    console.error(`[getCurrentProjectState] Failed to convert Object URL to Data URL for image: ${img.name}`, error);
+                    return { id: img.id, name: img.name, width: img.width, height: img.height, src: null, saveError: true };
+                }
+            }
+            return { id: img.id, name: img.name, width: img.width, height: img.height, src: img.src };
+        });
+
+        const imagesToSave = await Promise.all(imageProcessingPromises);
+
+        const projectState = {
+            version: '1.3-autosave-puppeteer', // New version marker
+            useGlobalBackgroundStyle: this.useGlobalBackgroundStyle,
+            globalBackgroundStyle: this.globalBackgroundStyle,
+            pages: this.pages.map(page => ({
+                ...page,
+                panelStates: page.panelStates.map(panel => ({ ...panel, imageId: panel.imageId || null }))
+            })),
+            images: imagesToSave,
+            currentPageIndex: this.currentPageIndex,
+            folderStructure: this.folderStructure,
+            currentFolderId: this.currentFolderId,
+            customLayouts: customLayouts
+        };
+        console.log("[getCurrentProjectState] Project state prepared:", projectState);
+        return projectState;
     }
 
     async loadProject(file) {
