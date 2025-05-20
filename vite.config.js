@@ -31,44 +31,45 @@ export default defineConfig({
           if (req.url === '/api/export-pdf' && req.method === 'POST') {
             console.log('[Vite Server] Received POST request for /api/export-pdf');
             try {
+              // Parse the project state from the request body
               const projectState = await parseJsonBody(req);
               console.log('[Vite Server] Parsed projectState from request body');
-              // console.log('[Vite Server] Project state page count:', projectState.pages.length);
 
-              const comicAppUrl = `http://localhost:${server.config.server.port || 5173}`;
-              const outputDir = path.join(projectRoot, 'temp_exports');
-
-              // Pass projectState to capturePageAsImage
-              const result = await capturePageAsImage(comicAppUrl, outputDir, projectState);
-
-              if (result.success && result.imagePath) {
-                console.log(`[Vite Server] Puppeteer capture successful: ${result.imagePath}`);
-                if (fs.existsSync(result.imagePath)) {
-                    res.setHeader('Content-Type', 'image/png');
-                    res.setHeader('Content-Disposition', `attachment; filename="captured_page.png"`);
-                    fs.createReadStream(result.imagePath).pipe(res);
-                    console.log('[Vite Server] Sent captured image to client.');
-                } else {
-                    console.error('[Vite Server] Captured image file not found:', result.imagePath);
-                    res.statusCode = 500;
-                    res.end(JSON.stringify({ success: false, error: 'Captured image not found post-processing.' }));
-                }
-              } else {
-                console.error('[Vite Server] Puppeteer capture failed:', result.error);
-                res.statusCode = 500;
-                res.end(JSON.stringify({ success: false, error: result.error || 'Puppeteer capture failed' }));
+              // Create temporary directory for exports
+              const outputDirectory = path.join(projectRoot, 'temp_exports');
+              if (!fs.existsSync(outputDirectory)) {
+                fs.mkdirSync(outputDirectory, { recursive: true });
               }
-            } catch (e) {
-              console.error('[Vite Server] Error processing /api/export-pdf POST request:', e);
+
+              // Get the URL of the comic creator
+              const protocol = req.protocol || 'http';
+              const host = req.headers.host || 'localhost:5173';
+              const comicCreatorUrl = `${protocol}://${host}`;
+
+              // Generate the PDF
+              const result = await capturePageAsImage(comicCreatorUrl, outputDirectory, projectState);
+
+              // Read the generated PDF
+              const pdfData = fs.readFileSync(result.pdfPath);
+
+              // Set response headers
+              res.setHeader('Content-Type', 'application/pdf');
+              res.setHeader('Content-Disposition', 'attachment; filename="comic.pdf"');
+              res.setHeader('Content-Length', pdfData.length);
+
+              // Send the PDF
+              res.end(pdfData);
+
+              // Clean up temporary files
+              fs.unlinkSync(result.pdfPath);
+              
+            } catch (error) {
+              console.error('[Vite Server] Error processing /api/export-pdf POST request:', error);
               res.statusCode = 500;
-              if (e instanceof SyntaxError) { // Check if it's a JSON parsing error
-                res.end(JSON.stringify({ success: false, error: 'Invalid JSON in request body.' }));
-              } else {
-                res.end(JSON.stringify({ success: false, error: e.message }));
-              }
+              res.end(`Error generating PDF: ${error.message}`);
             }
           } else {
-            next(); // Pass to other middlewares if not our endpoint
+            next();
           }
         });
       }

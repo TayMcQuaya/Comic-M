@@ -1,5 +1,4 @@
 import { layouts } from './layouts.js';
-import { ExportManager } from './modules/ExportManager.js'; // Import the new manager
 import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // Import Utils
 import { FolderSystem } from './modules/FolderSystem.js'; // Import FolderSystem
 import { DragAndDropManager } from './modules/DragAndDropManager.js'; // Import DragAndDropManager
@@ -40,7 +39,7 @@ class ComicCreator {
         this.currentFolderId = 'root';
         
         // Instantiate the Managers
-        this.exportManager = new ExportManager(this); 
+        // Remove exportManager instantiation
         this.folderSystem = new FolderSystem(this); // Instantiate FolderSystem
         this.dragAndDropManager = new DragAndDropManager(this); // Instantiate DragAndDropManager
         this.imageLibrary = new ImageLibrary(this); // Instantiate ImageLibrary
@@ -683,14 +682,19 @@ class ComicCreator {
 
         // Update download button event listener
         document.querySelector('#download-btn')?.addEventListener('click', async () => {
-            // this.exportManager.downloadComic(); // Old method, commented out
             console.log('[Frontend] Download button clicked, requesting PDF export...');
+            
+            // Show loading indicator
+            const loadingIndicator = document.createElement('div');
+            loadingIndicator.className = 'loading-indicator';
+            loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+            document.body.appendChild(loadingIndicator);
+
             try {
                 // Get the current project state
                 const projectState = await this.getCurrentProjectState();
                 if (!projectState) {
-                    alert('Could not retrieve project state for export.');
-                    return;
+                    throw new Error('Could not retrieve project state for export.');
                 }
 
                 const response = await fetch('/api/export-pdf', {
@@ -702,42 +706,52 @@ class ComicCreator {
                 });
 
                 if (!response.ok) {
-                    let errorMsg = `Error fetching PDF: ${response.status} ${response.statusText}`;
+                    let errorMsg = `Error generating PDF: ${response.status} ${response.statusText}`;
                     try {
                         const errDetails = await response.json();
                         errorMsg += ` - ${errDetails.error || 'Unknown server error'}`;
                     } catch (e) { /* Ignore if error response is not JSON */ }
-                    console.error(errorMsg);
-                    alert(errorMsg); // Inform the user
-                    return;
+                    throw new Error(errorMsg);
                 }
 
-                // For Phase 1, we expect an image back
+                // Get the PDF blob
                 const blob = await response.blob();
+                
+                // Get filename from Content-Disposition header or use default
+                const disposition = response.headers.get('content-disposition');
+                let filename = 'comic.pdf';
+                if (disposition && disposition.indexOf('attachment') !== -1) {
+                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                    const matches = filenameRegex.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+
+                // Create download link
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                // Get filename from Content-Disposition header if available, else default
-                const disposition = response.headers.get('content-disposition');
-                let filename = 'captured_page.png'; // Default filename
-                if (disposition && disposition.indexOf('attachment') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"])(?<filename>.*?)\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches.groups && matches.groups.filename) {
-                        filename = matches.groups.filename;
-                    }
-                }
                 a.download = filename;
+                
+                // Trigger download
                 document.body.appendChild(a);
                 a.click();
+                
+                // Clean up
                 window.URL.revokeObjectURL(url);
                 a.remove();
-                console.log('[Frontend] Captured image download initiated.');
+                
+                console.log('[Frontend] PDF download initiated.');
+                this.uiManager.showNotification('PDF generated successfully!', 'success');
 
             } catch (error) {
-                console.error('[Frontend] Error during PDF export request:', error);
-                alert(`An error occurred while trying to export: ${error.message}`);
+                console.error('[Frontend] Error during PDF export:', error);
+                this.uiManager.showNotification(`Error generating PDF: ${error.message}`, 'error');
+            } finally {
+                // Remove loading indicator
+                loadingIndicator.remove();
             }
         });
 
@@ -760,15 +774,47 @@ class ComicCreator {
                         reader.onload = (event) => {
                             try {
                                 const layoutData = JSON.parse(event.target.result);
-                                this.processCustomLayout(layoutData);
+                                
+                                // Validate the layout structure
+                                if (this.validateCustomLayout(layoutData)) {
+                                    // Generate a unique ID for this layout based on name
+                                    const layoutId = 'custom-' + layoutData.name.toLowerCase().replace(/\s+/g, '-');
+                                    
+                                    // Add the layout to the available layouts
+                                    this.layouts[layoutId] = layoutData;
+                                    
+                                    // Save to localStorage for persistence between sessions
+                                    this.layoutBuilderManager.saveLayoutToStorage(layoutData.name, layoutData);
+                                    
+                                    successCount++;
+                                } else {
+                                    console.error(`Invalid layout format in file: ${file.name}`);
+                                    failCount++;
+                                }
                             } catch (error) {
-                                console.error('Error parsing custom layout JSON:', error);
-                                alert('Invalid JSON file. Please check the format.');
+                                console.error(`Error parsing JSON file ${file.name}:`, error);
+                                failCount++;
+                            }
+                            
+                            processingCount++;
+                            
+                            // When all files have been processed
+                            if (processingCount === totalCount) {
+                                // Refresh the layout selection UI
+                                this.setupLayoutSelection();
+                                
+                                // Show completion message
+                                const resultMessage = `Batch processing complete:\n` +
+                                    `✅ ${successCount} layouts added successfully\n` +
+                                    `❌ ${failCount} layouts had errors`;
+                                alert(resultMessage);
                             }
                         };
                         reader.readAsText(file);
                     } else {
-                        alert('Please select a valid .json file.');
+                        failCount++;
+                        processingCount++;
+                        console.error(`File ${file.name} is not a valid JSON file.`);
                     }
                 }
             });
@@ -1673,6 +1719,7 @@ class ComicCreator {
             }
         });
         
+        // --- Convert all blob: images to data URLs for export ---
         const imageProcessingPromises = this.imageLibrary.getImages().map(async (img) => {
             if (img.isObjectURL && img.src && img.src.startsWith('blob:')) {
                 try {

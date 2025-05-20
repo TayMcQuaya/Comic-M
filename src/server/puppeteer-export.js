@@ -2,259 +2,282 @@
 
 import puppeteer from 'puppeteer';
 import path from 'path';
-import fs from 'fs/promises';
+import { promises as fsPromises } from 'fs';
+import fs from 'fs';
+import PDFDocument from 'pdfkit';
 
 // Function to be called by our Vite server endpoint
 async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState) {
   console.log(`[Puppeteer] Launching browser...`);
   const browser = await puppeteer.launch({
-    headless: true, // Run in headless mode (no visible browser window)
+    headless: true,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--font-render-hinting=none',
-      '--disable-gpu', // May help with consistency if GPU rendering differs
-      '--disable-dev-shm-usage', // Often needed in CI/server environments
-      '--force-color-profile=srgb', // Standard color profile
-      '--disable-features=IsolateOrigins,site-per-process' // Can simplify rendering paths
+      '--disable-gpu',
+      '--disable-dev-shm-usage',
+      '--window-size=1920,1080'
     ]
   });
-  console.log(`[Puppeteer] Browser launched.`);
-
-  const page = await browser.newPage();
-  // Set a much wider viewport to ensure the canvas is always fully visible
-  await page.setViewport({ width: 1600, height: 1200, deviceScaleFactor: 1 }); 
-  console.log(`[Puppeteer] New page created and viewport set with deviceScaleFactor: 1.`);
-
-  // Log what projectState Puppeteer received (first few keys for brevity)
-  if (projectState) {
-    console.log(`[Puppeteer] Received projectState. Page count: ${projectState.pages?.length}`);
-  } else {
-    console.warn('[Puppeteer] projectState was not provided.');
-  }
 
   try {
-    console.log(`[Puppeteer] Navigating to ${comicCreatorUrl}...`);
-    // Adjust timeout if needed, default is 30 seconds
-    await page.goto(comicCreatorUrl, { waitUntil: 'networkidle0' }); 
-    console.log(`[Puppeteer] Navigation to ${comicCreatorUrl} successful.`);
-
-    console.log('[Puppeteer] Attempting to load project state and initialize editor...');
-    // Expose a function to the page to signal when comicCreator.loadProject is done
-    let loadProjectPromiseResolver;
-    const loadProjectDonePromise = new Promise(resolve => { loadProjectPromiseResolver = resolve; });
-    await page.exposeFunction('onProjectLoadedByPuppeteer', () => {
-      console.log('[Puppeteer - Page Context] onProjectLoadedByPuppeteer called.');
-      loadProjectPromiseResolver();
+    const page = await browser.newPage();
+    
+    // Set longer timeout for navigation and element waiting
+    page.setDefaultTimeout(60000); // 60 seconds timeout
+    
+    // Set a consistent viewport size
+    await page.setViewport({ 
+      width: 1920, 
+      height: 1080,
+      deviceScaleFactor: 1
     });
 
-    await page.evaluate(async (stateToLoad) => {
-      const uploadPage = document.getElementById('upload-page');
-      const layoutPage = document.getElementById('layout-page');
-      const editorPage = document.getElementById('editor-page');
-      
-      if (uploadPage) uploadPage.classList.remove('active');
-      if (layoutPage) layoutPage.classList.remove('active');
-      if (editorPage) {
-        editorPage.classList.add('active');
-      } else {
-        console.error('[Puppeteer - Evaluate] #editor-page not found.');
-        throw new Error('#editor-page not found during page evaluation.');
+    // Enable request interception to ensure all resources load
+    await page.setRequestInterception(true);
+    page.on('request', request => {
+      request.continue();
+      if (request.failure()) {
+        console.error(`[Puppeteer] Request failed:`, request.url(), request.failure());
       }
+    });
 
-      if (window.comicCreator && typeof window.comicCreator.loadPageState === 'function') {
-        if (stateToLoad) {
-          console.log('[Puppeteer - Evaluate] Calling comicCreator logic to load project state...');
-          try {
-            if (window.comicCreator.autoSaveManager) {
-                await window.comicCreator.autoSaveManager.clearAutoSave();
-                window.comicCreator.autoSaveManager.stopAutoSaveTimer();
-            }
-            window.comicCreator.loadCustomLayouts?.(); 
+    // Log console messages from the page
+    page.on('console', msg => console.log('[Page Console]', msg.text()));
+    page.on('pageerror', err => console.error('[Page Error]', err));
 
-            if (stateToLoad.customLayouts) {
-                Object.entries(stateToLoad.customLayouts).forEach(([layoutId, layout]) => {
-                    window.comicCreator.layouts[layoutId] = layout;
-                    window.comicCreator.layoutBuilderManager?.saveLayoutToStorage(layout.name, layout);
-                });
-                window.comicCreator.setupLayoutSelection?.();
-            }
+    console.log(`[Puppeteer] Navigating to URL: ${comicCreatorUrl}`);
+    
+    const response = await page.goto(comicCreatorUrl, { 
+      waitUntil: ['networkidle0', 'domcontentloaded', 'load'],
+      timeout: 60000
+    });
 
-            window.comicCreator.imageLibrary?.clearImages();
-            window.comicCreator.pages = [];
-            window.comicCreator.currentPageIndex = 0;
-            window.comicCreator.folderStructure = { root: { type: 'folder', name: 'root', items: [], parent: null } };
-            window.comicCreator.currentFolderId = 'root';
-            const canvasElement = document.getElementById('comic-canvas');
-            if (canvasElement) canvasElement.innerHTML = '';
-            if (stateToLoad.hasOwnProperty('useGlobalBackgroundStyle')) window.comicCreator.useGlobalBackgroundStyle = stateToLoad.useGlobalBackgroundStyle;
-            if (stateToLoad.hasOwnProperty('globalBackgroundStyle')) window.comicCreator.globalBackgroundStyle = stateToLoad.globalBackgroundStyle;
-            if(window.comicCreator.backgroundManager) { // Update manager too
-              if (stateToLoad.hasOwnProperty('useGlobalBackgroundStyle')) window.comicCreator.backgroundManager.useGlobalBackgroundStyle = stateToLoad.useGlobalBackgroundStyle;
-              if (stateToLoad.hasOwnProperty('globalBackgroundStyle'))  window.comicCreator.backgroundManager.globalBackgroundStyle = stateToLoad.globalBackgroundStyle;
-            }
+    if (!response.ok()) {
+      throw new Error(`Failed to load page: ${response.status()} ${response.statusText()}`);
+    }
 
-            const imageProcessingPromises = stateToLoad.images.map(async (img) => {
-                if (!img.src || !img.src.startsWith('data:')) {
-                    if (img.src && img.src.startsWith('blob:')) return { ...img, isObjectURL: true };
-                    return { ...img, src: null, loadError: true }; 
-                }
-                try {
-                    const response = await fetch(img.src);
-                    if (!response.ok) throw new Error(`Failed to fetch data URL for ${img.name}`);
-                    const blob = await response.blob();
-                    const objectURL = URL.createObjectURL(blob);
-                    return { ...img, src: objectURL, isObjectURL: true };
-                } catch (error) {
-                    return { ...img, loadError: true, conversionError: true };
-                }
-            });
-            const loadedImages = await Promise.all(imageProcessingPromises);
-            window.comicCreator.imageLibrary?.addImages(loadedImages.filter(img => img !== null));
+    console.log(`[Puppeteer] Navigation complete. Waiting for comic canvas...`);
 
-            if (stateToLoad.folderStructure) {
-                window.comicCreator.folderStructure = stateToLoad.folderStructure;
-                window.comicCreator.currentFolderId = stateToLoad.currentFolderId || 'root';
-            } else {
-                window.comicCreator.imageLibrary?.getImages().forEach(image => {
-                    if (!window.comicCreator.folderStructure.root.items.includes(image.id)) {
-                        window.comicCreator.folderStructure.root.items.push(image.id.toString());
-                    }
-                });
-            }
-            window.comicCreator.imageLibrary?.updateThumbnails();
-            window.comicCreator.pages = stateToLoad.pages;
-            window.comicCreator.currentPageIndex = stateToLoad.currentPageIndex;
-            
-            await window.comicCreator.loadPageState(window.comicCreator.currentPageIndex);
-            await document.fonts.ready; // Explicitly wait for all fonts to be loaded and ready
-            
-            window.comicCreator.updatePageIndicator?.();
-            window.comicCreator.updateNavigationButtons?.();
-            if (window.comicCreator.autoSaveManager) await window.comicCreator.autoSaveManager.init();
-            console.log('[Puppeteer - Evaluate] Project state loaded and fonts ready.');
-            window.onProjectLoadedByPuppeteer();
+    // Wait for the comic canvas with extended timeout and visibility check
+    try {
+      await page.waitForFunction(() => {
+        const canvas = document.querySelector('#comic-canvas');
+        return canvas && window.getComputedStyle(canvas).display !== 'none';
+      }, { timeout: 60000 });
+    } catch (error) {
+      console.error('[Puppeteer] Failed to find comic canvas. DOM state:', await page.evaluate(() => document.body.innerHTML));
+      throw error;
+    }
 
-          } catch (e) {
-            console.error('[Puppeteer - Evaluate] Error during project load:', e.message, e.stack);
-            window.onProjectLoadedByPuppeteer(); 
-          }
-        } else {
-          console.warn('[Puppeteer - Evaluate] No project state. Initializing default.');
-          if (window.comicCreator && typeof window.comicCreator.createComic === 'function' && window.comicCreator.layouts) {
-            const layoutKeys = Object.keys(window.comicCreator.layouts);
-            if (layoutKeys.length > 0) window.comicCreator.createComic(window.comicCreator.layouts[layoutKeys[0]]);
-          }
-          window.onProjectLoadedByPuppeteer();
+    // Inject CSS to ensure consistent rendering
+    await page.addStyleTag({
+      content: `
+        #comic-canvas {
+          transform: none !important;
+          transition: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          display: block !important;
         }
-      } else {
-        throw new Error('comicCreator or methods not found');
+        .text-bubble {
+          transform-origin: center center !important;
+          transition: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .canvas-sticker-image {
+          transform-origin: center center !important;
+          transition: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .comic-panel img {
+          transition: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+        .canvas-background-image {
+          transition: none !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+        }
+      `
+    });
+
+    // Initialize project state and wait for images to load
+    await page.evaluate(async (state) => {
+      // Wait for comic creator
+      let attempts = 0;
+      while (!window.comicCreator && attempts < 50) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
       }
+      if (!window.comicCreator) throw new Error('Comic creator not initialized after 5 seconds');
+
+      console.log('[Page] Comic creator found, initializing project...');
+      await window.comicCreator.resetProject(false);
+
+      // Load and verify images first
+      if (state.images && state.images.length > 0) {
+        console.log('[Page] Loading images:', state.images.length);
+        window.comicCreator.imageLibrary.clearImages();
+        window.comicCreator.imageLibrary.addImages(state.images);
+        
+        // Verify images are loaded
+        const imageLoadPromises = state.images.map(img => {
+          return new Promise((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve(true);
+            image.onerror = () => resolve(false);
+            image.src = img.src;
+          });
+        });
+        
+        const results = await Promise.all(imageLoadPromises);
+        console.log('[Page] Image load results:', results);
+        
+        if (results.some(result => !result)) {
+          throw new Error('Some images failed to load');
+        }
+      }
+
+      // Load other state components
+      if (state.folderStructure) {
+        window.comicCreator.folderStructure = state.folderStructure;
+        window.comicCreator.currentFolderId = state.currentFolderId || 'root';
+      }
+      
+      if (state.customLayouts) {
+        Object.entries(state.customLayouts).forEach(([layoutId, layout]) => {
+          window.comicCreator.layouts[layoutId] = layout;
+        });
+      }
+
+      // Finally load pages
+      window.comicCreator.pages = state.pages;
+      window.comicCreator.currentPageIndex = 0;
+      
+      // Force initial page load
+      await window.comicCreator.loadPageState(0);
+      
+      // Wait for all elements to be ready
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return 'Project state loaded successfully';
     }, projectState);
 
-    console.log('[Puppeteer] Waiting for project load signal from page...');
-    await loadProjectDonePromise;
-    console.log('[Puppeteer] Frontend signaled project load complete.');
-    
-    console.log('[Puppeteer] Waiting for network idle after project load...');
-    await page.waitForNetworkIdle({ idleTime: 750, timeout: 25000 });
-    console.log('[Puppeteer] Network is idle.');
+    // Create output directory if it doesn't exist
+    await fsPromises.mkdir(outputDirectory, { recursive: true });
 
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    console.log('[Puppeteer] Additional 2.5s delay complete.');
-
-    // Inject CSS to force the canvas to the top-left and remove margin before screenshot
-    await page.evaluate(() => {
-      const canvas = document.getElementById('comic-canvas');
-      if (canvas) {
-        // Hide all siblings of the canvas
-        Array.from(document.body.children).forEach(child => {
-          if (child !== canvas && !child.contains(canvas)) {
-            child.style.display = 'none';
-          }
-        });
-        // Make sure the canvas is on top
-        canvas.style.margin = '0';
-        canvas.style.left = '0';
-        canvas.style.right = 'auto';
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.zIndex = '9999';
-        canvas.style.background = 'white'; // or your desired background
-      }
+    // Initialize PDF document
+    const pdfDoc = new PDFDocument({
+      size: [700, 700],
+      margin: 0
     });
-    console.log('[Puppeteer] Hid all UI except #comic-canvas and forced it to top-left for screenshot.');
+    const pdfPath = path.join(outputDirectory, 'comic.pdf');
+    const writeStream = fs.createWriteStream(pdfPath);
+    pdfDoc.pipe(writeStream);
 
-    console.log(`[Puppeteer] Final check for #comic-canvas readiness...`);
-    await page.waitForFunction(() => {
-        const canvas = document.getElementById('comic-canvas');
-        if (!canvas) return false;
-        const rect = canvas.getBoundingClientRect();
-        if (!(rect.width > 0 && rect.height > 0)) return false;
-        const panels = canvas.querySelectorAll('.comic-panel');
-        if (panels.length > 0) {
-            const firstPanel = panels[0];
-            const firstPanelImage = firstPanel.querySelector('img');
-            if (firstPanelImage) {
-                return firstPanelImage.complete && firstPanelImage.naturalWidth > 0;
-            }
-            return true; 
+    // Process each page
+    for (let pageIndex = 0; pageIndex < projectState.pages.length; pageIndex++) {
+      console.log(`[Puppeteer] Processing page ${pageIndex + 1} of ${projectState.pages.length}`);
+
+      // Load the page and ensure it's fully rendered
+      await page.evaluate(async (index) => {
+        await window.comicCreator.navigateToPage(index, true);
+        
+        // Force a redraw and wait for all elements
+        const canvas = document.querySelector('#comic-canvas');
+        if (canvas) {
+          canvas.style.display = 'none';
+          canvas.offsetHeight;
+          canvas.style.display = 'block';
+          
+          // Wait for all images in the canvas to load
+          const images = Array.from(canvas.querySelectorAll('img'));
+          await Promise.all(images.map(img => {
+            if (img.complete) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+            });
+          }));
         }
-        return document.readyState === 'complete';
-      },
-      { timeout: 25000 }
-    );
-    console.log(`[Puppeteer] #comic-canvas is confirmed ready.`);
+        
+        // Additional wait for rendering
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }, pageIndex);
 
-    const canvasElement = await page.$('#comic-canvas');
-    if (!canvasElement) throw new Error('#comic-canvas not found after all waits');
+      // Get the exact bounding box
+      const boundingBox = await page.evaluate(() => {
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) return null;
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: Math.round(rect.left),
+          y: Math.round(rect.top),
+          width: 700,
+          height: 700
+        };
+      });
 
-    const boundingBox = await canvasElement.boundingBox();
-    console.log('[Puppeteer] #comic-canvas bounding box after CSS injection:', boundingBox);
-    if (!boundingBox || boundingBox.width === 0 || boundingBox.height === 0) {
-        console.warn('[Puppeteer] #comic-canvas has no dimensions. Screenshot might be empty.');
+      if (!boundingBox) {
+        throw new Error('Could not find #comic-canvas for screenshot.');
+      }
+
+      // Take the screenshot
+      const screenshot = await page.screenshot({
+        clip: boundingBox,
+        omitBackground: false,
+        type: 'png'
+      });
+
+      // Add to PDF
+      if (pageIndex > 0) {
+        pdfDoc.addPage({
+          size: [700, 700],
+          margin: 0
+        });
+      }
+      
+      pdfDoc.image(screenshot, 0, 0, {
+        width: 700,
+        height: 700,
+        align: 'center',
+        valign: 'center'
+      });
+
+      console.log(`[Puppeteer] Successfully captured page ${pageIndex + 1}`);
     }
-    
-    await canvasElement.scrollIntoViewIfNeeded?.();
-    await new Promise(resolve => setTimeout(resolve, 200));
-    console.log('[Puppeteer] Brief 200ms delay after scroll complete.');
 
-    const clip = boundingBox ? {
-        x: boundingBox.x,
-        y: boundingBox.y,
-        width: Math.max(1, boundingBox.width),
-        height: Math.max(1, boundingBox.height)
-    } : undefined;
-
-    const fullPageScreenshotPath = path.join(outputDirectory, 'fullpage_diagnostic.png');
-    await page.screenshot({ path: fullPageScreenshotPath, fullPage: true });
-    console.log(`[Puppeteer] Full page diagnostic screenshot saved: ${fullPageScreenshotPath}`);
-
-    await fs.mkdir(outputDirectory, { recursive: true });
-    const screenshotPath = path.join(outputDirectory, 'page.png');
-    console.log(`[Puppeteer] Taking screenshot of #comic-canvas (element) to ${screenshotPath}...`);
-    await canvasElement.screenshot({ path: screenshotPath }); 
-    console.log(`[Puppeteer] Screenshot of #comic-canvas saved.`);
-
-    return { success: true, imagePath: screenshotPath };
+    // Finalize PDF
+    return new Promise((resolve, reject) => {
+      writeStream.on('finish', () => {
+        resolve({
+          pdfPath,
+          pageCount: projectState.pages.length
+        });
+      });
+      writeStream.on('error', reject);
+      pdfDoc.end();
+    });
 
   } catch (error) {
-    console.error('[Puppeteer] Error during page capture:', error.message, error.stack);
-    // Also take a full page screenshot on error for diagnostics
+    console.error('[Puppeteer] Error during export:', error);
     try {
-        const errorScreenshotPath = path.join(outputDirectory || '.', 'error_page_diagnostic.png');
-        await page.screenshot({ path: errorScreenshotPath, fullPage: true });
-        console.log(`[Puppeteer] Error diagnostic screenshot saved: ${errorScreenshotPath}`);
-    } catch (se) {
-        console.error('[Puppeteer] Could not take error screenshot:', se);
+      const errorScreenshot = await page.screenshot({ fullPage: true });
+      const errorScreenshotPath = path.join(outputDirectory, 'error-screenshot.png');
+      await fsPromises.writeFile(errorScreenshotPath, errorScreenshot);
+      console.log(`[Puppeteer] Error screenshot saved to: ${errorScreenshotPath}`);
+    } catch (screenshotError) {
+      console.error('[Puppeteer] Failed to save error screenshot:', screenshotError);
     }
-    return { success: false, error: error.message };
+    throw error;
   } finally {
-    console.log(`[Puppeteer] Closing browser...`);
     await browser.close();
-    console.log(`[Puppeteer] Browser closed.`);
   }
 }
 
-// This export will be used by the Vite middleware
 export { capturePageAsImage }; 
