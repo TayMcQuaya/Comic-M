@@ -4938,9 +4938,10 @@ input[type="color"] {
 /* Export Progress Indicator Styles */
 .export-progress-indicator {
     position: fixed;
-    bottom: 20px;
+    /* bottom: 20px; */ /* Removed bottom positioning */
+    top: 50%; /* Added top 50% for vertical centering */
     left: 50%;
-    transform: translateX(-50%); /* Center horizontally */
+    transform: translate(-50%, -50%); /* Adjusted transform for both X and Y centering */
     background-color: var(--card-bg);
     color: var(--text-color);
     padding: 15px 25px;
@@ -4960,7 +4961,7 @@ input[type="color"] {
 .export-progress-indicator.show {
     display: block;
     opacity: 1;
-    transform: translateX(-50%) translateY(0); /* Slide in from bottom slightly */
+    /* transform: translateX(-50%) translateY(0); */ /* Old transform for show state, will be covered by the main one now */
 }
 
 .export-progress-indicator .progress-text {
