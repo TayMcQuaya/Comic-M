@@ -682,22 +682,25 @@ class ComicCreator {
 
         // Update download button event listener
         document.querySelector('#download-btn')?.addEventListener('click', async () => {
-            console.log('[Frontend] Download button clicked, requesting PDF export...');
+            console.log('[Frontend] Download button clicked, initiating PDF export job...');
             
-            // Show loading indicator
-            const loadingIndicator = document.createElement('div');
-            loadingIndicator.className = 'loading-indicator';
-            loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
-            document.body.appendChild(loadingIndicator);
+            let jobId = null; // To store the job ID for polling and download
+            let progressInterval = null; // To store the interval ID for polling
+
+            // Use UIManager to show initial progress
+            this.uiManager.showExportProgress('Starting PDF export...', 0);
 
             try {
                 // Get the current project state
                 const projectState = await this.getCurrentProjectState();
                 if (!projectState) {
+                    this.uiManager.hideExportProgress();
+                    this.uiManager.showNotification('Could not retrieve project state for export.', 'error');
                     throw new Error('Could not retrieve project state for export.');
                 }
 
-                const response = await fetch('/api/export-pdf', {
+                // 1. Initiate the export job
+                const initiateResponse = await fetch('/api/export-pdf', { // Updated endpoint
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -705,54 +708,92 @@ class ComicCreator {
                     body: JSON.stringify(projectState),
                 });
 
-                if (!response.ok) {
-                    let errorMsg = `Error generating PDF: ${response.status} ${response.statusText}`;
+                if (initiateResponse.status !== 202) { // 202 Accepted indicates job started
+                    let errorMsg = `Error starting PDF export job: ${initiateResponse.status} ${initiateResponse.statusText}`;
                     try {
-                        const errDetails = await response.json();
-                        errorMsg += ` - ${errDetails.error || 'Unknown server error'}`;
+                        const errDetails = await initiateResponse.json();
+                        errorMsg += ` - ${errDetails.message || errDetails.error || 'Unknown server error'}`;
                     } catch (e) { /* Ignore if error response is not JSON */ }
+                    this.uiManager.hideExportProgress();
+                    this.uiManager.showNotification(errorMsg, 'error');
                     throw new Error(errorMsg);
                 }
 
-                // Get the PDF blob
-                const blob = await response.blob();
-                
-                // Get filename from Content-Disposition header or use default
-                const disposition = response.headers.get('content-disposition');
-                let filename = 'comic.pdf';
-                if (disposition && disposition.indexOf('attachment') !== -1) {
-                    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
-                    const matches = filenameRegex.exec(disposition);
-                    if (matches != null && matches[1]) {
-                        filename = matches[1].replace(/['"]/g, '');
-                    }
-                }
+                const jobDetails = await initiateResponse.json();
+                jobId = jobDetails.jobId;
+                const totalPages = jobDetails.totalPages;
 
-                // Create download link
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = filename;
-                
-                // Trigger download
-                document.body.appendChild(a);
-                a.click();
-                
-                // Clean up
-                window.URL.revokeObjectURL(url);
-                a.remove();
-                
-                console.log('[Frontend] PDF download initiated.');
-                this.uiManager.showNotification('PDF generated successfully!', 'success');
+                console.log(`[Frontend] PDF Export job started. Job ID: ${jobId}, Total Pages: ${totalPages}`);
+                this.uiManager.showExportProgress('Processing page 1...', 0, totalPages);
+
+                // 2. Poll for progress
+                progressInterval = setInterval(async () => {
+                    if (!jobId) {
+                        clearInterval(progressInterval);
+                        return;
+                    }
+
+                    try {
+                        const progressResponse = await fetch(`/api/export-progress/${jobId}`); // Updated endpoint
+                        if (!progressResponse.ok) {
+                            // Stop polling on server error during progress check
+                            clearInterval(progressInterval);
+                            this.uiManager.showNotification(`Error checking export progress: ${progressResponse.statusText}`, 'error');
+                            this.uiManager.updateExportProgress('Error checking progress.', 0, totalPages, true);
+                            return;
+                        }
+
+                        const progressData = await progressResponse.json();
+                        const percentage = totalPages > 0 ? Math.round((progressData.currentPage / totalPages) * 100) : 0;
+                        
+                        console.log(`[Frontend] Progress for Job ID ${jobId}: Status: ${progressData.status}, CurrentPage: ${progressData.currentPage}, TotalPages: ${totalPages}, Percentage: ${percentage}%`);
+
+                        if (progressData.status === 'processing') {
+                            this.uiManager.updateExportProgress(`Processing page ${progressData.currentPage} of ${totalPages}...`, percentage, totalPages);
+                        } else if (progressData.status === 'complete') {
+                            clearInterval(progressInterval);
+                            this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages);
+                            console.log(`[Frontend] Job ${jobId} complete. Final PDF Path: ${progressData.finalPdfPath}`);
+                            
+                            // 3. Download the PDF
+                            // Using window.location.href is a simple way to trigger download
+                            window.location.href = `/api/download-pdf/${jobId}`; // Updated endpoint
+                            
+                            // Hide progress after a delay
+                            setTimeout(() => {
+                                this.uiManager.hideExportProgress();
+                                this.uiManager.showNotification('PDF download initiated!', 'success');
+                            }, 3000); // 3 seconds delay
+
+                        } else if (progressData.status === 'error') {
+                            clearInterval(progressInterval);
+                            const errorMessage = progressData.error || 'Unknown error during PDF generation.';
+                            console.error(`[Frontend] Job ${jobId} failed with error: ${errorMessage}`);
+                            this.uiManager.updateExportProgress(`Error: ${errorMessage}`, percentage, totalPages, true);
+                            // Optionally, keep the error message visible longer or require user dismissal
+                            // For now, it will be hidden by hideExportProgress if not handled differently.
+                            // setTimeout(() => this.uiManager.hideExportProgress(), 5000); 
+                        }
+                    } catch (pollError) {
+                        console.error('[Frontend] Error polling for PDF export progress:', pollError);
+                        clearInterval(progressInterval);
+                        this.uiManager.showNotification('Error polling for export progress. Please try again.', 'error');
+                        this.uiManager.hideExportProgress();
+                    }
+                }, 2000); // Poll every 2 seconds
 
             } catch (error) {
-                console.error('[Frontend] Error during PDF export:', error);
-                this.uiManager.showNotification(`Error generating PDF: ${error.message}`, 'error');
-            } finally {
-                // Remove loading indicator
-                loadingIndicator.remove();
+                console.error('[Frontend] Error during PDF export initiation:', error);
+                // UIManager notification for error is handled within the try block for specific errors
+                // If it reaches here, it's likely an unhandled exception or network issue early on.
+                if (jobId && progressInterval) clearInterval(progressInterval); // Ensure polling stops
+                this.uiManager.hideExportProgress(); // Ensure progress UI is hidden
+                if (!error.message.includes('server error') && !error.message.includes('PDF export job')) { // Avoid double notifications
+                    this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
+                }
             }
+            // Note: The 'finally' block with loadingIndicator.remove() is removed
+            // as UIManager now handles showing/hiding the progress display.
         });
 
         // Custom Layout Upload - File input listener

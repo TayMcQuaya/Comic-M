@@ -4,6 +4,29 @@ const puppeteer = require('puppeteer');
 const fs = require('fs-extra');
 const path = require('path');
 const { PDFDocument } = require('pdf-lib'); // Added for PDF merging
+const { v4: uuidv4 } = require('uuid'); // For generating unique job IDs
+
+// In-memory store for export job statuses
+const exportJobs = {};
+
+// Function to clean up old jobs (e.g., after a certain time)
+// Simple example: remove jobs older than 1 hour
+setInterval(() => {
+    const now = Date.now();
+    for (const jobId in exportJobs) {
+        if (exportJobs[jobId].status === 'complete' || exportJobs[jobId].status === 'error') {
+            if (now - (exportJobs[jobId].lastUpdated || 0) > 3600000) { // 1 hour
+                console.log(`[JobCleanup] Removing old job: ${jobId}`);
+                if (exportJobs[jobId].jobOutputDir && exportJobs[jobId].status !== 'error') { // Don't delete if error might be needed
+                    fs.remove(exportJobs[jobId].jobOutputDir)
+                        .then(() => console.log(`[JobCleanup] Cleaned up job output directory: ${exportJobs[jobId].jobOutputDir} for job ${jobId}`))
+                        .catch(err => console.error(`[JobCleanup] Error cleaning up job output directory ${exportJobs[jobId].jobOutputDir} for job ${jobId}:`, err));
+                }
+                delete exportJobs[jobId];
+            }
+        }
+    }
+}, 60 * 60 * 1000); // Run every hour
 
 // Function to create a project state for a single page
 function createSinglePageProjectState(fullProjectState, pageIndexToExport) {
@@ -569,93 +592,154 @@ async function mergePdfs(pdfFilePaths, finalOutputPath) {
 
 export default function(router, comicCreatorUrl, outputDirBase) { // New ES Module export
 
-    router.post('/export-pdf', async (req, res) => { // Changed from '/api/export-pdf' to '/export-pdf'
+    router.post('/export-pdf', async (req, res) => {
         console.log('[Vite Server/PuppeteerModule] Received POST request for /export-pdf');
         const projectState = req.body;
+        const jobId = uuidv4();
+        const exportTimestamp = Date.now(); // Keep for unique folder naming
+        const jobOutputDir = path.join(outputDirBase, `export_${exportTimestamp}_${jobId}`); // Add jobId for more uniqueness
+        const tempPdfDir = path.join(jobOutputDir, 'temp_pages');
 
         if (!projectState || !projectState.pages || projectState.pages.length === 0) {
             console.error('[Vite Server] Invalid or empty project state received.');
             return res.status(400).send('Invalid or empty project state.');
         }
-        console.log(`[Vite Server] Parsed projectState from request body. Number of pages: ${projectState.pages.length}`);
+        
+        const totalPages = projectState.pages.length;
+        exportJobs[jobId] = {
+            id: jobId,
+            status: 'starting',
+            currentPage: 0,
+            totalPages: totalPages,
+            finalPdfPath: null,
+            jobOutputDir: jobOutputDir, // Store for potential cleanup
+            error: null,
+            lastUpdated: Date.now()
+        };
 
-        // Create a unique directory for this export job's temporary files
-        const exportTimestamp = Date.now();
-        const jobOutputDir = path.join(outputDirBase, `export_${exportTimestamp}`);
-        const tempPdfDir = path.join(jobOutputDir, 'temp_pages');
+        console.log(`[Vite Server] Job ${jobId} created. Total pages: ${totalPages}. Output dir: ${jobOutputDir}`);
+        // Respond to the client immediately that the job has started
+        res.status(202).json({ 
+            jobId: jobId,
+            message: 'PDF export process started.',
+            totalPages: totalPages 
+        });
 
-        try {
-            await fs.ensureDir(tempPdfDir); // Ensure temp directory for individual PDFs exists
-            console.log(`[Vite Server] Temporary directory for PDF pages: ${tempPdfDir}`);
-            
-            const individualPdfPaths = [];
-            const totalPages = projectState.pages.length;
-
-            for (let i = 0; i < totalPages; i++) {
-                console.log(`[Vite Server] Processing page ${i + 1} of ${totalPages}...`);
-                const singlePageProjectState = createSinglePageProjectState(projectState, i);
-                const tempPdfPath = path.join(tempPdfDir, `page_${i + 1}.pdf`);
-
-                console.log(`[Vite Server] Calling capturePageAsImage for page ${i + 1}... Output: ${tempPdfPath}`);
-                // Pass jobOutputDir as the base for capturePageAsImage, it might create subdirs like 'temp_export_images'
-                await capturePageAsImage(comicCreatorUrl, jobOutputDir, singlePageProjectState, tempPdfPath);
-                individualPdfPaths.push(tempPdfPath);
-                console.log(`[Vite Server] Successfully captured page ${i + 1} to ${tempPdfPath}`);
-            }
-
-            console.log('[Vite Server] All pages processed. Starting PDF merge...');
-            const finalPdfPath = path.join(jobOutputDir, 'comic_export_final.pdf');
-            await mergePdfs(individualPdfPaths, finalPdfPath);
-            console.log(`[Vite Server] Final PDF merged and saved to ${finalPdfPath}`);
-
-            // Clean up temporary individual PDF files
-            // await fs.remove(tempPdfDir); // Keep for debugging for now, or remove later
-            // console.log(`[Vite Server] Cleaned up temporary PDF pages directory: ${tempPdfDir}`);
-            
-            // Send the final PDF
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="comic_export_${exportTimestamp}.pdf"`);
-            const pdfFileStream = fs.createReadStream(finalPdfPath);
-            pdfFileStream.pipe(res);
-
-            pdfFileStream.on('end', async () => {
-                console.log('[Vite Server] Final PDF sent to client.');
-                // Optionally clean up the entire job directory after successful sending
-                try {
-                    await fs.remove(jobOutputDir);
-                    console.log(`[Vite Server] Cleaned up job output directory: ${jobOutputDir}`);
-                } catch (cleanupError) {
-                    console.error(`[Vite Server] Error cleaning up job output directory ${jobOutputDir}:`, cleanupError);
-                }
-            });
-            pdfFileStream.on('error', (err) => {
-                console.error('[Vite Server] Error streaming final PDF to client:', err);
-                // Don't try to send another response if headers already sent
-                if (!res.headersSent) {
-                    res.status(500).send('Error streaming PDF.');
-                }
-                // Consider cleanup here too, or mark for later cleanup
-            });
-
-        } catch (error) {
-            console.error('[Vite Server] Error processing /export-pdf POST request:', error);
-            // Attempt to clean up jobOutputDir on error as well
+        // Perform the PDF generation asynchronously
+        (async () => {
             try {
-                if (await fs.pathExists(jobOutputDir)) {
-                    await fs.remove(jobOutputDir);
-                    console.log(`[Vite Server] Cleaned up job output directory due to error: ${jobOutputDir}`);
+                exportJobs[jobId].status = 'processing';
+                exportJobs[jobId].lastUpdated = Date.now();
+                await fs.ensureDir(tempPdfDir);
+                console.log(`[Vite Server Job ${jobId}] Temporary directory for PDF pages: ${tempPdfDir}`);
+                
+                const individualPdfPaths = [];
+
+                for (let i = 0; i < totalPages; i++) {
+                    exportJobs[jobId].currentPage = i + 1;
+                    exportJobs[jobId].lastUpdated = Date.now();
+                    console.log(`[Vite Server Job ${jobId}] Processing page ${i + 1} of ${totalPages}...`);
+                    
+                    const singlePageProjectState = createSinglePageProjectState(projectState, i);
+                    const tempPdfPath = path.join(tempPdfDir, `page_${i + 1}.pdf`);
+
+                    console.log(`[Vite Server Job ${jobId}] Calling capturePageAsImage for page ${i + 1}... Output: ${tempPdfPath}`);
+                    await capturePageAsImage(comicCreatorUrl, jobOutputDir, singlePageProjectState, tempPdfPath);
+                    individualPdfPaths.push(tempPdfPath);
+                    console.log(`[Vite Server Job ${jobId}] Successfully captured page ${i + 1} to ${tempPdfPath}`);
                 }
-            } catch (cleanupError) {
-                console.error(`[Vite Server] Error cleaning up job output directory ${jobOutputDir} after main error:`, cleanupError);
+
+                console.log(`[Vite Server Job ${jobId}] All pages processed. Starting PDF merge...`);
+                const finalPdfPath = path.join(jobOutputDir, `comic_export_${exportTimestamp}.pdf`);
+                await mergePdfs(individualPdfPaths, finalPdfPath);
+                console.log(`[Vite Server Job ${jobId}] Final PDF merged and saved to ${finalPdfPath}`);
+
+                exportJobs[jobId].status = 'complete';
+                exportJobs[jobId].finalPdfPath = finalPdfPath;
+                exportJobs[jobId].lastUpdated = Date.now();
+
+                // Optionally clean up temporary individual PDF files after a short delay
+                // to ensure they are not needed by any download process.
+                setTimeout(async () => {
+                    try {
+                        if (await fs.pathExists(tempPdfDir)) {
+                            await fs.remove(tempPdfDir);
+                            console.log(`[Vite Server Job ${jobId}] Cleaned up temporary PDF pages directory: ${tempPdfDir}`);
+                        }
+                    } catch (cleanupError) {
+                        console.error(`[Vite Server Job ${jobId}] Error cleaning up temporary PDF pages directory ${tempPdfDir}:`, cleanupError);
+                    }
+                }, 30000); // 30 seconds delay
+
+            } catch (error) {
+                console.error(`[Vite Server Job ${jobId}] Error processing export:`, error);
+                exportJobs[jobId].status = 'error';
+                exportJobs[jobId].error = error.message || 'Unknown export error';
+                exportJobs[jobId].lastUpdated = Date.now();
+                // Cleanup jobOutputDir on error (optional, might want to keep for debugging)
+                // try {
+                //     if (await fs.pathExists(jobOutputDir)) {
+                //         await fs.remove(jobOutputDir);
+                //         console.log(`[Vite Server Job ${jobId}] Cleaned up job output directory due to error: ${jobOutputDir}`);
+                //     }
+                // } catch (cleanupError) {
+                //     console.error(`[Vite Server Job ${jobId}] Error cleaning up job output directory ${jobOutputDir} after main error:`, cleanupError);
+                // }
             }
-            
-            if (!res.headersSent) {
-                return res.status(500).send(`Error exporting PDF: ${error.message}`);
-            }
+        })(); // Immediately invoke the async function
+    });
+
+    // New endpoint to get progress
+    router.get('/export-progress/:jobId', (req, res) => {
+        const jobId = req.params.jobId;
+        const job = exportJobs[jobId];
+
+        if (job) {
+            res.json({
+                jobId: job.id,
+                status: job.status,
+                currentPage: job.currentPage,
+                totalPages: job.totalPages,
+                finalPdfPath: job.finalPdfPath, // Will be null until complete
+                error: job.error
+            });
+        } else {
+            res.status(404).send('Job not found.');
         }
     });
 
-    // You might have other routes or helper functions here
-    // For example, a function to get Puppeteer browser options
-    // function getPuppeteerLaunchOptions() { ... }
+    // New endpoint to download the PDF
+    router.get('/download-pdf/:jobId', async (req, res) => {
+        const jobId = req.params.jobId;
+        const job = exportJobs[jobId];
+
+        if (job && job.status === 'complete' && job.finalPdfPath) {
+            if (await fs.pathExists(job.finalPdfPath)) {
+                res.setHeader('Content-Type', 'application/pdf');
+                const filename = path.basename(job.finalPdfPath);
+                res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+                const pdfFileStream = fs.createReadStream(job.finalPdfPath);
+                
+                pdfFileStream.pipe(res);
+                pdfFileStream.on('error', (err) => {
+                    console.error(`[Vite Server Job ${jobId}] Error streaming PDF to client:`, err);
+                    if (!res.headersSent) {
+                        res.status(500).send('Error streaming PDF.');
+                    }
+                });
+                // Note: We might not clean up jobOutputDir immediately here, 
+                // as the job cleanup interval will handle it, or another mechanism.
+            } else {
+                console.error(`[Vite Server Job ${jobId}] Final PDF not found at path: ${job.finalPdfPath}`);
+                res.status(404).send('PDF file not found. It might have been cleaned up or an error occurred.');
+                 exportJobs[jobId].status = 'error'; // Mark as error if file is gone
+                 exportJobs[jobId].error = 'PDF file not found, possibly cleaned up.';
+                 exportJobs[jobId].lastUpdated = Date.now();
+            }
+        } else if (job) {
+            res.status(400).json({ message: 'Job not yet complete or has an error.', status: job.status, error: job.error });
+        } else {
+            res.status(404).send('Job not found.');
+        }
+    });
 };

@@ -363,4 +363,77 @@ export class UIManager {
             }
         });
     }
+
+    showExportProgress(message, percentage, totalPages) {
+        if (!this.exportProgressElement) {
+            this.exportProgressElement = document.createElement('div');
+            this.exportProgressElement.id = 'export-progress-indicator';
+            // Assign a class for CSS styling instead of inline styles
+            this.exportProgressElement.className = 'export-progress-indicator'; 
+            document.body.appendChild(this.exportProgressElement);
+        }
+        this.updateExportProgress(message, percentage, totalPages);
+        this.exportProgressElement.style.display = 'block'; // Or add a class to show
+        this.exportProgressElement.classList.add('show');
+    }
+
+    updateExportProgress(message, percentage, totalPages, isError = false) {
+        if (!this.exportProgressElement) {
+            this.showExportProgress(message, percentage, totalPages); // Create if not exists
+            if (isError) { // Ensure error styling is applied if created in this call
+                 this.exportProgressElement.classList.add('error');
+            }
+            return;
+        }
+
+        let progressText = message;
+        if (totalPages > 0 && percentage >= 0 && percentage <= 100 && !isError) {
+             progressText = `${message} (${percentage}%)`;
+        } else if (isError) {
+            // The message itself will contain the error details
+        }
+        
+        // Clear previous content
+        this.exportProgressElement.innerHTML = '';
+
+        const textElement = document.createElement('div');
+        textElement.className = 'progress-text';
+        textElement.innerHTML = progressText; // Use innerHTML to render styled error spans if any
+        this.exportProgressElement.appendChild(textElement);
+
+        if (totalPages > 0 && !isError) {
+            const progressBarContainer = document.createElement('div');
+            progressBarContainer.className = 'progress-bar-container';
+            
+            const progressBar = document.createElement('div');
+            progressBar.className = 'progress-bar';
+            progressBar.style.width = `${percentage}%`;
+            
+            progressBarContainer.appendChild(progressBar);
+            this.exportProgressElement.appendChild(progressBarContainer);
+        }
+
+        if (isError) {
+            this.exportProgressElement.classList.add('error');
+            this.exportProgressElement.classList.remove('success'); // Ensure success class is removed
+        } else if (percentage === 100) {
+            this.exportProgressElement.classList.add('success');
+            this.exportProgressElement.classList.remove('error');
+        } else {
+            this.exportProgressElement.classList.remove('error');
+            this.exportProgressElement.classList.remove('success');
+        }
+    }
+
+    hideExportProgress() {
+        if (this.exportProgressElement) {
+            this.exportProgressElement.style.display = 'none'; // Or remove a class
+            this.exportProgressElement.classList.remove('show');
+            this.exportProgressElement.classList.remove('error');
+            this.exportProgressElement.classList.remove('success');
+            // Optional: Remove the element if you don't want to reuse it
+            // this.exportProgressElement.remove();
+            // this.exportProgressElement = null;
+        }
+    }
 } 

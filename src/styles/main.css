@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&family=Creepster&family=Bowlby+One+SC&family=Bungee&family=Freckle+Face&family=Ceviche+One&family=Finger+Paint&family=Kablammo&family=Rubik+Puddles&family=Londrina+Sketch&family=Rock+Salt&display=swap');
+
 /* Google Fonts Integration - Moved to top of file */
 
 :root {
@@ -4932,3 +4934,77 @@ input[type="color"] {
 }
 
 /* Ensure no-bubble text elements don't show speech/thought bubble tails or other decorative elements */
+
+/* Export Progress Indicator Styles */
+.export-progress-indicator {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 15px 25px;
+    border-radius: 8px;
+    z-index: 1001;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    width: auto;
+    min-width: 300px; /* Minimum width */
+    max-width: 90%; /* Maximum width relative to viewport */
+    text-align: center;
+    display: none; /* Hidden by default */
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    border-top: 3px solid var(--primary-color);
+}
+
+.export-progress-indicator.show {
+    display: block;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0); /* Slide in from bottom slightly */
+}
+
+.export-progress-indicator .progress-text {
+    margin-bottom: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+}
+
+.export-progress-indicator .progress-bar-container {
+    width: 100%;
+    background-color: var(--input-bg);
+    border-radius: 5px;
+    overflow: hidden;
+    height: 12px; /* Slightly thicker bar */
+    border: 1px solid var(--border-color);
+}
+
+.export-progress-indicator .progress-bar {
+    background-color: var(--success-color);
+    height: 100%;
+    width: 0%; /* Starts at 0% */
+    border-radius: 4px; /* Inner bar radius */
+    transition: width 0.3s ease-in-out;
+}
+
+/* Error and Success states */
+.export-progress-indicator.error {
+    background-color: var(--danger-color);
+    color: var(--text-bright); /* Brighter text for error state */
+    border-top-color: var(--text-bright);
+}
+
+.export-progress-indicator.error .progress-text {
+    color: var(--text-bright);
+}
+
+.export-progress-indicator.success {
+    background-color: var(--success-color);
+    color: var(--background-color); /* Darker text for success state for contrast */
+    border-top-color: var(--background-color);
+}
+
+.export-progress-indicator.success .progress-text {
+    color: var(--background-color);
+}
+
+/* End of stylesheet */
