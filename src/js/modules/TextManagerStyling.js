@@ -684,11 +684,9 @@ export class TextManagerStyling {
                                 <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
                                 <label for="text-shadow">Text Shadow</label> <!-- Added label -->
                                 <div class="color-picker-container">
-                                    {/* Use imported function directly - now from TextManagerUtils */}
                                     <input type="color" id="shadow-color" value="${globalRgbToHex(this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowColor(textElement) : 'rgb(102,102,102)')}" ${!textElement.style.textShadow ? 'disabled' : ''}>
                                     <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${globalRgbToHex(this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowColor(textElement) : 'rgb(102,102,102)').toUpperCase()}</div>
                                 </div>
-                                {/* Add Shadow Offset and Blur Sliders */}
                                 <div class="shadow-sliders" ${!textElement.style.textShadow ? 'style="display: none;"' : ''}>
                                     <div class="slider-group">
                                         <label for="shadow-offset-x">X Offset</label>
@@ -703,19 +701,7 @@ export class TextManagerStyling {
                                     <div class="slider-group">
                                         <label for="shadow-blur">Blur</label>
                                         <input type="range" id="shadow-blur" class="shadow-blur" min="0" max="10" value="${this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowOffset(textElement).blur : 2}" step="1">
-                                        <span class="shadow-blur-value">${this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowOffset(textElement).blur : 2}px</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="opacity-control">
-                                <label>
-                                    <input type="checkbox" id="bubble-opacity" ${textBox.style.opacity === '0.5' ? 'checked' : ''}>
-                                    50% Opacity
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                                        <span class="shadow-blur-value">${this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowOffset(textElement).blur : 2}px</span>                                    </div>                                </div>                            </div>                        </div>                    </div>                </div>
                 
                 <div class="popup-section">
                     <h4>Position</h4>
@@ -1411,15 +1397,7 @@ export class TextManagerStyling {
             subtree: true
         });
 
-        const opacityCheckbox = popup.querySelector('#bubble-opacity');
-        opacityCheckbox.addEventListener('change', () => {
-            if (opacityCheckbox.checked) {
-                textBox.style.setProperty('--bubble-opacity', '0.5');
-            } else {
-                textBox.style.setProperty('--bubble-opacity', '1');
-            }
-            this.comicCreator.saveCurrentPageState();
-        });
+        
 
         const lineHeightSlider = popup.querySelector('#line-height');
         const lineHeightValue = popup.querySelector('.line-height-value');

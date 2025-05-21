@@ -80,12 +80,19 @@ export class TextManagerBubbleManipulation {
         deleteButton.innerHTML = '<i class="fas fa-times"></i>';
         deleteButton.title = 'Delete text';
         
+        // Add rotation handle
+        const rotationHandle = document.createElement('div');
+        rotationHandle.className = 'rotation-handle';
+        rotationHandle.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        rotationHandle.title = 'Drag to rotate, double-click to reset rotation';
+        
         // Append elements
         textContainer.appendChild(textElement);
         textContainer.appendChild(dragHandle);
         textContainer.appendChild(resizeHandle);
         textContainer.appendChild(formatButton);
         textContainer.appendChild(deleteButton);
+        textContainer.appendChild(rotationHandle);
         panel.appendChild(textContainer);
         
         // Make draggable (via ComicCreator)
@@ -118,6 +125,9 @@ export class TextManagerBubbleManipulation {
             }
         });
         
+        // Setup rotation handle functionality
+        this.setupRotationHandle(rotationHandle, textContainer);
+        
         // Setup text selection
         textContainer.addEventListener('click', (e) => {
             // Avoid selecting if clicking internal controls or the text itself initially
@@ -125,7 +135,8 @@ export class TextManagerBubbleManipulation {
                 !e.target.closest('.format-text-btn') && 
                 !e.target.closest('.resize-handle') && 
                 !e.target.closest('.delete-text-btn') &&
-                !e.target.closest('.drag-handle')) { 
+                !e.target.closest('.drag-handle') &&
+                !e.target.closest('.rotation-handle')) { 
                 this.selectTextBox(textContainer); // Call internal method
                 
                 // Prevent the event from propagating to avoid deselection by canvas click
@@ -235,6 +246,12 @@ export class TextManagerBubbleManipulation {
         deleteButton.className = 'delete-text-btn';
         deleteButton.innerHTML = '<i class="fas fa-times"></i>';
         deleteButton.title = 'Delete text';
+        
+        // Add rotation handle
+        const rotationHandle = document.createElement('div');
+        rotationHandle.className = 'rotation-handle';
+        rotationHandle.innerHTML = '<i class="fas fa-sync-alt"></i>';
+        rotationHandle.title = 'Drag to rotate, double-click to reset rotation';
 
         // Append elements
         textContainer.appendChild(textElement);
@@ -242,6 +259,7 @@ export class TextManagerBubbleManipulation {
         textContainer.appendChild(resizeHandle);
         textContainer.appendChild(formatButton);
         textContainer.appendChild(deleteButton);
+        textContainer.appendChild(rotationHandle);
         canvas.appendChild(textContainer); // Append directly to canvas
 
         // Make draggable (via ComicCreator)
@@ -249,6 +267,9 @@ export class TextManagerBubbleManipulation {
 
         // Make resizable (via ComicCreator)
         this.comicCreator.dragAndDropManager.makeTextResizable(textContainer, resizeHandle);
+        
+        // Setup rotation handle functionality
+        this.setupRotationHandle(rotationHandle, textContainer);
 
         // Setup delete functionality (same as addTextToPanel)
         deleteButton.addEventListener('click', () => {
@@ -275,7 +296,8 @@ export class TextManagerBubbleManipulation {
                 !e.target.closest('.format-text-btn') && 
                 !e.target.closest('.resize-handle') && 
                 !e.target.closest('.delete-text-btn') &&
-                !e.target.closest('.drag-handle')) {
+                !e.target.closest('.drag-handle') &&
+                !e.target.closest('.rotation-handle')) {
                 this.selectTextBox(textContainer); // Call internal method
                 e.stopPropagation();
             }
@@ -370,5 +392,116 @@ export class TextManagerBubbleManipulation {
         this.currentTextBox = null;
         this.comicCreator.deselectAll(); // Ensure sidebar updates
         this.comicCreator.saveCurrentPageState();
+    }
+
+    // Add this new method for rotation functionality
+    setupRotationHandle(rotationHandle, textBox) {
+        let isDragging = false;
+        let startAngle = 0;
+        let rotationValue = 0;
+        
+        // Function to get current rotation from transform style
+        const getRotationValue = () => {
+            const transform = textBox.style.transform;
+            const rotateMatch = transform.match(/rotate\(([-0-9.]+)deg\)/);
+            return rotateMatch ? parseFloat(rotateMatch[1]) : 0;
+        };
+        
+        // Function to calculate angle between points
+        const calculateAngle = (cx, cy, px, py) => {
+            const x = px - cx;
+            const y = py - cy;
+            return Math.atan2(y, x) * (180 / Math.PI);
+        };
+        
+        // Double-click to reset rotation
+        rotationHandle.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Reset rotation to 0
+            textBox.style.transform = textBox.style.transform.replace(/rotate\([^)]*\)/, 'rotate(0deg)');
+            rotationValue = 0;
+            
+            // Update UI
+            const rotationSlider = document.querySelector('#rotation');
+            const rotationValueDisplay = document.querySelector('.rotation-value');
+            if (rotationSlider && rotationValueDisplay) {
+                rotationSlider.value = 0;
+                rotationValueDisplay.textContent = '0°';
+            }
+            
+            // Save state
+            this.comicCreator.saveCurrentPageState();
+        });
+        
+        // Mouse down on rotation handle
+        rotationHandle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Get current rotation value
+            rotationValue = getRotationValue();
+            
+            // Calculate center of the text box
+            const rect = textBox.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            // Calculate starting angle
+            startAngle = calculateAngle(centerX, centerY, e.clientX, e.clientY) - rotationValue;
+            
+            isDragging = true;
+            
+            // Add event listeners for dragging
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+        
+        // Handle mouse movement during rotation
+        const handleMouseMove = (e) => {
+            if (!isDragging) return;
+            
+            // Calculate center point
+            const rect = textBox.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            // Calculate current angle
+            const currentAngle = calculateAngle(centerX, centerY, e.clientX, e.clientY);
+            
+            // Calculate new rotation value
+            rotationValue = currentAngle - startAngle;
+            
+            // Constrain the rotation value between -180 and 180
+            if (rotationValue > 180) rotationValue -= 360;
+            if (rotationValue < -180) rotationValue += 360;
+            
+            // Update text box rotation
+            const transformWithoutRotate = textBox.style.transform.replace(/\s*rotate\([^)]*\)/, '');
+            textBox.style.transform = `${transformWithoutRotate} rotate(${rotationValue}deg)`.trim();
+            
+            // Update rotation slider and value in the popup if it's open
+            const rotationSlider = document.querySelector('#rotation');
+            const rotationValueDisplay = document.querySelector('.rotation-value');
+            if (rotationSlider && rotationValueDisplay) {
+                rotationSlider.value = rotationValue;
+                rotationValueDisplay.textContent = `${Math.round(rotationValue)}°`;
+            }
+        };
+        
+        // Handle mouse up after rotation
+        const handleMouseUp = () => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            
+            // Remove event listeners
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            
+            // Save state
+            this.comicCreator.saveCurrentPageState();
+        };
     }
 } 
