@@ -57,7 +57,7 @@ export default defineConfig({
         const app = express(); // Create an mini express app
         
         // Enable JSON body parsing for this mini-app, as puppeteer-export expects req.body
-        app.use(express.json({ limit: '200mb' })); // Set a large limit, same as before potentially
+        app.use(express.json({ limit: '500mb' })); // Set a large limit, same as before potentially
 
         configurePuppeteerExport(app, comicCreatorUrl, outputDirBase); // Pass the express app as the router
 
