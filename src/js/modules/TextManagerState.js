@@ -41,23 +41,30 @@ export class TextManagerState {
                 const tailPositionClass = Array.from(textBubble.classList)
                     .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
 
-                // Get the computed style for positioning and bubble properties
                 const computedStyle = window.getComputedStyle(textBubble);
                 const textComputedStyle = window.getComputedStyle(textElement);
                 
-                // Store the current position values directly
-                const currentLeft = textBubble.style.left;
-                const currentTop = textBubble.style.top;
+                let finalWidth = textBubble.style.width;
+                let finalHeight = textBubble.style.height;
+
+                if (!finalWidth || !finalWidth.endsWith('px')) {
+                    finalWidth = computedStyle.width;
+                }
+                if (!finalHeight || !finalHeight.endsWith('px')) {
+                    finalHeight = computedStyle.height;
+                }
                 
-                // Only calculate exact position if current position is not explicitly set
-                let exactLeft = currentLeft;
-                let exactTop = currentTop;
+                const currentStyleLeft = textBubble.style.left; // Capture direct style.left
+                const currentStyleTop = textBubble.style.top;   // Capture direct style.top
                 
-                if (!currentLeft || !currentTop || currentLeft === 'auto' || currentTop === 'auto') {
+                let exactLeftForOriginalPos = currentStyleLeft;
+                let exactTopForOriginalPos = currentStyleTop;
+                
+                if (!exactLeftForOriginalPos || !exactTopForOriginalPos || exactLeftForOriginalPos === 'auto' || exactTopForOriginalPos === 'auto') {
                     const bubbleRect = textBubble.getBoundingClientRect();
                     const panelRect = panel.getBoundingClientRect();
-                    exactLeft = `${bubbleRect.left - panelRect.left}px`;
-                    exactTop = `${bubbleRect.top - panelRect.top}px`;
+                    exactLeftForOriginalPos = `${bubbleRect.left - panelRect.left}px`;
+                    exactTopForOriginalPos = `${bubbleRect.top - panelRect.top}px`;
                 }
                 
                 panelTexts.push({
@@ -68,18 +75,18 @@ export class TextManagerState {
                     tailSettings: textBubble.dataset.tailSettings || '',
                     positionGrid: textBubble.dataset.positionGrid || 'custom',
                     content: textElement.innerHTML,
-                    originalPosition: {
-                        left: exactLeft,
-                        top: exactTop,
-                        width: computedStyle.width,
-                        height: computedStyle.height
+                    originalPosition: { // Remains for reference, uses exactLeftForOriginalPos
+                        left: exactLeftForOriginalPos,
+                        top: exactTopForOriginalPos,
+                        width: finalWidth,
+                        height: finalHeight
                     },
                     style: {
-                        // Position and size from computed style
-                        left: exactLeft,
-                        top: exactTop,
-                        width: computedStyle.width,
-                        height: computedStyle.height,
+                        // Position and size directly from style or finalized values
+                        left: currentStyleLeft, // Use direct style.left
+                        top: currentStyleTop,   // Use direct style.top
+                        width: finalWidth,
+                        height: finalHeight,
                         transform: textBubble.style.transform || '',
                         
                         // Bubble properties from computed style
@@ -141,6 +148,16 @@ export class TextManagerState {
                     const exactLeft = bubbleRect.left - canvasRect.left;
                     const exactTop = bubbleRect.top - canvasRect.top;
                     
+                    let finalCanvasWidth = textBubble.style.width;
+                    let finalCanvasHeight = textBubble.style.height;
+    
+                    if (!finalCanvasWidth || !finalCanvasWidth.endsWith('px')) {
+                        finalCanvasWidth = window.getComputedStyle(textBubble).width;
+                    }
+                    if (!finalCanvasHeight || !finalCanvasHeight.endsWith('px')) {
+                        finalCanvasHeight = window.getComputedStyle(textBubble).height;
+                    }
+                    
                     canvasTextElements.push({
                         id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
@@ -149,18 +166,17 @@ export class TextManagerState {
                         tailSettings: textBubble.dataset.tailSettings || '',
                         positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                         content: textElement.innerHTML,
-                        // Store the exact computed position values to help with accurate restoration
                         originalPosition: {
                             left: `${exactLeft}px`,
                             top: `${exactTop}px`, 
-                            width: `${bubbleRect.width}px`,
-                            height: `${bubbleRect.height}px`
+                            width: finalCanvasWidth,
+                            height: finalCanvasHeight
                         },
                         style: {
                             left: textBubble.style.left,
                             top: textBubble.style.top,
-                            width: textBubble.style.width,
-                            height: textBubble.style.height,
+                            width: finalCanvasWidth,
+                            height: finalCanvasHeight,
                             transform: textBubble.style.transform,
                             backgroundColor: textBubble.style.backgroundColor,
                             bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color'),

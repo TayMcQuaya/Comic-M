@@ -55,7 +55,7 @@ function createSinglePageProjectState(fullProjectState, pageIndexToExport) {
             console.warn(`[SinglePageState] Image ID ${imageId} used on page ${pageIndexToExport} but not found in project images library.`);
         }
     });
-    
+
     // Retain all custom layouts, as they might be referenced by the page layout
     const customLayoutsToInclude = fullProjectState.customLayouts || [];
 
@@ -291,8 +291,8 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         } catch (e) {
             console.error('[Page Eval - Load] Error calling getPuppeteerProjectState or parsing its result:', e);
             return { success: false, error: `Error getting/parsing state: ${e.message}` };
-        }
-
+      }
+      
         if (!window.comicCreator) {
             console.error('[Page Eval - Load] window.comicCreator not found.');
             return { success: false, error: 'window.comicCreator not found' };
@@ -351,7 +351,7 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         const promises = images.map(img => {
             if (img.complete) return Promise.resolve();
             return new Promise((resolve, reject) => {
-                img.onload = resolve;
+              img.onload = resolve;
                 img.onerror = () => resolve(); // Resolve on error too, don't block indefinitely
             });
         });
@@ -414,29 +414,29 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     console.log('[Puppeteer] Temporarily hid non-canvas elements.');
 
     // Get the exact bounding box of the comic-canvas AFTER applying styles
-    const boundingBox = await page.evaluate(() => {
+      const boundingBox = await page.evaluate(() => {
         const canvas = document.querySelector('#comic-canvas');
         if (!canvas) return null;
         // Force a reflow to ensure styles are applied and dimensions are correct
         canvas.offsetHeight;
         const rect = canvas.getBoundingClientRect();
         return {
-            x: Math.round(rect.left),
-            y: Math.round(rect.top),
+          x: Math.round(rect.left),
+          y: Math.round(rect.top),
             // Use explicit 700x700 as per user request, but ensure rect.width/height are logged
             width: 700, // Forcing to 700 as requested
             height: 700, // Forcing to 700 as requested
             actualWidth: Math.round(rect.width),
             actualHeight: Math.round(rect.height)
         };
-    });
+      });
 
-    if (!boundingBox) {
+      if (!boundingBox) {
         console.error('[Puppeteer] Could not find #comic-canvas for bounding box after style changes.');
         // Attempt to restore styles before throwing error
         await page.evaluate(() => { /* ... style restoration logic ... */ });
         throw new Error('Could not find #comic-canvas for screenshot bounding box.');
-    }
+      }
     console.log(`[Puppeteer] Canvas bounding box for PDF: x=${boundingBox.x}, y=${boundingBox.y}, width=${boundingBox.width}, height=${boundingBox.height}. Actual on-page w/h: ${boundingBox.actualWidth}x${boundingBox.actualHeight}`);
 
     // const tempImageDir = path.join(outputDirectory, 'temp_export_images'); // Not used for PDF
@@ -529,10 +529,10 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
   } finally {
     if (browser) {
       console.log('[Puppeteer] Closing browser...');
-      await browser.close();
+    await browser.close();
       console.log('[Puppeteer] Browser closed.');
-    }
   }
+}
 }
 
 async function mergePdfs(pdfFilePaths, finalOutputPath) {

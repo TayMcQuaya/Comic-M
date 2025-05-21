@@ -173,39 +173,46 @@ export class TextManagerUtils {
      * @param {Object} textState - The saved state for the text bubble.
      */
     finalizeTextBubblePosition(textBubble, textState) {
-        // Skip if there's no originalPosition data
-        if (!textState.originalPosition) return;
+        // Skip if there's no style data or essential position data in style
+        if (!textState || !textState.style || textState.style.left == null || textState.style.top == null) {
+            console.warn(`TextManagerUtils.finalizeTextBubblePosition: Missing textState.style or essential position data for ${textBubble.id}. Using originalPosition as fallback or skipping.`);
+            // Fallback to originalPosition if style is insufficient but originalPosition exists
+            if (textState && textState.originalPosition && textState.originalPosition.left != null && textState.originalPosition.top != null) {
+                textBubble.style.left = textState.originalPosition.left;
+                textBubble.style.top = textState.originalPosition.top;
+                textBubble.style.width = textState.originalPosition.width;
+                textBubble.style.height = textState.originalPosition.height;
+                console.log(`TextManagerUtils.finalizeTextBubblePosition: Fallback to originalPosition for ${textBubble.id}`);
+            } else {
+                return; // Cannot proceed without sufficient position data
+            }
+        }
         
-        // Get the parent element
         const parentElement = textBubble.parentElement;
         if (!parentElement) return;
         
-        // Make sure we're using absolute positioning
         textBubble.style.position = 'absolute';
         
-        // Apply the original position directly from the saved state
-        textBubble.style.left = textState.originalPosition.left;
-        textBubble.style.top = textState.originalPosition.top;
+        // Apply position and dimensions primarily from textState.style
+        textBubble.style.left = textState.style.left;
+        textBubble.style.top = textState.style.top;
+        textBubble.style.width = textState.style.width;
+        textBubble.style.height = textState.style.height;
         
-        // Reset any additional spacing that might cause unwanted whitespace
         textBubble.style.margin = '0';
         textBubble.style.padding = textState.style.padding || '0';
         
-        // Extract any rotation value from the transform and preserve only that
         if (textState.style.transform) {
             const rotationMatch = textState.style.transform.match(/rotate\(([-\d.]+)deg\)/);
             if (rotationMatch) {
                 textBubble.style.transform = `rotate(${rotationMatch[1]}deg)`;
             } else {
-                textBubble.style.transform = '';
+                textBubble.style.transform = ''; // Clear transform if no rotation found
             }
+        } else {
+            textBubble.style.transform = ''; // Clear transform if not in state
         }
         
-        // Set precise size
-        textBubble.style.width = textState.originalPosition.width;
-        textBubble.style.height = textState.originalPosition.height;
-        
-        // Fix text content layout
         const textContent = textBubble.querySelector('.text-content');
         if (textContent) {
             textContent.style.margin = '0';
@@ -215,10 +222,10 @@ export class TextManagerUtils {
             textContent.style.display = 'inline-block';
             textContent.style.whiteSpace = 'pre-wrap';
             textContent.style.textRendering = 'geometricPrecision';
-            textContent.style.height = textState.originalPosition.height;
+            // Ensure text content height matches bubble height from style, not originalPosition
+            textContent.style.height = textState.style.height; 
         }
         
-        // Store the final position for debugging
-        console.log(`TextManagerUtils.finalizeTextBubblePosition: Fixed position of ${textBubble.id} to ${textBubble.style.left}, ${textBubble.style.top}`);
+        console.log(`TextManagerUtils.finalizeTextBubblePosition: Styled ${textBubble.id} to L:${textBubble.style.left}, T:${textBubble.style.top}, W:${textBubble.style.width}, H:${textBubble.style.height}`);
     }
 } 
