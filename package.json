@@ -10,7 +10,10 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.5.1",
+    "@ilovepdf/ilovepdf-nodejs": "^0.3.1",
+    "dotenv": "^16.0.3",
     "express": "^5.1.0",
+    "form-data": "^4.0.2",
     "fs-extra": "^11.3.0",
     "jspdf": "^2.5.1",
     "pdf-lib": "^1.17.1",

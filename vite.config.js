@@ -4,6 +4,10 @@ import configurePuppeteerExport from './src/server/puppeteer-export.js'; // New 
 import path from 'path';
 import fs from 'fs'; // fs-extra is used in puppeteer-export, but fs might still be needed here or can be removed if not.
 import express from 'express'; // Import express properly
+import { config } from 'dotenv'; // Add dotenv for environment variables
+
+// Load environment variables from .env file
+config();
 
 // Helper function to get the project root (where vite.config.js is)
 const projectRoot = process.cwd();

@@ -18,3 +18,4 @@ project_structure.py
 project_structure.txt
 temp/
 venv/
+.env

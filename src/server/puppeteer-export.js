@@ -1,10 +1,20 @@
 // This file will contain the Puppeteer logic for PDF export. 
 
-const puppeteer = require('puppeteer');
-const fs = require('fs-extra');
-const path = require('path');
-const { PDFDocument } = require('pdf-lib'); // Added for PDF merging
-const { v4: uuidv4 } = require('uuid'); // For generating unique job IDs
+import puppeteer from 'puppeteer';
+import fs from 'fs-extra';
+import path from 'path';
+import { PDFDocument } from 'pdf-lib'; // Added for PDF merging
+import { v4 as uuidv4 } from 'uuid'; // For generating unique job IDs
+import pdfCompressionService from './pdf-compression.js'; // Import compression service
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
+// Log environment variables status (without exposing the actual values)
+console.log('[PuppeteerExport] Environment check:');
+console.log('[PuppeteerExport] ILOVEPDF_PUBLIC_KEY exists:', !!process.env.ILOVEPDF_PUBLIC_KEY);
+console.log('[PuppeteerExport] ILOVEPDF_SECRET_KEY exists:', !!process.env.ILOVEPDF_SECRET_KEY);
 
 // In-memory store for export job statuses
 const exportJobs = {};
@@ -590,7 +600,7 @@ async function mergePdfs(pdfFilePaths, finalOutputPath) {
 // app.post('/api/export-pdf', async (req, res) => { ... });
 // For this example, I'll assume it's part of a router object passed to this module.
 
-export default function(router, comicCreatorUrl, outputDirBase) { // New ES Module export
+export default function configurePuppeteerExport(router, comicCreatorUrl, outputDirBase) {
 
     router.post('/export-pdf', async (req, res) => {
         console.log('[Vite Server/PuppeteerModule] Received POST request for /export-pdf');
@@ -612,6 +622,8 @@ export default function(router, comicCreatorUrl, outputDirBase) { // New ES Modu
             currentPage: 0,
             totalPages: totalPages,
             finalPdfPath: null,
+            compressedPdfPath: null, // Add compressed PDF path
+            compressionInfo: null, // Add compression statistics
             jobOutputDir: jobOutputDir, // Store for potential cleanup
             error: null,
             lastUpdated: Date.now()
@@ -654,12 +666,66 @@ export default function(router, comicCreatorUrl, outputDirBase) { // New ES Modu
                 await mergePdfs(individualPdfPaths, finalPdfPath);
                 console.log(`[Vite Server Job ${jobId}] Final PDF merged and saved to ${finalPdfPath}`);
 
-                exportJobs[jobId].status = 'complete';
-                exportJobs[jobId].finalPdfPath = finalPdfPath;
+                // Add PDF compression step
+                exportJobs[jobId].status = 'compressing';
+                exportJobs[jobId].lastUpdated = Date.now();
+                console.log(`[Vite Server Job ${jobId}] Starting PDF compression...`);
+                
+                const compressedPdfPath = path.join(jobOutputDir, `comic_export_compressed_${exportTimestamp}.pdf`);
+                // Define compression options here, e.g., from projectState.settings or a default
+                const compressionOptions = { 
+                    compression_level: projectState.settings?.pdfExport?.compressionLevel || 'recommended' 
+                }; 
+                console.log(`[Vite Server Job ${jobId}] Using compression options:`, compressionOptions);
+
+                const compressionResult = await pdfCompressionService.compressPDF(
+                    finalPdfPath, 
+                    compressedPdfPath,
+                    compressionOptions // Pass the options object
+                );
+                
+                // Store detailed compression info and update final path based on result
+                exportJobs[jobId].compressionInfo = {
+                    success: compressionResult.success,
+                    originalSize: compressionResult.originalSize,
+                    compressedSize: compressionResult.compressedSize,
+                    compressionRatio: compressionResult.compressionRatio,
+                    error: compressionResult.error,
+                    fallback_used: !!compressionResult.fallback_used,
+                    fallback_failed: !!compressionResult.fallback_failed,
+                    fallback_impossible: !!compressionResult.fallback_impossible
+                };
+
+                if (compressionResult.success) {
+                    exportJobs[jobId].finalPdfPath = compressedPdfPath;
+                    console.log(`[Vite Server Job ${jobId}] PDF compression successful. Compressed file: ${compressedPdfPath}`);
+                } else if (compressionResult.fallback_used) {
+                    exportJobs[jobId].finalPdfPath = compressedPdfPath; // This is now the path to the copied original file
+                    console.warn(`[Vite Server Job ${jobId}] PDF compression failed, but fallback to original file was successful. Path: ${compressedPdfPath}. Reason: ${compressionResult.error}`);
+                } else {
+                    // Fallback failed or was impossible, or another critical error occurred.
+                    // The job should be marked as an error, and we should not use compressedPdfPath.
+                    exportJobs[jobId].finalPdfPath = finalPdfPath; // Keep the uncompressed path as a last resort for download if it exists
+                    const criticalErrorMsg = `PDF compression failed critically: ${compressionResult.error}. Fallback impossible: ${!!compressionResult.fallback_impossible}, Fallback failed: ${!!compressionResult.fallback_failed}.`;
+                    console.error(`[Vite Server Job ${jobId}] ${criticalErrorMsg}`);
+                    // Update job status to error if compression and fallback both failed critically
+                    // Don't throw here to allow job status to be updated, but ensure error state is clear
+                    exportJobs[jobId].status = 'error';
+                    exportJobs[jobId].error = criticalErrorMsg;
+                    // No need to throw here, the error status will be picked up by the client
+                    // However, we will skip setting status to 'complete' later.
+                }
+                
+                // Only set to complete if not already in an error state from critical compression failure
+                if (exportJobs[jobId].status !== 'error') {
+                    exportJobs[jobId].status = 'complete';
+                    console.log(`[Vite Server Job ${jobId}] PDF processing (including compression attempt) completed.`);
+                } else {
+                    console.error(`[Vite Server Job ${jobId}] Job finished with an error state due to compression issues.`);
+                }
                 exportJobs[jobId].lastUpdated = Date.now();
 
                 // Optionally clean up temporary individual PDF files after a short delay
-                // to ensure they are not needed by any download process.
                 setTimeout(async () => {
                     try {
                         if (await fs.pathExists(tempPdfDir)) {
@@ -700,7 +766,18 @@ export default function(router, comicCreatorUrl, outputDirBase) { // New ES Modu
                 status: job.status,
                 currentPage: job.currentPage,
                 totalPages: job.totalPages,
-                finalPdfPath: job.finalPdfPath, // Will be null until complete
+                finalPdfPath: job.finalPdfPath, // Will be null until complete or point to compressed/original
+                // Ensure all relevant fields from job.compressionInfo are passed
+                compressionInfo: job.compressionInfo ? {
+                    success: job.compressionInfo.success,
+                    originalSize: job.compressionInfo.originalSize,
+                    compressedSize: job.compressionInfo.compressedSize,
+                    compressionRatio: job.compressionInfo.compressionRatio,
+                    error: job.compressionInfo.error,
+                    fallback_used: job.compressionInfo.fallback_used,
+                    fallback_failed: job.compressionInfo.fallback_failed,
+                    fallback_impossible: job.compressionInfo.fallback_impossible
+                } : null,
                 error: job.error
             });
         } else {
