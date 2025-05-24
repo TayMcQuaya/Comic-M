@@ -19,3 +19,4 @@ project_structure.txt
 temp/
 venv/
 .env
+comic_exports_output/
