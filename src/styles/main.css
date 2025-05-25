@@ -4879,74 +4879,98 @@ input[type="color"] {
 /* Export Progress Indicator Styles */
 .export-progress-indicator {
     position: fixed;
-    /* bottom: 20px; */ /* Removed bottom positioning */
-    top: 50%; /* Added top 50% for vertical centering */
+    top: 50%; /* Changed from bottom to top 50% */
     left: 50%;
-    transform: translate(-50%, -50%); /* Adjusted transform for both X and Y centering */
-    background-color: var(--card-bg);
-    color: var(--text-color);
+    transform: translate(-50%, -50%); /* Updated transform to center both vertically and horizontally */
+    background-color: #333;
+    color: white;
     padding: 15px 25px;
     border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     z-index: 1001;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    width: auto;
-    min-width: 300px; /* Minimum width */
-    max-width: 90%; /* Maximum width relative to viewport */
+    width: 90%;
+    max-width: 500px;
     text-align: center;
-    display: none; /* Hidden by default */
     opacity: 0;
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    border-top: 3px solid var(--primary-color);
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease; /* Removed bottom transition since we're not using it */
 }
 
 .export-progress-indicator.show {
-    display: block;
     opacity: 1;
-    /* transform: translateX(-50%) translateY(0); */ /* Old transform for show state, will be covered by the main one now */
+    visibility: visible;
+    /* bottom: 30px; */ /* REMOVE THIS LINE to allow centering */
 }
 
 .export-progress-indicator .progress-text {
     margin-bottom: 10px;
-    font-size: 1rem;
-    font-weight: bold;
+    font-size: 0.95em;
+    line-height: 1.4;
 }
 
 .export-progress-indicator .progress-bar-container {
     width: 100%;
-    background-color: var(--input-bg);
+    background-color: #555;
     border-radius: 5px;
-    overflow: hidden;
-    height: 12px; /* Slightly thicker bar */
-    border: 1px solid var(--border-color);
+    height: 12px;
+    overflow: hidden; /* Important for indeterminate animation */
 }
 
 .export-progress-indicator .progress-bar {
-    background-color: var(--success-color);
     height: 100%;
-    width: 0%; /* Starts at 0% */
-    border-radius: 4px; /* Inner bar radius */
-    transition: width 0.3s ease-in-out;
+    width: 0%; /* Default to 0% */
+    background-color: #4CAF50; /* Green for progress */
+    border-radius: 5px;
+    transition: width 0.2s ease-out;
 }
 
-/* Error and Success states */
-.export-progress-indicator.error {
-    background-color: var(--danger-color);
-    color: var(--text-bright); /* Brighter text for error state */
-    border-top-color: var(--text-bright);
+/* Indeterminate Progress Bar Styles */
+.export-progress-indicator .progress-bar.indeterminate {
+    width: 100% !important; /* Fill the container */
+    background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.2) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0.2) 75%,
+        transparent 75%,
+        transparent
+    );
+    background-size: 40px 40px; /* Size of the stripes */
+    animation: indeterminate-progress-animation 2s linear infinite;
 }
+
+@keyframes indeterminate-progress-animation {
+    0% {
+        background-position: 40px 0;
+    }
+    100% {
+        background-position: 0 0;
+    }
+}
+
 
 .export-progress-indicator.error .progress-text {
-    color: var(--text-bright);
+    color: #ffdddd; /* Lighter red for text on dark background */
 }
 
-.export-progress-indicator.success {
-    background-color: var(--success-color);
-    color: var(--background-color); /* Darker text for success state for contrast */
-    border-top-color: var(--background-color);
+.export-progress-indicator.error .progress-bar-container {
+    background-color: #773030; /* Darker red for error bar background */
+}
+
+.export-progress-indicator.error .progress-bar {
+    background-color: #f44336; /* Red for error progress */
+    width: 100%; /* Show full bar for error, but red */
 }
 
 .export-progress-indicator.success .progress-text {
-    color: var(--background-color);
+    color: #ddffdd; /* Lighter green for text */
 }
 
-/* End of stylesheet */
+.export-progress-indicator.success .progress-bar {
+    background-color: #4CAF50; /* Keep green for success */
+    width: 100%;
+}
+
+/* ... existing code ... */

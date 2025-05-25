@@ -415,7 +415,15 @@ export class UIManager {
             
             const progressBar = document.createElement('div');
             progressBar.className = 'progress-bar';
-            progressBar.style.width = `${percentage}%`;
+
+            // Apply/remove indeterminate style based on jobStatus
+            if (jobStatus === 'compressing') {
+                progressBar.classList.add('indeterminate');
+                progressBar.style.width = '100%'; // Indeterminate usually fills the bar
+            } else {
+                progressBar.classList.remove('indeterminate');
+                progressBar.style.width = `${percentage}%`;
+            }
             
             progressBarContainer.appendChild(progressBar);
             this.exportProgressElement.appendChild(progressBarContainer);

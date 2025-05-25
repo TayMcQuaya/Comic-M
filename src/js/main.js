@@ -754,7 +754,7 @@ class ComicCreator {
                             this.uiManager.updateExportProgress('Finalizing PDF creation...', 99, totalPages, false, 'merging'); // Pass status
                         } else if (progressData.status === 'compressing') {
                             // Add this block to handle the 'compressing' status
-                            this.uiManager.updateExportProgress('Compressing PDF... This may take a few minutes.', 100, totalPages, false, 'compressing'); // Pass status
+                            this.uiManager.updateExportProgress('Compressing PDF... This may take a few minutes.<br>Please be patient !', 100, totalPages, false, 'compressing'); // Pass status
                         } else if (progressData.status === 'complete') {
                             clearInterval(progressInterval);
                             this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete'); // Pass status
