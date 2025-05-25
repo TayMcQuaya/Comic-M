@@ -377,20 +377,28 @@ export class UIManager {
         this.exportProgressElement.classList.add('show');
     }
 
-    updateExportProgress(message, percentage, totalPages, isError = false) {
+    updateExportProgress(message, percentage, totalPages, isError = false, jobStatus = null) {
         if (!this.exportProgressElement) {
             this.showExportProgress(message, percentage, totalPages); // Create if not exists
             if (isError) { // Ensure error styling is applied if created in this call
                  this.exportProgressElement.classList.add('error');
             }
+            // If created here and it's a compressing status, ensure the right text is set
+            if (jobStatus === 'compressing') {
+                const textElement = this.exportProgressElement.querySelector('.progress-text');
+                if (textElement) textElement.innerHTML = message;
+            }
             return;
         }
 
         let progressText = message;
-        if (totalPages > 0 && percentage >= 0 && percentage <= 100 && !isError) {
+        // Only add percentage if not in 'compressing' status and other conditions are met
+        if (jobStatus !== 'compressing' && totalPages > 0 && percentage >= 0 && percentage <= 100 && !isError) {
              progressText = `${message} (${percentage}%)`;
         } else if (isError) {
-            // The message itself will contain the error details
+            // The message itself will contain the error details, no percentage needed
+        } else if (jobStatus === 'compressing') {
+            // Message is already set to progressText, no percentage needed
         }
         
         // Clear previous content

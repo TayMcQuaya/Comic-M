@@ -746,13 +746,18 @@ class ComicCreator {
                         const progressData = await progressResponse.json();
                         const percentage = totalPages > 0 ? Math.round((progressData.currentPage / totalPages) * 100) : 0;
                         
-                        console.log(`[Frontend] Progress for Job ID ${jobId}: Status: ${progressData.status}, CurrentPage: ${progressData.currentPage}, TotalPages: ${totalPages}, Percentage: ${percentage}%`);
+                        console.log(`[Frontend] Progress for Job ID ${jobId}: Status: ${progressData.status}, CurrentPage: ${progressData.currentPage}, TotalPages: ${totalPages}, Percentage: ${percentage}%`); // Around line 749
 
                         if (progressData.status === 'processing') {
                             this.uiManager.updateExportProgress(`Processing page ${progressData.currentPage} of ${totalPages}...`, percentage, totalPages);
+                        } else if (progressData.status === 'merging') { // Optional: Add handling for merging
+                            this.uiManager.updateExportProgress('Finalizing PDF creation...', 99, totalPages, false, 'merging'); // Pass status
+                        } else if (progressData.status === 'compressing') {
+                            // Add this block to handle the 'compressing' status
+                            this.uiManager.updateExportProgress('Compressing PDF... This may take a few minutes.', 100, totalPages, false, 'compressing'); // Pass status
                         } else if (progressData.status === 'complete') {
                             clearInterval(progressInterval);
-                            this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages);
+                            this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete'); // Pass status
                             console.log(`[Frontend] Job ${jobId} complete. Final PDF Path: ${progressData.finalPdfPath}`);
                             
                             // 3. Download the PDF

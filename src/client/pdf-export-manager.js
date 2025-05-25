@@ -15,6 +15,7 @@ export default class PdfExportManager {
         this.statusMessage = 'Idle';
         this.downloadUrl = null;
         this.currentJobId = null;
+        this.currentJobStatus = null;
     }
 
     async startExport(settings) {
@@ -68,13 +69,9 @@ export default class PdfExportManager {
             return new Promise((resolve, reject) => {
                 this.tracker = new PdfExportTracker(
                     this.currentJobId,
-                    (progressData) => { // onProgress
-                        this.progress = progressData.progress;
-                        this.statusMessage = progressData.status;
-                        if (this.ui) {
-                            this.ui.updateProgress(this.progress);
-                            this.ui.updateStatus(this.statusMessage);
-                        }
+                    (progress, jobStatus, data) => { // onProgress: Correctly accept 3 arguments
+                        // Directly call the main handleProgress method
+                        this.handleProgress(progress, jobStatus, data);
                     },
                     (result) => { // onComplete
                         this.handleExportComplete(result);
@@ -92,6 +89,42 @@ export default class PdfExportManager {
             this.handleExportError({ message: error.message || 'Unknown error starting export process' });
             return Promise.reject(error); // Propagate rejection
         }
+    }
+
+    handleProgress(progress, jobStatus, data = {}) {
+        console.log('[PdfExportManager.handleProgress] Received:', { progress, jobStatus, data }); // Log 1: What's coming in
+
+        this.currentJobStatus = jobStatus;
+        let statusMessage = '';
+        let displayProgress = progress;
+
+        if (jobStatus === 'generating') {
+            statusMessage = data.message || `Generating page ${data.currentPage || '?'} of ${data.totalPages || '?'}`;
+            console.log('[PdfExportManager.handleProgress] Condition: generating', { statusMessage, displayProgress, serverMessage: data.message });
+        } else if (jobStatus === 'merging') {
+            statusMessage = data.message || 'Finalizing PDF creation...';
+            console.log('[PdfExportManager.handleProgress] Condition: merging', { statusMessage, displayProgress, serverMessage: data.message });
+        } else if (jobStatus === 'compressing') {
+            statusMessage = 'Compressing PDF... This may take a few minutes. Please wait.';
+            displayProgress = 100; // Local PDF generation is done, show 100% for that part.
+            console.log('[PdfExportManager.handleProgress] Condition: compressing', { statusMessage, displayProgress, serverMessage: data.message }); // Key log
+        } else if (jobStatus === 'starting' || jobStatus === 'processing') {
+            statusMessage = data.message || `Processing export... (${jobStatus})`;
+            console.log('[PdfExportManager.handleProgress] Condition: starting/processing', { statusMessage, displayProgress, serverMessage: data.message });
+        } else if (data.message) { // Fallback if server sends a message for an unhandled status
+            statusMessage = data.message;
+            console.log('[PdfExportManager.handleProgress] Condition: data.message fallback', { statusMessage, displayProgress, serverMessage: data.message });
+        } else { // Ultimate fallback
+            statusMessage = `Current status: ${jobStatus} (${progress.toFixed(0)}%)`;
+            console.log('[PdfExportManager.handleProgress] Condition: final else fallback', { statusMessage, displayProgress });
+        }
+
+        if (this.ui) {
+            this.ui.updateProgress(displayProgress, statusMessage);
+            console.log('[PdfExportManager.handleProgress] UI updated with:', { displayProgress, statusMessage });
+        }
+        // The original, more concise log:
+        // console.log(`[PdfExportManager] Progress Update: ${displayProgress.toFixed(0)}%, Status: ${jobStatus}, UI Message: "${statusMessage}", ServerData:`, data);
     }
 
     handleExportComplete(data) {
