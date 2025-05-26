@@ -44,14 +44,28 @@ export class TextManagerState {
                 const computedStyle = window.getComputedStyle(textBubble);
                 const textComputedStyle = window.getComputedStyle(textElement);
                 
+                const panelWidth = panel.offsetWidth; // Define once for this panel
+                const panelHeight = panel.offsetHeight; // Define once for this panel
+                
                 let finalWidth = textBubble.style.width;
                 let finalHeight = textBubble.style.height;
 
+                // Ensure finalWidth and finalHeight are pixel values before conversion
                 if (!finalWidth || !finalWidth.endsWith('px')) {
-                    finalWidth = computedStyle.width;
+                    finalWidth = computedStyle.width; // This is a pixel value e.g., "150.34px"
                 }
                 if (!finalHeight || !finalHeight.endsWith('px')) {
-                    finalHeight = computedStyle.height;
+                    finalHeight = computedStyle.height; // This is a pixel value
+                }
+                
+                let savedWidthPercent = finalWidth; // Default to original if conversion fails
+                let savedHeightPercent = finalHeight;
+
+                if (finalWidth.endsWith('px') && panelWidth > 0) {
+                    savedWidthPercent = `${(parseFloat(finalWidth) / panelWidth) * 100}%`;
+                }
+                if (finalHeight.endsWith('px') && panelHeight > 0) {
+                    savedHeightPercent = `${(parseFloat(finalHeight) / panelHeight) * 100}%`;
                 }
                 
                 const currentStyleLeft = textBubble.style.left; // Capture direct style.left
@@ -71,8 +85,7 @@ export class TextManagerState {
                 let savedLeft = currentStyleLeft;
                 let savedTop = currentStyleTop;
 
-                const panelWidth = panel.offsetWidth;
-                const panelHeight = panel.offsetHeight;
+                // panelWidth and panelHeight are already defined above for this panel scope
 
                 if (currentStyleLeft && currentStyleLeft.includes('px') && panelWidth > 0) {
                     savedLeft = `${(parseFloat(currentStyleLeft) / panelWidth) * 100}%`;
@@ -111,15 +124,15 @@ export class TextManagerState {
                     originalPosition: { // This should ideally also be in percentages or clearly defined relative to what
                         left: savedLeft, // Storing calculated percent here for now
                         top: savedTop,   // Storing calculated percent here for now
-                        width: finalWidth,
-                        height: finalHeight
+                        width: savedWidthPercent,  // Store percentage width
+                        height: savedHeightPercent // Store percentage height
                     },
                     style: {
                         // Position and size directly from style or finalized values
                         left: savedLeft, // Ensure this is a percentage
                         top: savedTop,   // Ensure this is a percentage
-                        width: finalWidth,
-                        height: finalHeight,
+                        width: savedWidthPercent,  // Store percentage width
+                        height: savedHeightPercent, // Store percentage height
                         transform: textBubble.style.transform || '',
                         
                         // Bubble properties from computed style
@@ -181,11 +194,11 @@ export class TextManagerState {
                     const exactLeftPx = bubbleRect.left - canvasRect.left;
                     const exactTopPx = bubbleRect.top - canvasRect.top;
 
+                    const canvasWidth = canvas.offsetWidth; // Define once for this canvas text element section
+                    const canvasHeight = canvas.offsetHeight; // Define once for this canvas text element section
+
                     let savedCanvasLeft = textBubble.style.left;
                     let savedCanvasTop = textBubble.style.top;
-
-                    const canvasWidth = canvas.offsetWidth;
-                    const canvasHeight = canvas.offsetHeight;
 
                     // Convert style.left to percentage if it's pixels, or calculate if not set
                     if (textBubble.style.left && textBubble.style.left.includes('px') && canvasWidth > 0) {
@@ -210,11 +223,22 @@ export class TextManagerState {
                     let finalCanvasWidth = textBubble.style.width;
                     let finalCanvasHeight = textBubble.style.height;
     
+                    // Ensure finalCanvasWidth and finalCanvasHeight are pixel values before conversion
                     if (!finalCanvasWidth || !finalCanvasWidth.endsWith('px')) {
                         finalCanvasWidth = window.getComputedStyle(textBubble).width;
                     }
                     if (!finalCanvasHeight || !finalCanvasHeight.endsWith('px')) {
                         finalCanvasHeight = window.getComputedStyle(textBubble).height;
+                    }
+
+                    let savedCanvasWidthPercent = finalCanvasWidth;
+                    let savedCanvasHeightPercent = finalCanvasHeight;
+
+                    if (finalCanvasWidth.endsWith('px') && canvasWidth > 0) {
+                        savedCanvasWidthPercent = `${(parseFloat(finalCanvasWidth) / canvasWidth) * 100}%`;
+                    }
+                    if (finalCanvasHeight.endsWith('px') && canvasHeight > 0) {
+                        savedCanvasHeightPercent = `${(parseFloat(finalCanvasHeight) / canvasHeight) * 100}%`;
                     }
                     
                     canvasTextElements.push({
@@ -228,14 +252,14 @@ export class TextManagerState {
                         originalPosition: { // Store calculated percentages here too for consistency
                             left: savedCanvasLeft,
                             top: savedCanvasTop, 
-                            width: finalCanvasWidth,
-                            height: finalCanvasHeight
+                            width: savedCanvasWidthPercent,  // Store percentage width
+                            height: savedCanvasHeightPercent // Store percentage height
                         },
                         style: {
                             left: savedCanvasLeft, // Ensure this is a percentage
                             top: savedCanvasTop,   // Ensure this is a percentage
-                            width: finalCanvasWidth,
-                            height: finalCanvasHeight,
+                            width: savedCanvasWidthPercent,  // Store percentage width
+                            height: savedCanvasHeightPercent, // Store percentage height
                             transform: textBubble.style.transform,
                             backgroundColor: textBubble.style.backgroundColor,
                             bubbleBackgroundColor: textBubble.style.getPropertyValue('--bubble-background-color'),

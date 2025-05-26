@@ -716,14 +716,15 @@ class ComicCreator {
         if (downloadBtn) {
             downloadBtn.addEventListener('click', async () => {
                 console.log('[Main] Download button clicked. Prompting for filename...');
-                const filenameResult = await this.promptForFilename("MyComic", ".pdf"); // Default to .pdf, consistent with export
+                const filename = await this.promptForFilename("MyComic", ".pdf"); // Default to .pdf, consistent with export
 
-                if (!filenameResult || !filenameResult.filename) {
+                if (!filename) { 
                     console.log('[Main] Filename prompt cancelled or no filename entered.');
                     this.uiManager.showNotification('Export cancelled: No filename provided.', 'info');
                     return;
                 }
-                const comicName = filenameResult.filename;
+                // const comicName = filenameResult.filename; // No longer needed, filename is the string
+                const comicName = filename; // Use the filename directly
                 console.log(`[Main] Filename confirmed: ${comicName}. Initiating PDF export job...`);
                 
             this.uiManager.showExportProgress('Starting PDF export...', 0);
@@ -843,7 +844,7 @@ class ComicCreator {
                 } else if (progressData.status === 'merging') {
                     this.uiManager.updateExportProgress('Finalizing PDF...', 99, totalPages, false, 'merging');
                         } else if (progressData.status === 'compressing') {
-                    this.uiManager.updateExportProgress('Compressing PDF... This may take a moment.', 100, totalPages, false, 'compressing');
+                    this.uiManager.updateExportProgress('Compressing PDF... This may take a few minutes. <br>Please be patient.', 100, totalPages, false, 'compressing');
                         } else if (progressData.status === 'complete') {
                             clearInterval(progressInterval);
                     this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete');
@@ -1590,20 +1591,20 @@ class ComicCreator {
         console.log("[saveProject] Entered method. Timestamp:", Date.now());
 
         try {
-            // Prompt for filename
+        // Prompt for filename
             const filename = await this.promptForFilename("comic-project", ".json"); 
-            if (!filename) { 
-                console.log("Save project cancelled by user.");
+        if (!filename) {
+            console.log("Save project cancelled by user.");
                 this.uiManager.showNotification('Save cancelled: No filename provided.', 'info');
                 // this.isSavingProject = false; // Moved to finally
-                return; // Exit if user cancelled
-            }
+            return; // Exit if user cancelled
+        }
             // const filename = filenameResult.filename; // No longer needed, filename is already the string
 
-            // Force save current page state before exporting (including any new text elements)
-            console.log("Saving final page state before exporting project");
-            this.saveCurrentPageState();
-            
+        // Force save current page state before exporting (including any new text elements)
+        console.log("Saving final page state before exporting project");
+        this.saveCurrentPageState();
+        
             // Use getCurrentProjectState to get all data including dimensions and processed images
             const projectState = await this.getCurrentProjectState();
 
@@ -1611,24 +1612,24 @@ class ComicCreator {
                 this.uiManager.showNotification('Could not retrieve project state for saving.', 'error');
                 console.error("Failed to get project state in saveProject.");
                 // this.isSavingProject = false; // Moved to finally
-                return;
-            }
-            
-            // Create and trigger download
-            const blob = new Blob([JSON.stringify(projectState, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename; // Use the user-provided filename
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            return;
+        }
+        
+        // Create and trigger download
+        const blob = new Blob([JSON.stringify(projectState, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename; // Use the user-provided filename
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-            // --- Clear auto-save data after successful manual save ---
-            await this.autoSaveManager.clearAutoSave();
-            console.log("Manual save successful, cleared auto-save data.");
-            this.uiManager.showNotification("Project saved successfully!", "success");
+        // --- Clear auto-save data after successful manual save ---
+        await this.autoSaveManager.clearAutoSave();
+        console.log("Manual save successful, cleared auto-save data.");
+         this.uiManager.showNotification("Project saved successfully!", "success");
         } catch (error) {
             console.error("[saveProject] Error during save:", error);
             this.uiManager.showNotification("Error saving project.", "error");
@@ -2617,6 +2618,13 @@ class ComicCreator {
 
     async _loadProjectFromState(projectState) {
         console.log('[ComicCreator Headless] Loading project from state object...');
+
+        // Add the 'exporting' class to the body for Puppeteer-specific styling
+        if (window.IS_PUPPETEER_EXPORT) {
+            document.body.classList.add('exporting');
+            console.log('[ComicCreator Headless] Added "exporting" class to body.');
+        }
+
         // await this.autoSaveManager.clearAutoSave(); // AutoSaveManager calls this *before* _loadProjectFromState
         // this.autoSaveManager.stopAutoSaveTimer(); // AutoSaveManager also calls this
 

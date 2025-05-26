@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&family=Creepster&family=Bowlby+One+SC&family=Bungee&family=Freckle+Face&family=Ceviche+One&family=Finger+Paint&family=Kablammo&family=Rubik+Puddles&family=Londrina+Sketch&family=Rock+Salt&display=swap');
 
-/* Google Fonts Integration - Moved to top of file */
-
+/* Root variables for consistent styling */
 :root {
     /* Main theme colors - Manga/Comic inspired */
     --primary-color: #FF3B3B;      /* Vibrant red for emphasis */
@@ -4338,6 +4337,18 @@ input[type="color"] {
     outline: none !important;
 }
 
+body.exporting .comic-canvas-container {
+    height: auto !important; /* Allow container to grow with canvas */
+    min-height: var(--canvas-height) !important; /* Ensure it's at least as tall as the canvas */
+    align-items: center !important; /* Better for allowing canvas to define its height */
+    padding: 0 !important; /* Remove padding for screenshot accuracy if canvas is directly child */
+}
+
+body.exporting #comic-canvas {
+    margin: 0 auto !important; /* Center the canvas if container is now auto-height and wider */
+                               /* This assumes puppeteer-export.js will still handle top:0, left:0 for final capture */
+}
+
 .exporting .comic-panel {
     border: 3px solid #000 !important; /* Match the 3px border used in editor view */
     box-shadow: none !important;
@@ -5059,4 +5070,13 @@ input[type="color"] {
 
 #goToPage {
     margin-left: 3px;
+}
+
+.exporting .text-bubble * { /* Target all children within the text-bubble */
+    /* Force inheritance of font size, color etc. unless explicitly set on the text-content */
+    /* font-size: inherit !important; */ /* Potentially problematic if specific sizes are set - Commented out */
+    /* color: inherit !important; */ /* Commented out */
+    /* line-height: inherit !important; */ /* Commented out */
+    text-shadow: none !important; /* Remove editor-only text shadows */
+    -webkit-text-stroke: unset !important; /* Remove editor-only stroke */
 }

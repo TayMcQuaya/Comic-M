@@ -41,71 +41,49 @@ setInterval(() => {
 // Function to create a project state for a single page
 function createSinglePageProjectState(fullProjectState, pageIndexToExport) {
     console.log(`[SinglePageState] Creating state for page index: ${pageIndexToExport}`);
-    if (!fullProjectState || !fullProjectState.pages || pageIndexToExport < 0 || pageIndexToExport >= fullProjectState.pages.length) {
-        console.error('[SinglePageState] Invalid input or page index out of bounds.');
-        throw new Error('Invalid input for creating single page project state.');
+    const pageToExport = fullProjectState.pages[pageIndexToExport];
+
+    if (!pageToExport) {
+        console.error(`[SinglePageState] Error: Page at index ${pageIndexToExport} not found.`);
+        return null;
     }
 
-    const singlePageData = fullProjectState.pages[pageIndexToExport];
-    const imagesForThisPage = [];
-    const allImagesFromProject = fullProjectState.images || [];
-    const usedImageIdsOnThisPage = new Set(); // Use a Set to store unique image IDs
-
-    // console.log(`[SinglePageState] Page ${pageIndexToExport} data:`, JSON.stringify(singlePageData, null, 2).substring(0, 1000)); // Log first 1KB of page data
-    // console.log(`[SinglePageState] Total images in project: ${allImagesFromProject.length}`);
-
-    // Extract image IDs from panels on the current page
-    if (singlePageData.panelStates && Array.isArray(singlePageData.panelStates)) {
-        singlePageData.panelStates.forEach(panelState => {
-            if (panelState.imageId) {
-                usedImageIdsOnThisPage.add(String(panelState.imageId));
-            }
+    // Collect image IDs used on this specific page (panels, background, stickers)
+    const usedImageIds = new Set();
+    if (pageToExport.panelStates) {
+        pageToExport.panelStates.forEach(panel => {
+            if (panel.imageId) usedImageIds.add(panel.imageId);
         });
     }
-
-    // Extract image ID from page background
-    if (singlePageData.backgroundState && singlePageData.backgroundState.imageId) {
-        usedImageIdsOnThisPage.add(String(singlePageData.backgroundState.imageId));
+    if (pageToExport.backgroundState && pageToExport.backgroundState.imageId) {
+        usedImageIds.add(pageToExport.backgroundState.imageId);
     }
-
-    // Extract image IDs from stickers on the current page
-    if (singlePageData.stickerStates && Array.isArray(singlePageData.stickerStates)) {
-        singlePageData.stickerStates.forEach(stickerState => {
-            if (stickerState.imageId) {
-                usedImageIdsOnThisPage.add(String(stickerState.imageId));
-            }
+    if (pageToExport.stickerStates) {
+        pageToExport.stickerStates.forEach(sticker => {
+            if (sticker.imageId) usedImageIds.add(sticker.imageId);
         });
     }
+    console.log(`[SinglePageState] Page ${pageIndexToExport} uses image IDs:`, Array.from(usedImageIds));
 
-    console.log(`[SinglePageState] Page ${pageIndexToExport} uses image IDs:`, Array.from(usedImageIdsOnThisPage));
+    // Filter the full project's images to include only those used on this page
+    const imagesForThisPage = fullProjectState.images.filter(img => usedImageIds.has(img.id));
 
-    // Populate imagesForThisPage with actual image objects from the project's image library
-    usedImageIdsOnThisPage.forEach(imageId => {
-        const foundImage = allImagesFromProject.find(img => String(img.id) === imageId);
-        if (foundImage) {
-            imagesForThisPage.push(foundImage);
-        } else {
-            console.warn(`[SinglePageState] Image ID ${imageId} used on page ${pageIndexToExport} but not found in project images library.`);
-        }
-    });
-
-    // Retain all custom layouts, as they might be referenced by the page layout
-    const customLayoutsToInclude = fullProjectState.customLayouts || [];
-
-    const stateForSinglePage = {
-        images: imagesForThisPage, // Only images used by this specific page
-        customLayouts: customLayoutsToInclude, 
-        // comicPanels global definition might not be needed if panel data is fully in pages[x].panelStates
-        // However, if pages[x].layoutId refers to a layout in comicPanels that defines structure, it might be.
-        // For now, let's assume ComicCreator._loadProjectFromState can reconstruct panels from page.panelStates and layout data.
-        // We can add fullProjectState.comicPanels back if it proves necessary.
-        pages: [singlePageData], // The current page being processed
-        settings: fullProjectState.settings, // Global settings
-        currentPageIndex: 0, // Since 'pages' array now has only one page
+    const singlePageProjectState = {
+        version: fullProjectState.version,
+        canvasDimensionKey: fullProjectState.canvasDimensionKey,
+        canvasWidth: fullProjectState.canvasWidth,
+        canvasHeight: fullProjectState.canvasHeight,
+        useGlobalBackgroundStyle: fullProjectState.useGlobalBackgroundStyle,
+        globalBackgroundStyle: fullProjectState.globalBackgroundStyle,
+        pages: [pageToExport],
+        images: imagesForThisPage,
+        currentPageIndex: 0,
+        folderStructure: fullProjectState.folderStructure,
+        currentFolderId: fullProjectState.currentFolderId,
+        customLayouts: fullProjectState.customLayouts,
     };
-
-    console.log(`[SinglePageState] Created state for page ${pageIndexToExport}. Images included: ${imagesForThisPage.length}. Original project images: ${allImagesFromProject.length}`);
-    return stateForSinglePage;
+    console.log(`[SinglePageState] Created state for page ${pageIndexToExport}. Images included: ${imagesForThisPage.length}. Original project images: ${fullProjectState.images.length}`);
+    return singlePageProjectState;
 }
 
 
@@ -396,8 +374,41 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
     await new Promise(resolve => setTimeout(resolve, 1500)); // Adjust as needed
     console.log('[Puppeteer] Final rendering delay complete.');
 
+    console.log('[Puppeteer] About to get boundingBox. Checking canvas computed styles...');
+    console.log(`[Puppeteer] Project state dimensions for check: Width=${projectState.canvasWidth}, Height=${projectState.canvasHeight}`);
+    const canvasComputedStyles = await page.evaluate(() => {
+        const canvas = document.querySelector('#comic-canvas');
+        if (!canvas) return { error: '#comic-canvas not found' };
+        const styles = window.getComputedStyle(canvas);
+        const cs = {
+            width: styles.width,
+            height: styles.height,
+            minWidth: styles.minWidth,
+            minHeight: styles.minHeight,
+            maxWidth: styles.maxWidth,
+            maxHeight: styles.maxHeight,
+            cssVariableWidth: getComputedStyle(document.documentElement).getPropertyValue('--canvas-width').trim(),
+            cssVariableHeight: getComputedStyle(document.documentElement).getPropertyValue('--canvas-height').trim(),
+            offsetWidth: canvas.offsetWidth,
+            offsetHeight: canvas.offsetHeight,
+            clientWidth: canvas.clientWidth,
+            clientHeight: canvas.clientHeight,
+            scrollWidth: canvas.scrollWidth,
+            scrollHeight: canvas.scrollHeight
+        };
+        // Check parent dimensions too
+        if (canvas.parentElement) {
+            const parentStyles = window.getComputedStyle(canvas.parentElement);
+            cs.parentWidth = parentStyles.width;
+            cs.parentHeight = parentStyles.height;
+            cs.parentOffsetWidth = canvas.parentElement.offsetWidth;
+            cs.parentOffsetHeight = canvas.parentElement.offsetHeight;
+        }
+        return cs;
+    });
+    console.log('[Puppeteer] Canvas Computed Styles in Puppeteer:', canvasComputedStyles);
+
     // Temporarily hide all elements except the comic canvas and its parents/ancestors
-    // to ensure only the canvas is captured.
     await page.evaluate(() => {
         const canvas = document.querySelector('#comic-canvas');
         if (!canvas) return;
@@ -456,11 +467,10 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         return {
           x: Math.round(rect.left),
           y: Math.round(rect.top),
-            // Use explicit 700x700 as per user request, but ensure rect.width/height are logged
-            width: 700, // Forcing to 700 as requested
-            height: 700, // Forcing to 700 as requested
-            actualWidth: Math.round(rect.width),
-            actualHeight: Math.round(rect.height)
+            width: Math.round(rect.width), // Use the actual rendered width of the canvas
+            height: Math.round(rect.height), // Use the actual rendered height of the canvas
+            // actualWidth: Math.round(rect.width), // Redundant now
+            // actualHeight: Math.round(rect.height) // Redundant now
         };
       });
 
@@ -470,7 +480,7 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         await page.evaluate(() => { /* ... style restoration logic ... */ });
         throw new Error('Could not find #comic-canvas for screenshot bounding box.');
       }
-    console.log(`[Puppeteer] Canvas bounding box for PDF: x=${boundingBox.x}, y=${boundingBox.y}, width=${boundingBox.width}, height=${boundingBox.height}. Actual on-page w/h: ${boundingBox.actualWidth}x${boundingBox.actualHeight}`);
+    console.log(`[Puppeteer] Canvas bounding box for PDF: x=${boundingBox.x}, y=${boundingBox.y}, width=${boundingBox.width}, height=${boundingBox.height}. Actual on-page w/h: ${boundingBox.width}x${boundingBox.height}`);
 
     // const tempImageDir = path.join(outputDirectory, 'temp_export_images'); // Not used for PDF
     // await fs.mkdir(tempImageDir, { recursive: true }); // Not used for PDF
@@ -499,8 +509,8 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         clip: {
             x: boundingBox.x,
             y: boundingBox.y,
-            width: boundingBox.width,
-            height: boundingBox.height
+            width: boundingBox.width, // Use calculated boundingBox width for the clip
+            height: boundingBox.height // Use calculated boundingBox height for the clip
         },
         type: 'png',
         omitBackground: false // Set to false to include canvas background; true if it should be transparent and handled by PDF bg
@@ -509,16 +519,22 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
 
     console.log('[Puppeteer] Creating PDF with embedded screenshot...');
     const pdfDoc = await PDFDocument.create();
-    const pageOfPdf = pdfDoc.addPage([boundingBox.width, boundingBox.height]); // Page size from boundingBox
+    let pdfPageWidth = projectState.canvasWidth || 700; // Fallback if undefined
+    let pdfPageHeight = projectState.canvasHeight || 700; // Fallback if undefined
+
+    console.log(`[Puppeteer] PDF Page Dimensions: Width=${pdfPageWidth}, Height=${pdfPageHeight}`);
+
+    const pageOfPdf = pdfDoc.addPage([pdfPageWidth, pdfPageHeight]);
     
     const pngImage = await pdfDoc.embedPng(pngScreenshotBuffer);
 
+    // Draw the image to fill the PDF page. 
+    // The image itself was clipped to the canvas dimensions.
     pageOfPdf.drawImage(pngImage, {
         x: 0,
-        y: 0, // In pdf-lib, for a page of H, drawing at y=0 places it at the bottom. 
-             // Since page height IS image height, y=0 works.
-        width: boundingBox.width,
-        height: boundingBox.height,
+        y: 0, 
+        width: pdfPageWidth,  // Scale image to fill the PDF page width
+        height: pdfPageHeight, // Scale image to fill the PDF page height
     });
 
     const pdfBytes = await pdfDoc.save();

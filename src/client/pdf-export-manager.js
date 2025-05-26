@@ -105,7 +105,7 @@ export default class PdfExportManager {
             statusMessage = data.message || 'Finalizing PDF creation...';
             console.log('[PdfExportManager.handleProgress] Condition: merging', { statusMessage, displayProgress, serverMessage: data.message });
         } else if (jobStatus === 'compressing') {
-            statusMessage = 'Compressing PDF... This may take a few minutes. Please wait.';
+            statusMessage = 'Compressing PDF... This may take a few minutes. <br>Please wait.';
             displayProgress = 100; // Local PDF generation is done, show 100% for that part.
             console.log('[PdfExportManager.handleProgress] Condition: compressing', { statusMessage, displayProgress, serverMessage: data.message }); // Key log
         } else if (jobStatus === 'starting' || jobStatus === 'processing') {
