@@ -7,6 +7,36 @@ export class PanelManager {
 
         // Track the currently selected panel element within the editor
         this.currentPanel = null; 
+
+        // Initialize canvas dimensions. These will be updated by setCanvasDimension.
+        // Default to a common size, but these will be quickly overwritten.
+        this.canvasWidth = 700; 
+        this.canvasHeight = 700;
+        this.panelPadding = 40; // Assuming 40px padding on each side for panel area calculation
+        this.panelGap = 12; // Default gap, can be made configurable if needed
+    }
+
+    /**
+     * Updates the canvas dimensions used for panel calculations.
+     * @param {number} newWidth - The new width of the canvas.
+     * @param {number} newHeight - The new height of the canvas.
+     */
+    updateCanvasSize(newWidth, newHeight) {
+        this.canvasWidth = newWidth;
+        this.canvasHeight = newHeight;
+        console.log(`PanelManager: Canvas size updated to ${this.canvasWidth}x${this.canvasHeight}`);
+        // Note: Re-rendering of panels is typically handled by ComicCreator calling createPanels again.
+    }
+
+    /**
+     * Calculates the effective panel area dimensions based on current canvas size and padding.
+     * @returns {{width: number, height: number}}
+     */
+    getPanelAreaDimensions() {
+        // Deduct padding from both sides (hence * 2)
+        const areaWidth = this.canvasWidth - (this.panelPadding * 2);
+        const areaHeight = this.canvasHeight - (this.panelPadding * 2);
+        return { width: areaWidth, height: areaHeight };
     }
 
     /**
@@ -15,33 +45,92 @@ export class PanelManager {
      * @param {HTMLElement} canvas - The canvas element to add panels to.
      */
     createPanels(layoutConfig, canvas) {
-        // Calculate the available space for panels, considering padding/margins
-        // These values might need adjustment based on final canvas styling
-        const panelAreaWidth = 620;
-        const panelAreaHeight = 620;
-        const panelGap = 12; // Gap between panels
+        const { width: panelAreaWidth, height: panelAreaHeight } = this.getPanelAreaDimensions();
+        const panelGap = this.panelGap;
 
-        layoutConfig.panels.forEach(panel => {
+        // Clear existing panels from the canvas first
+        canvas.innerHTML = '';
+
+        if (!layoutConfig || !layoutConfig.panels) {
+            console.warn("PanelManager: createPanels called with invalid or no layoutConfig.panels.", layoutConfig);
+            // Optionally create a blank canvas or a message
+            if (layoutConfig && layoutConfig.id === 'empty') { // Handle 'empty' layout explicitly if needed
+                 console.log("PanelManager: Creating an empty canvas.");
+            }
+            return;
+        }
+
+
+        layoutConfig.panels.forEach(panelData => {
             const div = document.createElement('div');
             div.className = 'comic-panel';
             
             // Calculate base positions and dimensions based on percentage layout
-            const baseX = panel.x * panelAreaWidth / 100;
-            const baseY = panel.y * panelAreaHeight / 100;
-            const baseWidth = panel.width * panelAreaWidth / 100;
-            const baseHeight = panel.height * panelAreaHeight / 100;
+            // These percentages are relative to the panelAreaWidth/Height
+            const baseX = panelData.x * panelAreaWidth / 100;
+            const baseY = panelData.y * panelAreaHeight / 100;
+            const baseWidth = panelData.width * panelAreaWidth / 100;
+            const baseHeight = panelData.height * panelAreaHeight / 100;
 
-            // Adjust for panel gap and canvas padding (assuming 40px padding)
-            const adjustedX = baseX + 40 + (panel.x > 0 ? panelGap / 2 : 0);
-            const adjustedY = baseY + 40 + (panel.y > 0 ? panelGap / 2 : 0);
-            // Subtract the gap from width/height to create space
-            const adjustedWidth = baseWidth - (panel.width < 100 ? panelGap : 0); 
-            const adjustedHeight = baseHeight - (panel.height < 100 ? panelGap : 0);
+            // Adjust for panel gap and overall canvas padding (this.panelPadding is the offset for the entire panel area)
+            // The panel's (x,y) are within the panelArea, which is already inset by panelPadding.
+            // So, final position = canvasPadding + positionWithinPanelArea.
+            const adjustedX = this.panelPadding + baseX;
+            const adjustedY = this.panelPadding + baseY;
             
-            div.style.left = adjustedX + 'px';
-            div.style.top = adjustedY + 'px';
-            div.style.width = adjustedWidth + 'px';
-            div.style.height = adjustedHeight + 'px';
+            // Adjust width/height to account for gaps *between* panels
+            // A panel takes its full percentage width/height *within the panelArea*
+            // Gaps are then created by slightly shrinking panels that are not edge-to-edge.
+            // This logic might need refinement based on how gaps are precisely handled.
+            // For now, let's assume panelData.width/height are the final desired percentages *including* potential gap subtractions if done at layout definition.
+            // If gaps are purely visual between full-percentage panels, then no subtraction here.
+            // The existing logic: subtract gap if panel width/height < 100. This creates an internal gap.
+            
+            let effectiveWidth = baseWidth;
+            let effectiveHeight = baseHeight;
+
+            // This gap adjustment logic seems to create internal gaps by shrinking panels.
+            // If panelData.x > 0, it means it's not the first panel in a row (potentially), so it might need a gap on its left.
+            // This needs careful review against the visual intent of panelGap.
+            // The original code:
+            // const adjustedX = baseX + 40 + (panel.x > 0 ? panelGap / 2 : 0);
+            // const adjustedY = baseY + 40 + (panel.y > 0 ? panelGap / 2 : 0);
+            // const adjustedWidth = baseWidth - (panel.width < 100 ? panelGap : 0); 
+            // const adjustedHeight = baseHeight - (panel.height < 100 ? panelGap : 0);
+            // This implies that the `panelGap` is used to create space *between* panels by shrinking them slightly
+            // and shifting them.
+            // Let's try to replicate the original gap logic more closely, but using the new dynamic panelArea.
+
+            // Revised gap logic based on original:
+            // The '40' was the fixed padding. We now use this.panelPadding.
+            // The panelGap is used to shrink panels to create space.
+            // A panel at x=0 or y=0 is at the edge of the panelArea.
+
+            div.style.left = (this.panelPadding + (panelData.x * panelAreaWidth / 100)) + 'px';
+            div.style.top = (this.panelPadding + (panelData.y * panelAreaHeight / 100)) + 'px';
+            
+            // If a panel's width is less than 100% (of the panelArea), it implies it doesn't span the full width,
+            // so it might be next to another panel, and thus a gap is needed.
+            // The gap is typically shared between two adjacent panels (gap/2 on each side).
+            // Or, the panel itself is made smaller by 'panelGap' if it's not a full-width/height panel.
+            // This is a bit ambiguous from the original.
+            // Let's assume panelData.width/height are percentages OF panelAreaWidth/Height.
+            // And the gap reduces this.
+            effectiveWidth = (panelData.width * panelAreaWidth / 100);
+            effectiveHeight = (panelData.height * panelAreaHeight / 100);
+
+            // The original logic for adjusting width/height for gaps:
+            // It shrinks the panel if it's not 100% wide/high.
+            // This might be to create an "internal margin" or to ensure gaps don't cause overflow.
+            if (panelData.width < 100) effectiveWidth -= panelGap;
+            if (panelData.height < 100) effectiveHeight -= panelGap;
+            
+            // Ensure widths/heights are not negative after gap subtraction
+            effectiveWidth = Math.max(0, effectiveWidth);
+            effectiveHeight = Math.max(0, effectiveHeight);
+
+            div.style.width = effectiveWidth + 'px';
+            div.style.height = effectiveHeight + 'px';
             
             // Add the panel to the canvas
             canvas.appendChild(div);

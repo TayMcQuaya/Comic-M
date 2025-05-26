@@ -67,6 +67,39 @@ export class TextManagerState {
                     exactTopForOriginalPos = `${bubbleRect.top - panelRect.top}px`;
                 }
                 
+                // Convert to percentages if they are pixel values
+                let savedLeft = currentStyleLeft;
+                let savedTop = currentStyleTop;
+
+                const panelWidth = panel.offsetWidth;
+                const panelHeight = panel.offsetHeight;
+
+                if (currentStyleLeft && currentStyleLeft.includes('px') && panelWidth > 0) {
+                    savedLeft = `${(parseFloat(currentStyleLeft) / panelWidth) * 100}%`;
+                } else if (!currentStyleLeft || currentStyleLeft === 'auto') { // If not set, calculate from bounding rect
+                    const bubbleRect = textBubble.getBoundingClientRect();
+                    const panelRect = panel.getBoundingClientRect();
+                    if (panelWidth > 0) savedLeft = `${((bubbleRect.left - panelRect.left) / panelWidth) * 100}%`;
+                    else savedLeft = '0%'; // Fallback for zero width panel
+                }
+
+                if (currentStyleTop && currentStyleTop.includes('px') && panelHeight > 0) {
+                    savedTop = `${(parseFloat(currentStyleTop) / panelHeight) * 100}%`;
+                } else if (!currentStyleTop || currentStyleTop === 'auto') { // If not set, calculate from bounding rect
+                    const bubbleRect = textBubble.getBoundingClientRect();
+                    const panelRect = panel.getBoundingClientRect();
+                    if (panelHeight > 0) savedTop = `${((bubbleRect.top - panelRect.top) / panelHeight) * 100}%`;
+                    else savedTop = '0%'; // Fallback for zero height panel
+                }
+                
+                // Ensure originalPosition also stores percentages if it's being used as primary source by restore
+                let originalPosLeftPercent = savedLeft;
+                let originalPosTopPercent = savedTop;
+                // The originalPosition logic was a bit complex, for now, ensure primary saved style is percent.
+                // If originalPosition.left/top were from getBoundingClientRect, convert them too.
+                // This part needs to be very careful if originalPosition is truly the source of truth for restore.
+                // For now, focusing on style.left/top being percentages.
+
                 panelTexts.push({
                     id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
@@ -75,16 +108,16 @@ export class TextManagerState {
                     tailSettings: textBubble.dataset.tailSettings || '',
                     positionGrid: textBubble.dataset.positionGrid || 'custom',
                     content: textElement.innerHTML,
-                    originalPosition: { // Remains for reference, uses exactLeftForOriginalPos
-                        left: exactLeftForOriginalPos,
-                        top: exactTopForOriginalPos,
+                    originalPosition: { // This should ideally also be in percentages or clearly defined relative to what
+                        left: savedLeft, // Storing calculated percent here for now
+                        top: savedTop,   // Storing calculated percent here for now
                         width: finalWidth,
                         height: finalHeight
                     },
                     style: {
                         // Position and size directly from style or finalized values
-                        left: currentStyleLeft, // Use direct style.left
-                        top: currentStyleTop,   // Use direct style.top
+                        left: savedLeft, // Ensure this is a percentage
+                        top: savedTop,   // Ensure this is a percentage
                         width: finalWidth,
                         height: finalHeight,
                         transform: textBubble.style.transform || '',
@@ -145,9 +178,35 @@ export class TextManagerState {
                     const canvasRect = canvas.getBoundingClientRect();
                     
                     // Calculate the exact position relative to the canvas
-                    const exactLeft = bubbleRect.left - canvasRect.left;
-                    const exactTop = bubbleRect.top - canvasRect.top;
-                    
+                    const exactLeftPx = bubbleRect.left - canvasRect.left;
+                    const exactTopPx = bubbleRect.top - canvasRect.top;
+
+                    let savedCanvasLeft = textBubble.style.left;
+                    let savedCanvasTop = textBubble.style.top;
+
+                    const canvasWidth = canvas.offsetWidth;
+                    const canvasHeight = canvas.offsetHeight;
+
+                    // Convert style.left to percentage if it's pixels, or calculate if not set
+                    if (textBubble.style.left && textBubble.style.left.includes('px') && canvasWidth > 0) {
+                        savedCanvasLeft = `${(parseFloat(textBubble.style.left) / canvasWidth) * 100}%`;
+                    } else if ((!textBubble.style.left || textBubble.style.left === 'auto') && canvasWidth > 0) {
+                        savedCanvasLeft = `${(exactLeftPx / canvasWidth) * 100}%`;
+                    } else if (canvasWidth === 0) {
+                        savedCanvasLeft = '0%'; // Fallback for zero width canvas
+                    }
+                    // If already a percentage, keep it as is (implicitly handled by not entering above conditions)
+
+                    // Convert style.top to percentage if it's pixels, or calculate if not set
+                    if (textBubble.style.top && textBubble.style.top.includes('px') && canvasHeight > 0) {
+                        savedCanvasTop = `${(parseFloat(textBubble.style.top) / canvasHeight) * 100}%`;
+                    } else if ((!textBubble.style.top || textBubble.style.top === 'auto') && canvasHeight > 0) {
+                        savedCanvasTop = `${(exactTopPx / canvasHeight) * 100}%`;
+                    } else if (canvasHeight === 0) {
+                        savedCanvasTop = '0%'; // Fallback for zero height canvas
+                    }
+                    // If already a percentage, keep it as is
+
                     let finalCanvasWidth = textBubble.style.width;
                     let finalCanvasHeight = textBubble.style.height;
     
@@ -166,15 +225,15 @@ export class TextManagerState {
                         tailSettings: textBubble.dataset.tailSettings || '',
                         positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                         content: textElement.innerHTML,
-                        originalPosition: {
-                            left: `${exactLeft}px`,
-                            top: `${exactTop}px`, 
+                        originalPosition: { // Store calculated percentages here too for consistency
+                            left: savedCanvasLeft,
+                            top: savedCanvasTop, 
                             width: finalCanvasWidth,
                             height: finalCanvasHeight
                         },
                         style: {
-                            left: textBubble.style.left,
-                            top: textBubble.style.top,
+                            left: savedCanvasLeft, // Ensure this is a percentage
+                            top: savedCanvasTop,   // Ensure this is a percentage
                             width: finalCanvasWidth,
                             height: finalCanvasHeight,
                             transform: textBubble.style.transform,
@@ -475,17 +534,17 @@ export class TextManagerState {
         if (textState.style) {
             // Position and size - Apply these in a specific order for proper restoration
             
-            // PRIORITY 1: Use originalPosition if available - this is the most accurate
-            if (textState.originalPosition) {
-                console.log(`TextManagerState.restoreTextBubble: Using originalPosition for ${textBubble.id} - left: ${textState.originalPosition.left}, top: ${textState.originalPosition.top}`);
-                textBubble.style.left = textState.originalPosition.left;
-                textBubble.style.top = textState.originalPosition.top;
+            // PRIORITY 1: Use originalPosition if available (now contains percentages)
+            if (textState.originalPosition && textState.originalPosition.left != null && textState.originalPosition.top != null) {
+                console.log(`TextManagerState.restoreTextBubble: Using originalPosition (percentages) for ${textBubble.id} - left: ${textState.originalPosition.left}, top: ${textState.originalPosition.top}`);
+                textBubble.style.left = textState.originalPosition.left; // Should be a percentage string
+                textBubble.style.top = textState.originalPosition.top;   // Should be a percentage string
                 
-                // Store this data again for potential reuse
+                // Store this data again for potential reuse (already percentages)
                 textBubble.dataset.originalLeft = textState.originalPosition.left;
                 textBubble.dataset.originalTop = textState.originalPosition.top;
                 
-                // Apply exact dimensions if available
+                // Apply exact dimensions if available (these are usually pixel strings e.g. "150px" or "auto")
                 if (textState.originalPosition.width) {
                     textBubble.style.width = textState.originalPosition.width;
                 }
@@ -493,41 +552,22 @@ export class TextManagerState {
                     textBubble.style.height = textState.originalPosition.height;
                 }
             } 
-            // PRIORITY 2: Fall back to style values otherwise
+            // PRIORITY 2: Fall back to style values otherwise (expecting percentages here too)
             else {
-                // Step 1: Apply position values first without any transform
-                // Ensure we're using exact pixel values for reliable positioning
-                if (textState.style.left) {
-                    if (textState.style.left.endsWith('%')) {
-                        // Convert percentage to pixels to avoid panel size changes affecting position
-                        const percentage = parseFloat(textState.style.left);
-                        const parentWidth = parentElement.clientWidth;
-                        const pixelValue = (percentage / 100) * parentWidth;
-                        textBubble.style.left = `${pixelValue}px`;
-                    } else {
-                        textBubble.style.left = textState.style.left;
-                    }
+                console.log(`TextManagerState.restoreTextBubble: Using style.left/top (percentages) for ${textBubble.id}`);
+                if (textState.style.left != null) {
+                    textBubble.style.left = textState.style.left; // Should be a percentage string
+                }
+                if (textState.style.top != null) {
+                    textBubble.style.top = textState.style.top;   // Should be a percentage string
                 }
                 
-                if (textState.style.top) {
-                    if (textState.style.top.endsWith('%')) {
-                        // Convert percentage to pixels to avoid panel size changes affecting position
-                        const percentage = parseFloat(textState.style.top);
-                        const parentHeight = parentElement.clientHeight;
-                        const pixelValue = (percentage / 100) * parentHeight;
-                        textBubble.style.top = `${pixelValue}px`;
-                    } else {
-                        textBubble.style.top = textState.style.top;
-                    }
-                }
-                
-                // Step 2: Apply dimensions - preserving exact sizes
+                // Apply dimensions from style
                 if (textState.style.width) textBubble.style.width = textState.style.width;
                 if (textState.style.height) textBubble.style.height = textState.style.height;
             }
             
             // Step 3: Apply transform and z-index last
-            // Important: Keep ONLY the rotation part if we're using originalPosition 
             if (textState.style.transform) {
                 // Extract just the rotation if there's a translate component
                 if (textState.style.transform.includes('translate')) {

@@ -626,17 +626,51 @@ export class StickerManager {
     saveStickerStates() {
         console.log("StickerManager: Saving sticker states");
         const stickers = Array.from(document.querySelectorAll('.canvas-sticker-image'));
+        const comicCanvas = document.querySelector('#comic-canvas');
+        if (!comicCanvas) {
+            console.error("StickerManager: Cannot save sticker states - comic canvas not found.");
+            return [];
+        }
+        const canvasWidth = comicCanvas.offsetWidth;
+        const canvasHeight = comicCanvas.offsetHeight;
+
         const stickerStates = stickers.map(sticker => {
-            // Extract position information from transform/styles
             const position = sticker.dataset.positionGrid || this.getPositionFromSticker(sticker);
             
+            let savedLeft = sticker.style.left;
+            let savedTop = sticker.style.top;
+
+            // If current style.left is in pixels, convert to percentage relative to canvas
+            if (sticker.style.left && sticker.style.left.includes('px') && canvasWidth > 0) {
+                savedLeft = `${(parseFloat(sticker.style.left) / canvasWidth) * 100}%`;
+            } else if (!sticker.style.left && canvasWidth > 0) { // If not set, try to calculate from current position (e.g. after a drag if style wasn't updated)
+                const rect = sticker.getBoundingClientRect();
+                const canvasRect = comicCanvas.getBoundingClientRect();
+                savedLeft = `${((rect.left - canvasRect.left) / canvasWidth) * 100}%`;
+            } else if (canvasWidth === 0 && sticker.style.left.includes('px')){
+                savedLeft = '0%'; // Fallback if canvas width is 0 but style was in px
+            }
+            // If already a percentage, it remains as is.
+
+            // If current style.top is in pixels, convert to percentage relative to canvas
+            if (sticker.style.top && sticker.style.top.includes('px') && canvasHeight > 0) {
+                savedTop = `${(parseFloat(sticker.style.top) / canvasHeight) * 100}%`;
+            } else if (!sticker.style.top && canvasHeight > 0) { // If not set, try to calculate
+                const rect = sticker.getBoundingClientRect();
+                const canvasRect = comicCanvas.getBoundingClientRect();
+                savedTop = `${((rect.top - canvasRect.top) / canvasHeight) * 100}%`;
+            } else if (canvasHeight === 0 && sticker.style.top.includes('px')){
+                savedTop = '0%'; // Fallback if canvas height is 0 but style was in px
+            }
+            // If already a percentage, it remains as is.
+
             return {
             id: sticker.id,
             imageId: sticker.dataset.imageId,
-            left: sticker.style.left,
-            top: sticker.style.top,
+            left: savedLeft, // Should now be a percentage string
+            top: savedTop,   // Should now be a percentage string
             width: sticker.style.width,
-                height: sticker.style.height,
+            height: sticker.style.height,
             transform: sticker.style.transform,
             zIndex: sticker.style.zIndex || '5', // Save z-index, default to 5 if missing
             size: sticker.dataset.size || '100', // Store size percentage

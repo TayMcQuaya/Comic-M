@@ -31,6 +31,10 @@
     --shadow-color: rgba(0, 0, 0, 0.5);
     --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
     --panel-border-color: #FF3B3B;
+
+    /* Canvas Dimensions */
+    --canvas-width: 700px;
+    --canvas-height: 700px;
 }
 
 * {
@@ -100,6 +104,41 @@ body {
     margin-bottom: 1.5rem;
     text-transform: uppercase;
     text-shadow: 2px 2px 0 var(--shadow-color);
+}
+
+/* Canvas Size Selection Styles */
+.canvas-size-selection {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column; /* Changed to column for better layout */
+    align-items: center;
+    gap: 0.75rem; /* Spacing between title and buttons */
+}
+
+.canvas-size-selection h4 {
+    color: var(--text-bright);
+    font-size: 1.2rem; /* Adjusted font size */
+    margin-bottom: 0.5rem; /* Spacing below the title */
+}
+
+.canvas-size-selection .button-row {
+    display: flex;
+    justify-content: center;
+    gap: 1rem; /* Spacing between buttons */
+}
+
+.canvas-size-selection .primary-btn {
+    background-color: var(--input-bg); /* Default button look */
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+.canvas-size-selection .primary-btn.active-size {
+    background-color: var(--primary-color); /* Active button look */
+    color: var(--text-color);
+    border-color: var(--primary-color);
+    box-shadow: 0 0 8px var(--primary-color); 
 }
 
 /* Button group for upload section */
@@ -581,8 +620,8 @@ body {
     background: var(--card-bg);
     box-shadow: 8px 8px 0 var(--shadow-color);
     margin: -60px auto 0; /* Changed from transform to negative margin */
-    width: 700px;
-    height: 700px;
+    width: var(--canvas-width);
+    height: var(--canvas-height);
     border: 3px solid var(--border-color);
     /* Removed transform */
 }
@@ -4974,3 +5013,50 @@ input[type="color"] {
 }
 
 /* ... existing code ... */
+
+/* Page navigation improvements */
+.page-navigation-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem; /* Spacing between elements */
+}
+
+.page-nav-btn {
+    padding: 0.5rem 0.8rem; /* Adjust padding for smaller buttons */
+}
+
+.page-indicator {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.page-number-input {
+    width: 40px;
+    text-align: center;
+    padding: 0.3rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 0.9rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 5px;
+}
+
+.page-number-input {
+    width: 40px;
+    text-align: center;
+    margin: 0 3px;
+}
+
+#goToPage {
+    margin-left: 3px;
+}

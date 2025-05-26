@@ -25,6 +25,13 @@ class ComicCreator {
         this.currentPageIndex = 0;
         this.layouts = layouts; // Store layouts in the instance
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
+        
+        this.canvasDimensions = {
+            current: { width: 700, height: 700, name: "Current (700x700px)" },
+            amazonKDP: { width: 490, height: 700, name: "Amazon KDP (7\"x10\")" } // Scaled for display
+        };
+        this.selectedCanvasDimension = 'current'; // Default dimension
+
         // this.currentPanel = null; // Moved to PanelManager
         // this.currentTextBox = null; // Will be managed by TextManager
         // Add folder system properties
@@ -55,44 +62,49 @@ class ComicCreator {
         this.init();
     }
 
-    async init() { // Make init async to await autoSaveManager.init
-        // Initialize selection tracking - Moved to ImageLibrary
-        // this.selectedAssets = [];
-        // this.lastSelectedAsset = null;
-        
-        // Set up global document click handler for selection clearing
+    async init() { 
+        console.log("[Main] ComicCreator init called.");
         document.addEventListener('click', (e) => {
-            // Only clear selection if clicking outside of thumbnails and folders
             if (!e.target.closest('.thumbnail-container') && 
                 !e.target.closest('.folder-container')) {
-                this.imageLibrary.clearSelection(); // Ensure call uses imageLibrary instance
+                this.imageLibrary.clearSelection(); 
             }
         });
         
-        // Load custom layouts from localStorage to make them available globally
         this.loadCustomLayouts();
+        console.log("[Main] Custom layouts loaded.");
         
         this.setupUploadArea();
+        console.log("[Main] Upload area set up.");
         this.setupLayoutSelection();
+        console.log("[Main] Layout selection set up.");
         this.setupComicEditor();
-        this.setupEventListeners();
-        this.setupProjectControls(); // Add this line
-        this.initializeUI(); // This might be moved/refactored later
-        this.uiManager.setupSidebarTabs(); // Call UIManager method
+        console.log("[Main] Comic editor set up.");
+        this.setupEventListeners(); // General listeners
+        console.log("[Main] General event listeners set up.");
+        this.setupProjectControls(); 
+        console.log("[Main] Project controls set up.");
+        // this.setupPageNavigation(); // Listeners for page navigation buttons // Intentionally commented out
+        // console.log("[Main] Page navigation set up."); // Intentionally commented out
         
-        // Initialize history AFTER the initial setup seems complete
-        // This assumes the initial state (e.g., first blank page) is ready
-        // We might need to adjust this if loading a project happens later.
+        this.initializeUI(); 
+        console.log("[Main] UI initialized.");
+        this.uiManager.setupSidebarTabs(); 
+        console.log("[Main] UIManager setupSidebarTabs called.");
+        
         try {
             this.historyManager.initializeWithInitialState();
+            console.log("[Main] HistoryManager initialized.");
         } catch (e) {
-            console.error("Failed to initialize history manager state:", e);
-            // Potentially notify user?
+            console.error("[Main] Failed to initialize history manager state:", e);
         }
 
-        // Initialize AutoSaveManager AFTER other initializations
-        // It might prompt the user, which could load state, so it should run late.
-        await this.autoSaveManager.init(); // Await initialization
+        await this.autoSaveManager.init(); 
+        console.log("[Main] AutoSaveManager initialized.");
+
+        this.setCanvasDimension(this.selectedCanvasDimension); 
+        console.log("[Main] Initial canvas dimension set.");
+        console.log("[Main] ComicCreator init finished.");
     }
 
     setupUploadArea() {
@@ -539,425 +551,360 @@ class ComicCreator {
     }
 
     setupEventListeners() {
-        // Navigation
-        document.querySelector('#next-step-btn').addEventListener('click', () => {
-            document.querySelector('#upload-page').classList.remove('active');
-            document.querySelector('#layout-page').classList.add('active');
-        });
+        console.log("[Main] setupEventListeners called.");
 
-        document.querySelector('#back-to-upload').addEventListener('click', () => {
-            document.querySelector('#layout-page').classList.remove('active');
-            document.querySelector('#upload-page').classList.add('active');
-        });
-
-        document.querySelector('#back-to-editor-btn').addEventListener('click', () => {
-            document.querySelector('#upload-page').classList.remove('active');
-            document.querySelector('#editor-page').classList.add('active');
-        });
-
-        document.querySelector('#back-to-layout').addEventListener('click', () => {
-            document.querySelector('#editor-page').classList.remove('active');
-            document.querySelector('#layout-page').classList.add('active');
-        });
-
-        // Load Project Button in Upload Page
-        document.querySelector('#load-project-btn').addEventListener('click', (event) => { // Add event arg
-            const buttonElement = event.target; // Get the button element
-            
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
-            input.style.display = 'none';
-            document.body.appendChild(input);
-
-            input.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    await this.loadProject(file);
-                    // After loading, go directly to the editor page
-                    document.querySelector('#upload-page').classList.remove('active');
-                    document.querySelector('#editor-page').classList.add('active');
-                } else {
-                    console.log("Load Project cancelled by user.");
-                }
-                // Clean up the input element regardless of selection
-                document.body.removeChild(input);
+        // --- Page Navigation ---
+        const nextStepBtn = document.getElementById('next-step-btn');
+        if (nextStepBtn) {
+            nextStepBtn.addEventListener('click', () => {
+                console.log("[Main] Next Step button clicked (Upload to Layout).");
+                document.getElementById('upload-page').classList.remove('active');
+                document.getElementById('layout-page').classList.add('active');
             });
+        } else { console.error("[Main] #next-step-btn not found"); }
 
-            // Remove focus from the button BEFORE opening the dialog
-            buttonElement.blur(); 
+        const backToUploadBtn = document.getElementById('back-to-upload');
+        if (backToUploadBtn) {
+            backToUploadBtn.addEventListener('click', () => {
+                console.log("[Main] Back to Upload button clicked (Layout to Upload).");
+                document.getElementById('layout-page').classList.remove('active');
+                document.getElementById('upload-page').classList.add('active');
+            });
+        } else { console.error("[Main] #back-to-upload-btn not found"); }
 
-            input.click();
-        });
+        const backToLayoutBtn = document.getElementById('back-to-layout');
+        if (backToLayoutBtn) {
+            backToLayoutBtn.addEventListener('click', () => {
+                console.log("[Main] Back to Layout button clicked (Editor to Layout).");
+                document.getElementById('editor-page').classList.remove('active');
+                document.getElementById('layout-page').classList.add('active');
+            });
+        } else { console.error("[Main] #back-to-layout-btn not found"); }
 
-        // Add Text Button
-        document.querySelector('#add-text-btn')?.addEventListener('click', () => {
+        const backToEditorBtn = document.getElementById('back-to-editor-btn');
+        if (backToEditorBtn) {
+            backToEditorBtn.addEventListener('click', () => {
+                console.log("[Main] Back to Editor button clicked (Upload to Editor).");
+                // Basic check: if there's content on the current page
+                if (this.pages[this.currentPageIndex] && (this.pages[this.currentPageIndex].layout || this.pages[this.currentPageIndex].panelStates.length > 0)) {
+                    document.getElementById('upload-page').classList.remove('active');
+                    document.getElementById('editor-page').classList.add('active');
+                } else {
+                    // If no project seems active, go to layout selection
+                    document.getElementById('upload-page').classList.remove('active');
+                    document.getElementById('layout-page').classList.add('active');
+                    this.uiManager.showNotification("No active project. Select a layout to start.", "info");
+                }
+            });
+        } else { console.error("[Main] #back-to-editor-btn not found"); }
+
+        // --- Canvas Size Selection ---
+        const currentSizeBtn = document.getElementById('current-size-btn');
+        if (currentSizeBtn) {
+            currentSizeBtn.addEventListener('click', () => this.setCanvasDimension('current'));
+        } else { console.error("[Main] #current-size-btn not found"); }
+
+        const amazonKDPSizeBtn = document.getElementById('amazon-kdp-size-btn');
+        if (amazonKDPSizeBtn) {
+            amazonKDPSizeBtn.addEventListener('click', () => this.setCanvasDimension('amazonKDP'));
+        } else { console.error("[Main] #amazon-kdp-size-btn not found"); }
+
+        // --- Add Text Button ---
+        const addTextBtn = document.getElementById('add-text-btn');
+        if (addTextBtn) {
+            addTextBtn.addEventListener('click', () => {
+                console.log("[Main] Add Text button clicked. Mode:", this.currentSidebarMode);
             switch (this.currentSidebarMode) {
                 case 'panels':
-                    // Check the currentPanel property of the PanelManager instance
                     if (this.panelManager.currentPanel) { 
-                        // Pass the selected panel from PanelManager to addTextToPanel
-                        this.textManager.addTextToPanel(this.panelManager.currentPanel); // Use TextManager
+                            this.textManager.addTextToPanel(this.panelManager.currentPanel);
                     } else {
-                        // If no panel selected in panels mode, show modal via UIManager
                         this.uiManager.showSelectPanelModal(); 
                     }
                     break;
-                case 'backgrounds':
+                    case 'backgrounds': // Fallthrough
                 case 'stickers':
-                    // Add text directly to canvas in backgrounds or stickers mode
-                    this.textManager.addTextToCanvas(); // Use TextManager
+                        this.textManager.addTextToCanvas();
                     break;
                 default:
-                    console.warn('Add Text button clicked in unknown mode:', this.currentSidebarMode);
-            }
-        });
-
-        // New Project Button
-        document.querySelector('#new-project-btn')?.addEventListener('click', () => {
-            this.promptForNewProject();
-        });
-
-        // Panel Controls
-        const zoomControl = document.querySelector('.zoom-control');
-        if (zoomControl) {
-            zoomControl.addEventListener('input', (e) => {
-                if (!this.currentPanel) return;
-                const img = this.currentPanel.querySelector('img');
-                if (!img) return;
-
-                const initialScale = parseFloat(this.currentPanel.dataset.initialScale) || 1;
-                const zoomPercentage = parseFloat(e.target.value);
-                const newScale = (initialScale * zoomPercentage) / 100;
-                
-                // Update transform while maintaining position
-                const currentTransform = img.style.transform;
-                const newTransform = currentTransform.replace(/scale\(.*?\)/, `scale(${newScale})`);
-                img.style.transform = newTransform;
-                
-                // Store current scale
-                this.currentPanel.dataset.currentScale = newScale;
-                
-                const zoomValue = e.target.parentElement.querySelector('.zoom-value');
-                if (zoomValue) {
-                    zoomValue.textContent = `${Math.round(zoomPercentage)}%`;
+                        console.warn('[Main] Add Text button clicked in unknown mode:', this.currentSidebarMode);
                 }
             });
-        }
+        } else { console.error("[Main] #add-text-btn not found"); }
+        
+        // --- Project Actions ---
+        const saveProjectBtn = document.getElementById('save-project-btn');
+        if (saveProjectBtn) {
+            saveProjectBtn.addEventListener('click', () => this.saveProject());
+        } else { console.error("[Main] #save-project-btn not found"); }
 
-        // Position Controls
-        document.querySelectorAll('.position-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (!this.currentPanel) return;
-                const img = this.currentPanel.querySelector('img');
-                if (!img) return;
-
-                const step = 10;
-                const direction = btn.classList.contains('up') ? 'up' :
-                                btn.classList.contains('down') ? 'down' :
-                                btn.classList.contains('left') ? 'left' :
-                                btn.classList.contains('right') ? 'right' : null;
-                
-                if (!direction) return;
-
-                const currentLeft = parseInt(img.style.left) || 50;
-                const currentTop = parseInt(img.style.top) || 50;
-
-                switch (direction) {
-                    case 'up':
-                        img.style.top = `${currentTop - step}%`;
-                        break;
-                    case 'down':
-                        img.style.top = `${currentTop + step}%`;
-                        break;
-                    case 'left':
-                        img.style.left = `${currentLeft - step}%`;
-                        break;
-                    case 'right':
-                        img.style.left = `${currentLeft + step}%`;
-                        break;
-                }
+        const loadProjectBtnUploadPage = document.querySelector('#upload-page #load-project-btn'); // Specific to upload page
+        if (loadProjectBtnUploadPage) {
+            loadProjectBtnUploadPage.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        try {
+                            await this.loadProject(file);
+                            // Go to editor after loading
+                            document.getElementById('upload-page').classList.remove('active');
+                            document.getElementById('editor-page').classList.add('active');
+                        } catch (error) {
+                            console.error("Error loading project:", error);
+                            this.uiManager.showNotification("Error loading project. Check console.", "error");
+                        }
+                    }
+                };
+                input.click();
             });
-        });
+        } else { console.error("[Main] #load-project-btn on upload page not found"); }
 
-        // Update download button event listener
-        document.querySelector('#download-btn')?.addEventListener('click', async () => {
-            console.log('[Frontend] Download button clicked, initiating PDF export job...');
-            
-            let jobId = null; // To store the job ID for polling and download
-            let progressInterval = null; // To store the interval ID for polling
+        const newProjectBtn = document.getElementById('new-project-btn');
+        if (newProjectBtn) {
+            newProjectBtn.addEventListener('click', () => this.promptForNewProject());
+        } else { console.error("[Main] #new-project-btn not found"); }
 
-            // Use UIManager to show initial progress
+        const downloadBtn = document.getElementById('download-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', async () => {
+                console.log('[Main] Download button clicked. Prompting for filename...');
+                const filenameResult = await this.promptForFilename("MyComic", ".pdf"); // Default to .pdf, consistent with export
+
+                if (!filenameResult || !filenameResult.filename) {
+                    console.log('[Main] Filename prompt cancelled or no filename entered.');
+                    this.uiManager.showNotification('Export cancelled: No filename provided.', 'info');
+                    return;
+                }
+                const comicName = filenameResult.filename;
+                console.log(`[Main] Filename confirmed: ${comicName}. Initiating PDF export job...`);
+                
             this.uiManager.showExportProgress('Starting PDF export...', 0);
-
             try {
-                // Get the current project state
                 const projectState = await this.getCurrentProjectState();
                 if (!projectState) {
                     this.uiManager.hideExportProgress();
                     this.uiManager.showNotification('Could not retrieve project state for export.', 'error');
-                    throw new Error('Could not retrieve project state for export.');
+                        return;
                 }
+                    projectState.comicName = comicName; // Add filename for backend
 
-                // 1. Initiate the export job
-                const initiateResponse = await fetch('/api/export-pdf', { // Updated endpoint
+                    const initiateResponse = await fetch('/api/export-pdf', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                        headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(projectState),
                 });
 
-                if (initiateResponse.status !== 202) { // 202 Accepted indicates job started
-                    let errorMsg = `Error starting PDF export job: ${initiateResponse.status} ${initiateResponse.statusText}`;
-                    try {
-                        const errDetails = await initiateResponse.json();
-                        errorMsg += ` - ${errDetails.message || errDetails.error || 'Unknown server error'}`;
-                    } catch (e) { /* Ignore if error response is not JSON */ }
+                    if (initiateResponse.status !== 202) {
+                        let errorMsg = `Error starting PDF export: ${initiateResponse.status}`;
+                        try { const errDetails = await initiateResponse.json(); errorMsg += ` - ${errDetails.message || 'Server error'}`; } catch (e) { /* ignore */ }
                     this.uiManager.hideExportProgress();
                     this.uiManager.showNotification(errorMsg, 'error');
-                    throw new Error(errorMsg);
+                        return;
                 }
 
                 const jobDetails = await initiateResponse.json();
-                jobId = jobDetails.jobId;
-                const totalPages = jobDetails.totalPages;
+                    this.pollExportProgress(jobDetails.jobId, jobDetails.totalPages); // Start polling
+                } catch (error) {
+                    console.error('[Main] Error during PDF export initiation:', error);
+                    this.uiManager.hideExportProgress();
+                    this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
+                }
+            });
+        } else { console.error("[Main] #download-btn not found"); }
 
-                console.log(`[Frontend] PDF Export job started. Job ID: ${jobId}, Total Pages: ${totalPages}`);
-                this.uiManager.showExportProgress('Processing page 1...', 0, totalPages);
+        // --- Panel Controls (Zoom, Position) ---
+        // These are more complex and often tied to a selected panel.
+        // Initial setup might be here, but updates/event handling might be better in PanelManager or UIManager
+        // when a panel is selected. For now, keeping basic listeners if elements are always present.
+        const zoomControl = document.querySelector('#panel-properties .zoom-control');
+        if (zoomControl) {
+            zoomControl.addEventListener('input', (e) => {
+                if (this.panelManager && this.panelManager.currentPanel) {
+                    this.panelManager.handleZoom(e, this.panelManager.currentPanel);
+                }
+            });
+        } // else { console.warn("[Main] Zoom control in panel properties not found during setup."); }
 
-                // 2. Poll for progress
-                progressInterval = setInterval(async () => {
+        const positionButtons = document.querySelectorAll('#panel-properties .position-btn');
+        if (positionButtons.length > 0) {
+            positionButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (this.panelManager && this.panelManager.currentPanel) {
+                        this.panelManager.handlePositionChange(btn, this.panelManager.currentPanel);
+                    }
+                });
+            });
+        } // else { console.warn("[Main] Position buttons in panel properties not found during setup."); }
+        
+        // Listener for the "Empty Canvas" filter button on layout page
+        const emptyCanvasFilterBtn = document.querySelector('.filter-btn[data-filter="0"]');
+        if (emptyCanvasFilterBtn) {
+            emptyCanvasFilterBtn.addEventListener('click', () => {
+                this.selectedLayout = 'empty'; 
+                document.querySelectorAll('.layout-option').forEach(opt => opt.classList.remove('selected'));
+                console.log("[Main] Empty canvas selected via filter button.");
+                this.createComic({ name: "Empty Canvas", panels: [] }); // Pass an empty layout object
+            });
+        } else { console.warn("[Main] Empty canvas filter button not found."); }
+
+        // Custom Layout Upload
+        const customLayoutInput = document.getElementById('custom-layout-input');
+        if (customLayoutInput) {
+            customLayoutInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (!files.length) return;
+                if (files.length > 1) {
+                    this.processBatchLayouts(files);
+                } else {
+                    this.processSingleLayoutFile(files[0]);
+                }
+            });
+        } else { console.warn("[Main] #custom-layout-input not found."); }
+
+
+        // Global click listener for deselecting items (if not handled elsewhere more specifically)
+        // document.addEventListener('click', (e) => {
+        //    if (!e.target.closest('.comic-panel, .text-bubble, .canvas-sticker-image, .properties-panel, .sidebar-tabs, .tool-btn')) {
+        //        this.deselectAll(); // deselectAll should handle what to deselect
+        //    }
+        // });
+        console.log("[Main] setupEventListeners finished.");
+    }
+
+    // Helper for polling export progress (extracted from download listener)
+    pollExportProgress(jobId, totalPages) {
+        const progressInterval = setInterval(async () => {
                     if (!jobId) {
                         clearInterval(progressInterval);
                         return;
                     }
-
                     try {
-                        const progressResponse = await fetch(`/api/export-progress/${jobId}`); // Updated endpoint
+                const progressResponse = await fetch(`/api/export-progress/${jobId}`);
                         if (!progressResponse.ok) {
-                            // Stop polling on server error during progress check
                             clearInterval(progressInterval);
                             this.uiManager.showNotification(`Error checking export progress: ${progressResponse.statusText}`, 'error');
                             this.uiManager.updateExportProgress('Error checking progress.', 0, totalPages, true);
                             return;
                         }
-
                         const progressData = await progressResponse.json();
                         const percentage = totalPages > 0 ? Math.round((progressData.currentPage / totalPages) * 100) : 0;
-                        
-                        console.log(`[Frontend] Progress for Job ID ${jobId}: Status: ${progressData.status}, CurrentPage: ${progressData.currentPage}, TotalPages: ${totalPages}, Percentage: ${percentage}%`); // Around line 749
+                console.log(`[Main] Progress for Job ID ${jobId}: Status: ${progressData.status}, Page: ${progressData.currentPage}/${totalPages}`);
 
                         if (progressData.status === 'processing') {
                             this.uiManager.updateExportProgress(`Processing page ${progressData.currentPage} of ${totalPages}...`, percentage, totalPages);
-                        } else if (progressData.status === 'merging') { // Optional: Add handling for merging
-                            this.uiManager.updateExportProgress('Finalizing PDF creation...', 99, totalPages, false, 'merging'); // Pass status
+                } else if (progressData.status === 'merging') {
+                    this.uiManager.updateExportProgress('Finalizing PDF...', 99, totalPages, false, 'merging');
                         } else if (progressData.status === 'compressing') {
-                            // Add this block to handle the 'compressing' status
-                            this.uiManager.updateExportProgress('Compressing PDF... This may take a few minutes.<br>Please be patient !', 100, totalPages, false, 'compressing'); // Pass status
+                    this.uiManager.updateExportProgress('Compressing PDF... This may take a moment.', 100, totalPages, false, 'compressing');
                         } else if (progressData.status === 'complete') {
                             clearInterval(progressInterval);
-                            this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete'); // Pass status
-                            console.log(`[Frontend] Job ${jobId} complete. Final PDF Path: ${progressData.finalPdfPath}`);
-                            
-                            // 3. Download the PDF
-                            // Using window.location.href is a simple way to trigger download
-                            window.location.href = `/api/download-pdf/${jobId}`; // Updated endpoint
-                            
-                            // Hide progress after a delay
+                    this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete');
+                    window.location.href = `/api/download-pdf/${jobId}`;
                             setTimeout(() => {
                                 this.uiManager.hideExportProgress();
                                 this.uiManager.showNotification('PDF download initiated!', 'success');
-                            }, 3000); // 3 seconds delay
-
+                    }, 3000);
                         } else if (progressData.status === 'error') {
                             clearInterval(progressInterval);
                             const errorMessage = progressData.error || 'Unknown error during PDF generation.';
-                            console.error(`[Frontend] Job ${jobId} failed with error: ${errorMessage}`);
                             this.uiManager.updateExportProgress(`Error: ${errorMessage}`, percentage, totalPages, true);
-                            // Optionally, keep the error message visible longer or require user dismissal
-                            // For now, it will be hidden by hideExportProgress if not handled differently.
-                            // setTimeout(() => this.uiManager.hideExportProgress(), 5000); 
                         }
                     } catch (pollError) {
-                        console.error('[Frontend] Error polling for PDF export progress:', pollError);
+                console.error('[Main] Error polling for PDF export progress:', pollError);
                         clearInterval(progressInterval);
-                        this.uiManager.showNotification('Error polling for export progress. Please try again.', 'error');
+                this.uiManager.showNotification('Error polling for export progress.', 'error');
                         this.uiManager.hideExportProgress();
                     }
-                }, 2000); // Poll every 2 seconds
-
-            } catch (error) {
-                console.error('[Frontend] Error during PDF export initiation:', error);
-                // UIManager notification for error is handled within the try block for specific errors
-                // If it reaches here, it's likely an unhandled exception or network issue early on.
-                if (jobId && progressInterval) clearInterval(progressInterval); // Ensure polling stops
-                this.uiManager.hideExportProgress(); // Ensure progress UI is hidden
-                if (!error.message.includes('server error') && !error.message.includes('PDF export job')) { // Avoid double notifications
-                    this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
-                }
-            }
-            // Note: The 'finally' block with loadingIndicator.remove() is removed
-            // as UIManager now handles showing/hiding the progress display.
-        });
-
-        // Custom Layout Upload - File input listener
-        const customLayoutInput = document.getElementById('custom-layout-input');
-        if (customLayoutInput) {
-            customLayoutInput.addEventListener('change', (e) => {
-                const files = e.target.files;
-                if (files.length === 0) return;
-                
-                // For multiple files
-                if (files.length > 1) {
-                    this.processBatchLayouts(files);
-                } 
-                // For single file
-                else {
-                    const file = files[0];
+        }, 2000);
+    }
+    
+    // Helper to process a single layout file (extracted from custom layout listener)
+    processSingleLayoutFile(file) {
                     if (file && file.type === 'application/json') {
                         const reader = new FileReader();
                         reader.onload = (event) => {
                             try {
                                 const layoutData = JSON.parse(event.target.result);
-                                
-                                // Validate the layout structure
                                 if (this.validateCustomLayout(layoutData)) {
-                                    // Generate a unique ID for this layout based on name
                                     const layoutId = 'custom-' + layoutData.name.toLowerCase().replace(/\s+/g, '-');
-                                    
-                                    // Add the layout to the available layouts
                                     this.layouts[layoutId] = layoutData;
-                                    
-                                    // Save to localStorage for persistence between sessions
-                                    this.layoutBuilderManager.saveLayoutToStorage(layoutData.name, layoutData);
-                                    
-                                    successCount++;
+                        this.layoutBuilderManager.saveLayoutToStorage(layoutData.name, layoutData); // Persist
+                        this.uiManager.showNotification(`Custom layout "${layoutData.name}" added.`, "success");
+                        this.setupLayoutSelection(); // Refresh layout grid
                                 } else {
-                                    console.error(`Invalid layout format in file: ${file.name}`);
-                                    failCount++;
+                        this.uiManager.showNotification(`Invalid layout format in ${file.name}.`, "error");
                                 }
                             } catch (error) {
+                    this.uiManager.showNotification(`Error parsing ${file.name}.`, "error");
                                 console.error(`Error parsing JSON file ${file.name}:`, error);
-                                failCount++;
-                            }
-                            
-                            processingCount++;
-                            
-                            // When all files have been processed
-                            if (processingCount === totalCount) {
-                                // Refresh the layout selection UI
-                                this.setupLayoutSelection();
-                                
-                                // Show completion message
-                                const resultMessage = `Batch processing complete:\n` +
-                                    `✅ ${successCount} layouts added successfully\n` +
-                                    `❌ ${failCount} layouts had errors`;
-                                alert(resultMessage);
                             }
                         };
                         reader.readAsText(file);
                     } else {
-                        failCount++;
-                        processingCount++;
-                        console.error(`File ${file.name} is not a valid JSON file.`);
-                    }
-                }
-            });
+            this.uiManager.showNotification(`File ${file.name} is not a valid JSON file.`, "error");
+        }
+    }
+
+
+    setCanvasDimension(dimensionKey) {
+        if (!this.canvasDimensions[dimensionKey]) {
+            console.error("Invalid canvas dimension key:", dimensionKey);
+            return;
         }
 
-        // Add keyboard event listener for delete key and UNDO
-        document.addEventListener('keydown', (e) => {
-            // Check for Ctrl+Z (or Cmd+Z on Mac) for UNDO
-            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-                e.preventDefault(); // Prevent browser's default undo behavior
-                console.log("Ctrl+Z detected, attempting undo...");
-                this.historyManager.undo();
-                return; // Don't process other keys if undo was triggered
-            }
-            
-            // Add Ctrl+Y for REDO later if needed
-            // if ((e.ctrlKey || e.metaKey) && event.key === 'y') {
-            //    e.preventDefault(); 
-            //    console.log("Ctrl+Y detected, attempting redo...");
-            //    this.historyManager.redo();
-            //    return;
-            // }
+        this.selectedCanvasDimension = dimensionKey;
+        const newDim = this.canvasDimensions[dimensionKey];
 
-            // Existing Delete key logic
-            if (e.key === 'Delete') {
-                // Check current sidebar mode and selected element
-                switch (this.currentSidebarMode) {
-                    case 'panels':
-                        // FIRST check if a text box is selected
-                        if (this.textManager.currentTextBox) {
-                            // Check if the key press originated INSIDE the editable text area
-                            const editableTextElement = this.textManager.currentTextBox.querySelector('.text-content');
-                            if (editableTextElement && editableTextElement.contains(e.target)) {
-                                // If triggered inside the editable area, let the browser handle character deletion
-                                // Do nothing here.
-                            } else {
-                                // If triggered outside the editable area (e.g., bubble selected), delete the whole box
-                                // *** Record state BEFORE deleting text box ***
-                                this.historyManager.recordSnapshotBeforeAction(false, 'text');
-                                this.textManager.deleteSelectedTextBox(); // Use TextManager method
-                            }
-                        } 
-                        // ONLY if NO text box is selected (or deletion wasn't handled above), THEN check if a panel image should be deleted
-                        else if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
-                            // *** Record state BEFORE clearing panel image ***
-                            this.historyManager.recordSnapshotBeforeAction(false, 'panel');
-                            this.panelManager.clearPanelImage(this.panelManager.currentPanel);
-                        }
-                        break;
-                    case 'backgrounds':
-                        const backgroundElement = document.querySelector('.canvas-background-image');
-                        if (backgroundElement) {
-                            // *** Record state BEFORE removing background ***
-                            this.historyManager.recordSnapshotBeforeAction();
-                            this.backgroundManager.clearCustomBackground(); // Use BackgroundManager method
-                        }
-                        break;
-                    case 'stickers':
-                         // Check StickerManager for selected sticker
-                        if (this.stickerManager.selectedSticker) {
-                             // *** Record state BEFORE deleting sticker ***
-                            this.historyManager.recordSnapshotBeforeAction();
-                            this.stickerManager.deleteSelectedSticker(); // Use StickerManager method
-                        }
-                        break;
-                    case 'library':
-                         // Call ImageLibrary's delete method
-                         if (this.imageLibrary.selectedAssets.length > 0) {
-                            // *** Record state BEFORE deleting library image(s) ***
-                            this.historyManager.recordSnapshotBeforeAction();
-                            this.imageLibrary.deleteSelectedImages();
-                         }
-                         break;
-                }
-            }
+        document.documentElement.style.setProperty('--canvas-width', `${newDim.width}px`);
+        document.documentElement.style.setProperty('--canvas-height', `${newDim.height}px`);
 
-             // Deselect elements on Escape key
-            if (e.key === 'Escape') {
-                this.deselectAll();
-            }
-        });
+        // Update button active states
+        const currentSizeBtn = document.getElementById('current-size-btn');
+        const amazonKDPSizeBtn = document.getElementById('amazon-kdp-size-btn');
 
-        // Add other specific listeners (like canvas interactions, sidebar controls) if not handled by managers
-        const canvas = document.querySelector('#comic-canvas');
-        canvas.addEventListener('click', (e) => {
-            // Clicking on the canvas background deselects panels/text
-            if (e.target === canvas || e.target.classList.contains('canvas-background') || e.target.classList.contains('canvas-background-image')) {
-                this.deselectAll();
-            }
-        });
+        if (currentSizeBtn) currentSizeBtn.classList.toggle('active-size', dimensionKey === 'current');
+        if (amazonKDPSizeBtn) amazonKDPSizeBtn.classList.toggle('active-size', dimensionKey === 'amazonKDP');
         
-        // Global click listener for deselecting assets in image library moved to init()
+        // Update button text to reflect the selected dimension more clearly if needed (optional)
+        // For instance, if you want the button text itself to change.
+        // currentSizeBtn.textContent = this.canvasDimensions.current.name;
+        // amazonKDPSizeBtn.textContent = this.canvasDimensions.amazonKDP.name;
+        // currentSizeBtn.classList.toggle('active-size', dimensionKey === 'current');
+        // amazonKDPSizeBtn.classList.toggle('active-size', dimensionKey === 'amazonKDP');
 
-        // Listener for window resize (optional, but good for responsiveness)
-        // window.addEventListener('resize', () => {
-            // Might need to redraw canvas or adjust element positions
-        // });
+
+        // Propagate this change to PanelManager
+        // LayoutBuilderManager's internal canvas is assumed to be fixed size for defining percentages.
+        // So, it does not need to be updated with the main canvas dimensions.
+        // if (this.layoutBuilderManager) {
+        //    this.layoutBuilderManager.updateCanvasSize(newDim.width, newDim.height); 
+        // }
+        if (this.panelManager) {
+            this.panelManager.updateCanvasSize(newDim.width, newDim.height);
+        }
+
+        // After updating dimensions, if a comic is already on screen, re-render it.
+        // This assumes createComic() can be called to redraw with current settings.
+        // We need to ensure it uses the new canvas size.
+        // It might be better to have a dedicated "refreshLayout" or "redrawCanvas" method.
+        if (document.getElementById('editor-page').classList.contains('active')) {
+            // Only redraw if the editor is active and showing a comic.
+            // Pass the currently selected layout for the current page.
+             const currentPageLayout = this.pages[this.currentPageIndex]?.layout;
+             if (currentPageLayout) {
+                this.createComic(currentPageLayout); 
+             } else if (this.selectedLayout) { // Fallback to overall selected layout if page has no specific one
+                this.createComic(this.selectedLayout);
+                            } else {
+                this.createComic('empty'); // Or just create an empty canvas
+             }
+        }
+        
+        this.historyManager.addState(); // Save state after dimension change
+        console.log(`Canvas dimension set to: ${dimensionKey} (${newDim.width}x${newDim.height}px)`);
     }
 
     createComic(layout = null) {
@@ -1016,11 +963,9 @@ class ComicCreator {
         canvas.innerHTML = '';
         
         // Set canvas dimensions and center it
-        canvas.style.width = '700px';
-        canvas.style.height = '700px';
-        canvas.style.position = 'relative';
-        canvas.style.margin = '0 auto';
-        canvas.style.display = 'block';
+        canvas.style.position = 'relative'; // Keep this if not set in CSS
+        canvas.style.margin = '0 auto'; // Keep this for centering if not in CSS
+        canvas.style.display = 'block'; // Keep this if not set in CSS
 
         // Create a container for the canvas with padding
         const canvasContainer = canvas.parentElement;
@@ -1140,110 +1085,54 @@ class ComicCreator {
         const goToPageBtn = document.getElementById('goToPage');
 
         // Add event listeners for existing buttons
-        addPageBtn.addEventListener('click', () => this.showLayoutSelection());
-        prevPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex - 1));
-        nextPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex + 1));
-        deletePageBtn.addEventListener('click', () => this.deleteCurrentPage());
-        reorderPagesBtn.addEventListener('click', () => this.reorderPages());
+        if (addPageBtn) addPageBtn.addEventListener('click', () => this.showLayoutSelection());
+        if (prevPageBtn) prevPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex - 1));
+        if (nextPageBtn) nextPageBtn.addEventListener('click', () => this.navigateToPage(this.currentPageIndex + 1));
+        if (deletePageBtn) deletePageBtn.addEventListener('click', () => this.deleteCurrentPage());
+        if (reorderPagesBtn) reorderPagesBtn.addEventListener('click', () => this.reorderPages());
 
         // Add event listeners for direct page navigation
         const handlePageNavigation = () => {
-            const pageNum = parseInt(pageNumberInput.value, 10);
-            if (pageNum && pageNum >= 1 && pageNum <= this.pages.length) {
-                this.navigateToPage(pageNum - 1);
-            } else {
-                // Reset to current page if invalid
-                pageNumberInput.value = this.currentPageIndex + 1;
+            if (pageNumberInput) { // Check if input exists
+                const pageNum = parseInt(pageNumberInput.value, 10);
+                if (pageNum && pageNum >= 1 && pageNum <= this.pages.length) {
+                    this.navigateToPage(pageNum - 1);
+                } else {
+                    // Reset to current page if invalid
+                    pageNumberInput.value = this.currentPageIndex + 1;
+                }
             }
         };
 
-        goToPageBtn.addEventListener('click', handlePageNavigation);
-        pageNumberInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handlePageNavigation();
-            }
-        });
-
-        // Update input when navigating with prev/next buttons
+        if (goToPageBtn) goToPageBtn.addEventListener('click', handlePageNavigation);
+        if (pageNumberInput) {
+            pageNumberInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handlePageNavigation();
+                }
+            });
+        }
+        
+        // Define updatePageIndicator within initializeUI as it's closely tied to these elements
         this.updatePageIndicator = () => {
-            const indicator = document.querySelector('.page-indicator');
-            const input = document.getElementById('pageNumberInput');
-            if (indicator) {
-                indicator.textContent = `of ${this.pages.length}`;
+            const indicatorSpan = document.querySelector('.page-indicator'); 
+            const input = document.getElementById('pageNumberInput'); 
+        
+            if (indicatorSpan) {
+                indicatorSpan.textContent = `Page ${this.currentPageIndex + 1} of ${this.pages.length}`;
             }
             if (input) {
                 input.value = this.currentPageIndex + 1;
                 input.max = this.pages.length;
             }
         };
+
+        this.updateNavigationButtons(); 
+        this.updatePageIndicator(); 
+        console.log("[Main] initializeUI finished, page navigation updated.");
     }
 
-    setupPageNavigation() {
-        const pageNavigation = document.createElement('div');
-        pageNavigation.className = 'page-navigation';
-        pageNavigation.innerHTML = `
-            <div class="page-controls">
-                <div class="nav-group" style="display: flex; flex-direction: column; align-items: center;">
-                    <span class="page-indicator">Page 1 of 1</span>
-                    <div class="input-group" style="margin: 8px 0; display: flex; flex-direction: row; align-items: center; gap: 5px;">
-                        <button class="tool-btn" id="prevPage" style="
-                            width: 32px;
-                            height: 32px;
-                            background: #ff4444;
-                            color: #fff;
-                            border: 2px solid #ffff00;
-                            border-radius: 4px;
-                        ">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <input type="number" id="pageNumberInput" class="page-number-input" min="1" value="1" style="
-                            width: 25px;
-                            height: 32px;
-                            padding: 2px;
-                            text-align: center;
-                            background: #333;
-                            color: #fff;
-                            border: 2px solid #ffff00;
-                            border-radius: 4px;
-                        ">
-                        <button class="tool-btn" id="nextPage" style="
-                            width: 32px;
-                            height: 32px;
-                            background: #ff4444;
-                            color: #fff;
-                            border: 2px solid #ffff00;
-                            border-radius: 4px;
-                        ">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        <button class="tool-btn" id="goToPage" style="
-                            height: 32px;
-                            padding: 0 8px;
-                            background: #ff4444;
-                            color: #fff;
-                            border: 2px solid #ffff00;
-                            border-radius: 4px;
-                        ">GO</button>
-                    </div>
-                </div>
-            </div>
-            <div class="page-actions">
-                <button class="primary-btn" id="addPage">
-                    <i class="fas fa-plus"></i> Add New Page
-                </button>
-                <button class="danger-btn" id="deletePage">
-                    <i class="fas fa-trash"></i> Delete Page
-                </button>
-                <button class="tool-btn" id="reorderPagesBtn">
-                    <i class="fas fa-sort"></i> Reorder Pages
-                </button>
-            </div>
-        `;
-        const editorHeader = document.querySelector('.editor-header');
-        editorHeader.appendChild(pageNavigation);
-
-        // Rest of the event listener code stays the same...
-    }
+    
 
     showLayoutSelection() {
         // Save current page state before showing layout selection

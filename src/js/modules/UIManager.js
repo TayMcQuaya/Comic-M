@@ -15,15 +15,27 @@ export class UIManager {
 
     // --- NEW: Setup Sidebar Tab Switching --- 
     setupSidebarTabs() {
+        console.log("[UIManager] setupSidebarTabs called");
         const tabsContainer = document.querySelector('.sidebar-tabs');
-        if (!tabsContainer) return;
+        if (!tabsContainer) {
+            console.error("[UIManager] Sidebar tabs container not found!");
+            return;
+        }
 
         tabsContainer.addEventListener('click', (e) => {
+            console.log("[UIManager] Sidebar tab clicked", e.target);
             const clickedTab = e.target.closest('.tab-btn');
-            if (!clickedTab) return;
+            if (!clickedTab) {
+                console.log("[UIManager] Click was not on a tab button.");
+                return;
+            }
 
             const newMode = clickedTab.dataset.tab;
-            if (newMode === this.comicCreator.currentSidebarMode) return; // Do nothing if clicking the active tab
+            console.log("[UIManager] Clicked tab mode:", newMode, "Current mode:", this.comicCreator.currentSidebarMode);
+            if (newMode === this.comicCreator.currentSidebarMode) {
+                console.log("[UIManager] Clicked tab is already active.");
+                return; 
+            }
 
             // Update the active tab visually
             tabsContainer.querySelectorAll('.tab-btn').forEach(tab => {
@@ -33,104 +45,108 @@ export class UIManager {
 
             // Update the internal mode state
             this.comicCreator.currentSidebarMode = newMode;
-            console.log('Switched sidebar mode to:', this.comicCreator.currentSidebarMode);
+            console.log('[UIManager] Switched sidebar mode to:', this.comicCreator.currentSidebarMode);
 
             // First deselect any currently selected item when switching modes
             this.comicCreator.deselectAll(); 
 
+            // Update visibility of left sidebar content sections
+            const sidebarContents = document.querySelectorAll('.sidebar-content > div[data-tab-content]');
+            console.log("[UIManager] Found left sidebar content sections:", sidebarContents.length);
+            sidebarContents.forEach(content => {
+                if (content.dataset.tabContent === newMode) {
+                    content.style.display = 'block';
+                    console.log("[UIManager] Showing left sidebar content for:", newMode);
+                } else {
+                    content.style.display = 'none';
+                }
+            });
+
             // Then update the right sidebar based on the selected mode
             this.updateRightSidebarView();
         });
+        console.log("[UIManager] Event listener for sidebar tabs attached.");
     }
 
     // --- NEW: Update Right Sidebar View --- 
     updateRightSidebarView() {
+        console.log("[UIManager] updateRightSidebarView called for mode:", this.comicCreator.currentSidebarMode);
         const propertiesPanel = document.querySelector('.properties-panel');
-        if (!propertiesPanel) return;
+        if (!propertiesPanel) {
+            console.error("[UIManager] Properties panel not found!");
+            return;
+        }
 
-        // Clear previous content
+        // Clear previous properties panel content
         propertiesPanel.innerHTML = '';
+        console.log("[UIManager] Properties panel cleared.");
 
-        // Access state and managers via comicCreator instance
         const currentMode = this.comicCreator.currentSidebarMode;
         const panelManager = this.comicCreator.panelManager;
         const backgroundManager = this.comicCreator.backgroundManager;
         const stickerManager = this.comicCreator.stickerManager;
-        const textManager = this.comicCreator.textManager;
+        const textManager = this.comicCreator.textManager; 
 
         // Show the relevant section based on mode AND current selection
         switch (currentMode) {
             case 'panels':
-                console.log("Right sidebar: Panels tab active.");
-                let panelProps = propertiesPanel.querySelector('#panel-properties');
-                if (!panelProps) {
-                    panelProps = document.createElement('div');
-                    panelProps.id = 'panel-properties';
-                    panelProps.className = 'properties-section';
-                    propertiesPanel.appendChild(panelProps);
-                }
-                
-                // Ensure the container is visible
+                console.log("[UIManager] Right sidebar: Panels tab active.");
+                let panelProps = document.createElement('div');
+                panelProps.id = 'panel-properties';
+                panelProps.className = 'properties-section';
+                propertiesPanel.appendChild(panelProps);
                 panelProps.style.display = 'block';
 
-                // Show panel controls ONLY if a panel is selected
-                if (panelManager.currentPanel) { // Access via panelManager instance
-                    // Call PanelManager to update the controls INSIDE the panelProps container
+                if (panelManager.currentPanel) {
+                    console.log("[UIManager] Current panel selected, calling updatePanelControls.");
                     panelManager.updatePanelControls(panelManager.currentPanel, panelProps); 
                 } else {
-                    // Display the placeholder message inside the panelProps container
+                    console.log("[UIManager] No panel selected, showing placeholder.");
                     panelProps.innerHTML = '<h4>Panel Settings</h4><div class="panel-controls"><p>Select a panel to see its properties.</p></div>';
                 }
                 break;
                 
             case 'backgrounds':
-                 console.log("Right sidebar: Backgrounds tab active.");
-                // Always show background controls when this tab is active
-                backgroundManager.updateBackgroundControls(); // Call manager method
+                console.log("[UIManager] Right sidebar: Backgrounds tab active. Calling updateBackgroundControls.");
+                backgroundManager.updateBackgroundControls(propertiesPanel);
                 break;
                 
             case 'stickers':
-                 console.log("Right sidebar: Stickers tab active.");
-                let stickerProps = propertiesPanel.querySelector('#sticker-properties');
-                if (!stickerProps) {
-                    stickerProps = document.createElement('div');
-                    stickerProps.id = 'sticker-properties';
-                    stickerProps.className = 'properties-section';
-                    propertiesPanel.appendChild(stickerProps);
-                }
-                
-                 // Show sticker controls ONLY if a sticker is selected
-                 if (stickerManager.currentSticker) { // Access via stickerManager instance
-                     stickerManager.updateStickerControls(); // StickerManager updates based on its own state
-                 } else if (stickerProps) {
+                console.log("[UIManager] Right sidebar: Stickers tab active.");
+                let stickerProps = document.createElement('div');
+                stickerProps.id = 'sticker-properties'; // Ensure this ID is unique or handled by StickerManager
+                stickerProps.className = 'properties-section';
+                propertiesPanel.appendChild(stickerProps);
+                stickerProps.style.display = 'block';
+
+                if (stickerManager.selectedSticker) { 
+                    console.log("[UIManager] Current sticker selected, calling updateStickerControls.");
+                    stickerManager.updateStickerControls(stickerProps); 
+                } else {
+                    console.log("[UIManager] No sticker selected, showing placeholder.");
                     stickerProps.innerHTML = '<h4>Sticker Settings</h4><div class="panel-controls"><p>Select a sticker to see its properties.</p></div>';
-                    stickerProps.style.display = 'block';
-                 } else {
-                    // Ensure sticker props div exists for the message if needed
-                    stickerManager.updateStickerControls(); // Call StickerManager method
-                 }
+                }
                 break;
-            case 'text': // Assuming text properties are handled here or via TextManager
-                 console.log("Right sidebar: Text tab active (or relevant).");
-                 // Show text controls ONLY if a text box is selected
-                 if (textManager.currentTextBox) { // Access via textManager instance
-                     textManager.updateTextProperties(textManager.currentTextBox);
-                 } else {
-                     // Optional: Show default message if no text box selected
-                     let textProps = propertiesPanel.querySelector('#text-properties');
-                     if (!textProps) {
-                         textProps = document.createElement('div');
-                         textProps.id = 'text-properties';
-                         textProps.className = 'properties-section';
-                         propertiesPanel.appendChild(textProps);
-                     }
-                     textProps.innerHTML = '<h4>Text Settings</h4><div class="panel-controls"><p>Select a text element to see its properties.</p></div>';
-                     textProps.style.display = 'block';
-                 }
-                 break;
-            default:
-                 console.warn("Unknown sidebar mode:", currentMode);
+            
+            // It seems text properties are handled by a general text-properties div. 
+            // We should ensure TextManager or UIManager explicitly shows/hides #text-properties
+            // For now, let's assume TextManager is responsible for its own UI visibility when a text element is selected.
+            // Or, we add a specific case here if UIManager should control it globally.
         }
+
+        // Handling Text Properties Panel visibility separately if it's a generic panel
+        const textPropertiesPanel = document.getElementById('text-properties');
+        if (textPropertiesPanel) {
+            if (textManager.currentTextBox) {
+                console.log("[UIManager] Text box selected, showing text properties panel.");
+                textPropertiesPanel.style.display = 'block';
+                // textManager.updateTextProperties(textManager.currentTextBox, textPropertiesPanel); // Ensure this is called if needed
+            } else {
+                console.log("[UIManager] No text box selected, hiding text properties panel.");
+                textPropertiesPanel.style.display = 'none';
+            }
+        }
+        console.log("[UIManager] updateRightSidebarView finished.");
     }
 
     // --- Show Notification ---

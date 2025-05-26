@@ -29,6 +29,11 @@
                     <h3>Your Images</h3>
                     <div id="image-thumbnails" class="thumbnails-grid"></div>
                 </div>
+                <div class="canvas-size-selection">
+                    <h4>Select Canvas Size:</h4>
+                    <button id="current-size-btn" class="primary-btn active-size">Current (700x700px)</button>
+                    <button id="amazon-kdp-size-btn" class="primary-btn">Amazon KDP (7"x10")</button>
+                </div>
                 <div class="button-group">
                     <button id="load-project-btn" class="primary-btn">
                         <i class="fas fa-folder-open"></i> Load Project
@@ -109,12 +114,22 @@
                         <button class="tab-btn" data-tab="stickers">Stickers</button>
                     </div>
                     <div class="sidebar-content">
-                        <!-- Existing Upload Area (will move slightly later if needed) -->
-                        <!-- The upload area might be better placed above the tabs, TBD -->
-                        
-                        <!-- Image Library (now within content area) -->
-                        <h3>Your Images</h3> 
-                        <div id="editor-thumbnails" class="thumbnails-grid"></div>
+                        <div data-tab-content="panels">
+                            <h3>Your Images</h3> 
+                            <div id="editor-thumbnails" class="thumbnails-grid"></div>
+                        </div>
+                        <div data-tab-content="backgrounds" style="display: none;">
+                            <!-- Content for Backgrounds tab -->
+                            <h3>Background Styles</h3>
+                            <div class="background-styles" id="background-styles-container">
+                                <!-- Background style buttons will be populated here by BackgroundManager -->
+                            </div>
+                        </div>
+                        <div data-tab-content="stickers" style="display: none;">
+                            <!-- Content for Stickers tab -->
+                            <h3>Stickers</h3>
+                            <div id="sticker-thumbnails" class="thumbnails-grid"></div> 
+                        </div>
                     </div>
                 </div>
 
