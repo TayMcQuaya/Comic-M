@@ -2312,56 +2312,35 @@ class ComicCreator {
 
     // --- Deselect All Elements --- 
     deselectAll() {
-        const propertiesPanel = document.querySelector('.properties-panel'); // Get panel ref
+        console.log("ComicCreator: deselectAll called");
+        if (this.panelManager) {
+            this.panelManager.selectPanel(null); // Deselect current panel
+        }
+        if (this.textManager) {
+            this.textManager.deselectTextBox(); // Deselect current text box
+        }
+        if (this.stickerManager) {
+            this.stickerManager.deselectCurrentSticker(); // Deselect current sticker
+        }
+        // Add other managers as needed
+        // Update the right sidebar (e.g., to show a default view or be empty)
+        this.uiManager.updateRightSidebarView(); // This should clear or reset the properties panel
+    }
 
-        if (this.currentPanel) {
-            this.currentPanel.classList.remove('selected');
-            const img = this.currentPanel.querySelector('img');
-            if (img) {
-                img.style.cursor = 'default';
-                img.style.pointerEvents = 'none';
-            }
-            this.currentPanel = null;
-            // Hide panel props if they exist
-             if (propertiesPanel) {
-                const panelProps = propertiesPanel.querySelector('#panel-properties');
-                 if (panelProps) panelProps.style.display = 'none';
-             }
+    /**
+     * Deselects any currently active panels or text boxes.
+     * This is typically called before selecting a sticker to ensure only one element type is active.
+     */
+    deselectPanelsAndText() {
+        console.log("ComicCreator: deselectPanelsAndText called");
+        if (this.panelManager && this.panelManager.currentPanel) {
+            this.panelManager.selectPanel(null); // Deselect current panel
         }
-        if (this.currentTextBox) {
-            this.currentTextBox.classList.remove('selected-text');
-            this.currentTextBox = null;
-             // Hide text props if they exist
-             if (propertiesPanel) {
-                const textProps = propertiesPanel.querySelector('#text-properties');
-                if (textProps) textProps.style.display = 'none';
-            }
+        if (this.textManager && this.textManager.currentTextBox) {
+            this.textManager.deselectTextBox(); // Deselect current text box
         }
-        if (this.currentBackground) {
-            this.currentBackground.classList.remove('selected-background');
-            this.currentBackground = null;
-             // Hide background props if they exist
-            if (propertiesPanel) {
-                const bgProps = propertiesPanel.querySelector('#background-properties');
-                if (bgProps) bgProps.style.display = 'none';
-            }
-        }
-        
-        // Use StickerManager to deselect stickers
-        if (this.currentSticker) {
-            this.stickerManager.deselectCurrentSticker();
-            this.currentSticker = null;
-            
-             // Hide sticker props if they exist
-             if (propertiesPanel) {
-                 const stickerProps = propertiesPanel.querySelector('#sticker-properties');
-                 if (stickerProps) stickerProps.style.display = 'none';
-             }
-        }
-        
-         // After deselecting everything, update the sidebar based on the current mode
-         // This ensures the correct default message or empty state is shown.
-         this.uiManager.updateRightSidebarView(); 
+        // We don't deselect stickers here.
+        // We also don't call uiManager.updateRightSidebarView() as the sticker selection will handle it.
     }
 
     loadPage(pageIndex) {

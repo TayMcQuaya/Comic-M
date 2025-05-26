@@ -201,8 +201,6 @@ export class PanelManager {
             
             // Store image ID for state saving
             panel.dataset.imageId = image.id.toString();
-            // Update thumbnail states via the ComicCreator instance
-            this.comicCreator.imageLibrary.updateThumbnails(); 
             
             // Setup dragging for the newly added image via the ComicCreator instance
             this.comicCreator.dragAndDropManager.setupImageDragging(img);
@@ -211,6 +209,8 @@ export class PanelManager {
 
             // --- Explicitly save state AFTER image is added and panel selected --- 
             this.comicCreator.saveCurrentPageState();
+            // Update thumbnail states via the ComicCreator instance AFTER saving page state
+            this.comicCreator.imageLibrary.updateThumbnails(); 
             // --- End state save ---
 
         } catch (error) {

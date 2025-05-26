@@ -89,7 +89,9 @@ export class StickerManager {
         // Add click handler to select
             stickerImg.addEventListener('click', (e) => {
             e.stopPropagation();
-                this.selectSticker(stickerImg);
+            // First, tell ComicCreator to deselect any active panels or text boxes
+            this.comicCreator.deselectPanelsAndText(); 
+            this.selectSticker(stickerImg); // Then, select this sticker
             });
 
         // Select the sticker after adding it
@@ -98,25 +100,41 @@ export class StickerManager {
         // Save the canvas state
         this.comicCreator.saveCurrentPageState();
 
+        this.comicCreator.imageLibrary.updateThumbnails();
+
         return stickerImg;
     }
 
     // --- Select Sticker ---
     selectSticker(stickerElement) {
-        if (!stickerElement || stickerElement === this.currentSticker) {
-            // Avoid re-selecting the same sticker or selecting null
+        if (!stickerElement) {
+            console.log('StickerManager: selectSticker called with null. No action.');
             return;
         }
-        console.log('StickerManager: Selecting sticker:', stickerElement.id);
 
-        // Deselect any other selected element (handled by ComicCreator)
-        this.comicCreator.deselectAll();
+        // Case 1: Clicking the ALREADY selected sticker (e.g. to ensure properties are shown if hidden).
+        if (stickerElement === this.currentSticker) {
+            console.log('StickerManager: Re-clicked current sticker. Ensuring properties are visible and sticker is on top.', stickerElement.id);
+            this.currentSticker.style.zIndex = '101'; // Ensure it's on top
+            this.updateStickerControls(); // Refresh/ensure controls are visible
+            return;
+        }
 
+        // Case 2: Switching to a NEW sticker (or selecting the first one after a general deselect).
+        // Deselect the previous sticker *if it exists and is different*.
+        if (this.currentSticker) {
+            console.log('StickerManager: Deselecting previous sticker:', this.currentSticker.id);
+            this.currentSticker.classList.remove('selected-sticker');
+            this.currentSticker.style.zIndex = '5'; // Reset z-index
+        }
+        
+        // Set the new current sticker
         this.currentSticker = stickerElement;
-        stickerElement.classList.add('selected-sticker'); // Add a specific class for styling
-        stickerElement.style.zIndex = '101'; // Set slightly higher than max text z-index (100)
-
-        // Update the right sidebar with sticker controls
+        this.currentSticker.classList.add('selected-sticker');
+        this.currentSticker.style.zIndex = '101'; 
+        console.log('StickerManager: Newly selected sticker:', this.currentSticker.id);
+        
+        // Update controls for the newly selected sticker.
         this.updateStickerControls();
     }
 
@@ -800,7 +818,9 @@ loadStickerStates(page) {
                 
                 stickerImg.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    this.selectSticker(stickerImg);
+                    // First, tell ComicCreator to deselect any active panels or text boxes
+                    this.comicCreator.deselectPanelsAndText();
+                    this.selectSticker(stickerImg); // Then, select this sticker
                 });
             } else {
                 console.warn(`StickerManager: Image ID ${state.imageId} not found in library for sticker ${state.id}. Skipping sticker.`);

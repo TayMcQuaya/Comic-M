@@ -68,6 +68,7 @@ export class BackgroundManager {
 
         // Save the overall page state
         this.comicCreator.saveCurrentPageState();
+        this.comicCreator.imageLibrary.updateThumbnails();
         // Update sidebar controls to show image options
         this.updateBackgroundControls();
     }
