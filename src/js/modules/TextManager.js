@@ -116,6 +116,13 @@ export class TextManager {
         return this.bubbleManipulation.selectTextBox(textBox);
     }
 
+    deselectTextBox() {
+        if (this.bubbleManipulation) {
+            return this.bubbleManipulation.deselectCurrentTextBox();
+        }
+        console.warn("TextManager: bubbleManipulation module not found for deselectTextBox.");
+    }
+
     deleteSelectedTextBox() {
         if (!this.bubbleManipulation.currentTextBox) return;
 

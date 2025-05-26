@@ -516,4 +516,23 @@ export class TextManagerBubbleManipulation {
             this.comicCreator.saveCurrentPageState();
         };
     }
+
+    /**
+     * Deselects the currently active text box, if any.
+     * This is typically called by ComicCreator.deselectAll or before selecting a new element.
+     */
+    deselectCurrentTextBox() {
+        if (this.currentTextBox) {
+            console.log('[TM_BubbleManipulation] Deselecting text box:', this.currentTextBox.id);
+            this.currentTextBox.classList.remove('selected-text');
+            // Optionally, hide any specific text-related UI elements if not handled by UIManager
+            const popup = document.getElementById('text-format-popup');
+            if (popup && popup.style.display !== 'none') {
+                popup.style.display = 'none';
+            }
+            this.currentTextBox = null;
+        } else {
+            // console.log('[TM_BubbleManipulation] deselectCurrentTextBox called, but no currentTextBox to deselect.');
+        }
+    }
 } 
