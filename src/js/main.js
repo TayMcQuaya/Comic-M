@@ -44,6 +44,7 @@ class ComicCreator {
             }
         };
         this.currentFolderId = 'root';
+        this.isSavingProject = false; // Add this line
         
         // Instantiate the Managers
         // Remove exportManager instantiation
@@ -1581,152 +1582,59 @@ class ComicCreator {
 
 
     async saveProject() { // Make async
-        // Prompt for filename
-        const filename = await this.promptForFilename("comic-project", ".json"); // Pass default and extension
-        if (!filename) {
-            console.log("Save project cancelled by user.");
-            return; // Exit if user cancelled
-        }
-
-        // Force save current page state before exporting (including any new text elements)
-        console.log("Saving final page state before exporting project");
-        this.saveCurrentPageState();
-        
-        // Make sure all text elements are recorded
-        // Refresh canvas to ensure we capture everything in the DOM
-        const canvasTextElements = document.querySelectorAll('#comic-canvas > .text-bubble');
-        console.log(`Found ${canvasTextElements.length} canvas text elements - making sure they're all saved`);
-        
-        // Get the current page object
-        const currentPage = this.pages[this.currentPageIndex];
-        if (!currentPage) {
-            console.error("Cannot save project - current page not found");
+        if (this.isSavingProject) {
+            console.log("[saveProject] Already in progress. Ignoring additional call.");
             return;
         }
-        
-        // Double-check if canvasTextElements in current page matches the DOM
-        if (currentPage.canvasTextElements && 
-            canvasTextElements.length > 0 && 
-            canvasTextElements.length !== currentPage.canvasTextElements.length) {
-            console.warn(`Mismatch between DOM text elements (${canvasTextElements.length}) and saved state (${currentPage.canvasTextElements.length}). Forcing state refresh.`);
-            // Force refresh the page state to capture all elements
+        this.isSavingProject = true;
+        console.log("[saveProject] Entered method. Timestamp:", Date.now());
+
+        try {
+            // Prompt for filename
+            const filename = await this.promptForFilename("comic-project", ".json"); 
+            if (!filename) { 
+                console.log("Save project cancelled by user.");
+                this.uiManager.showNotification('Save cancelled: No filename provided.', 'info');
+                // this.isSavingProject = false; // Moved to finally
+                return; // Exit if user cancelled
+            }
+            // const filename = filenameResult.filename; // No longer needed, filename is already the string
+
+            // Force save current page state before exporting (including any new text elements)
+            console.log("Saving final page state before exporting project");
             this.saveCurrentPageState();
+            
+            // Use getCurrentProjectState to get all data including dimensions and processed images
+            const projectState = await this.getCurrentProjectState();
+
+            if (!projectState) {
+                this.uiManager.showNotification('Could not retrieve project state for saving.', 'error');
+                console.error("Failed to get project state in saveProject.");
+                // this.isSavingProject = false; // Moved to finally
+                return;
+            }
+            
+            // Create and trigger download
+            const blob = new Blob([JSON.stringify(projectState, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename; // Use the user-provided filename
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            // --- Clear auto-save data after successful manual save ---
+            await this.autoSaveManager.clearAutoSave();
+            console.log("Manual save successful, cleared auto-save data.");
+            this.uiManager.showNotification("Project saved successfully!", "success");
+        } catch (error) {
+            console.error("[saveProject] Error during save:", error);
+            this.uiManager.showNotification("Error saving project.", "error");
+        } finally {
+            this.isSavingProject = false; // Reset flag in all cases
         }
-        
-        // Identify custom layouts used in this project
-        const customLayoutIds = new Set();
-        this.pages.forEach(page => {
-            const layoutId = page.layout;
-            if (layoutId && typeof layoutId === 'string' && layoutId.startsWith('custom-')) {
-                customLayoutIds.add(layoutId);
-            }
-        });
-        
-        // Create a map of custom layouts that are used in this project
-        const customLayouts = {};
-        customLayoutIds.forEach(layoutId => {
-            if (this.layouts[layoutId]) {
-                const layoutName = this.layouts[layoutId].name;
-                customLayouts[layoutId] = this.layouts[layoutId];
-                console.log(`Including custom layout in project: ${layoutName} (${layoutId})`);
-            }
-        });
-        
-        // --- MODIFIED: Convert Object URLs back to Data URLs before saving ---
-        const imageProcessingPromises = this.imageLibrary.getImages().map(async (img) => {
-            if (img.isObjectURL && img.src && img.src.startsWith('blob:')) {
-                try {
-                    // Fetch the blob data from the Object URL
-                    const response = await fetch(img.src);
-                    if (!response.ok) {
-                        throw new Error(`Failed to fetch blob URL for ${img.name} (status: ${response.status})`);
-                    }
-                    const blob = await response.blob();
-                    
-                    // Use FileReader to convert Blob to Data URL
-                    const dataUrl = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(blob);
-                    });
-                    
-                    console.log(`Converted Object URL back to Data URL for saving: ${img.name}`);
-                    // Return image data with the persistent Data URL
-                    return {
-                        id: img.id,
-                        name: img.name,
-                        width: img.width,
-                        height: img.height,
-                        src: dataUrl
-                        // No need to save isObjectURL flag
-                    };
-                } catch (error) {
-                    console.error(`Failed to convert Object URL to Data URL for image: ${img.name} (${img.id})`, error);
-                    // Fallback: Save with a null src or indicate error? Saving null might be safer.
-                    return { 
-                        id: img.id, 
-                        name: img.name, 
-                        width: img.width, 
-                        height: img.height, 
-                        src: null, // Indicate data loss 
-                        saveError: true
-                    };
-                }
-            } else {
-                // If it's not an Object URL (e.g., already a Data URL or failed load),
-                // save the existing src (which might be null or a Data URL)
-                return {
-                    id: img.id,
-                    name: img.name,
-                    width: img.width,
-                    height: img.height,
-                    src: img.src // Keep original src 
-                };
-            }
-        });
-
-        // Wait for all conversions to complete
-        const imagesToSave = await Promise.all(imageProcessingPromises);
-        // --- END MODIFICATION ---
-
-        // Create project state object
-        const projectState = {
-            version: '1.3-autosave', // Update version
-            useGlobalBackgroundStyle: this.useGlobalBackgroundStyle,
-            globalBackgroundStyle: this.globalBackgroundStyle,
-            pages: this.pages.map(page => ({
-                ...page,
-                panelStates: page.panelStates.map(panel => ({
-                    ...panel,
-                    // Convert image data URLs to just IDs
-                    imageId: panel.imageId || null
-                }))
-            })),
-            images: imagesToSave, // <-- Use the processed images array
-            currentPageIndex: this.currentPageIndex,
-            // Add folder structure and current folder ID
-            folderStructure: this.folderStructure,
-            currentFolderId: this.currentFolderId,
-            // Add custom layouts to ensure portability across devices
-            customLayouts: customLayouts
-        };
-        
-        // Create and trigger download
-        const blob = new Blob([JSON.stringify(projectState, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename; // Use the user-provided filename
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        // --- Clear auto-save data after successful manual save ---
-        await this.autoSaveManager.clearAutoSave();
-        console.log("Manual save successful, cleared auto-save data.");
-         this.uiManager.showNotification("Project saved successfully!", "success");
     }
 
     async getCurrentProjectState() {
@@ -2087,10 +1995,10 @@ class ComicCreator {
 
     setupProjectControls() {
         // Save Project button
-        const saveProjectBtn = document.getElementById('save-project-btn');
-        if (saveProjectBtn) {
-            saveProjectBtn.addEventListener('click', () => this.saveProject());
-        }
+        // const saveProjectBtn = document.getElementById('save-project-btn');
+        // if (saveProjectBtn) {
+        //     saveProjectBtn.addEventListener('click', () => this.saveProject());
+        // }
         
         // Load Project button
         const loadProjectBtn = document.getElementById('load-project-btn');
