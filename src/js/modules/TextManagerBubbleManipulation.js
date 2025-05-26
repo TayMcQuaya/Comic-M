@@ -18,6 +18,9 @@ export class TextManagerBubbleManipulation {
         // Record state before adding text, with special action type for text creation
         this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_create');
 
+        console.log('[TM_BubbleManipulation] addTextToPanel called. Panel:', panel);
+        console.log('[TM_BubbleManipulation] Default text settings:', JSON.stringify(this.defaultTextSettings));
+
         // Create text container with default speech bubble
         const textId = `text_${Date.now()}`;
         const textContainer = document.createElement('div');
@@ -32,11 +35,13 @@ export class TextManagerBubbleManipulation {
         const initialTop = Math.max(0, (panel.clientHeight / 2) - 25); // Approx center minus half default height
         textContainer.style.left = `${initialLeft}px`; 
         textContainer.style.top = `${initialTop}px`;
+        console.log(`[TM_BubbleManipulation] Initial position for panel text: left=${initialLeft}px, top=${initialTop}px`);
         // textContainer.style.transform = 'translate(-50%, -50%)'; // No longer using transform for centering
         textContainer.style.minWidth = '100px';
         textContainer.style.minHeight = '50px';
         textContainer.style.padding = '10px';
         textContainer.style.zIndex = '100'; // Ensure panel text is also above stickers
+        console.log('[TM_BubbleManipulation] Text container zIndex set to:', textContainer.style.zIndex);
         
         // Create editable text element
         const textElement = document.createElement('div');
@@ -94,6 +99,7 @@ export class TextManagerBubbleManipulation {
         textContainer.appendChild(deleteButton);
         textContainer.appendChild(rotationHandle);
         panel.appendChild(textContainer);
+        console.log('[TM_BubbleManipulation] Text container appended to panel.', textContainer);
         
         // Make draggable (via ComicCreator)
         this.comicCreator.dragAndDropManager.makeTextDraggable(textContainer, dragHandle);
@@ -179,6 +185,9 @@ export class TextManagerBubbleManipulation {
         // Record state before adding text, with special action type for text creation
         this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_create');
 
+        console.log('[TM_BubbleManipulation] addTextToCanvas called.');
+        console.log('[TM_BubbleManipulation] Default text settings:', JSON.stringify(this.defaultTextSettings));
+
         const canvas = document.querySelector('#comic-canvas');
         if (!canvas) {
             console.error("Cannot add text, canvas not found.");
@@ -203,10 +212,12 @@ export class TextManagerBubbleManipulation {
         const initialTop = Math.max(0, (canvasRect.height / 2) - 25); // Approx center minus half default height
         textContainer.style.left = `${initialLeft}px`; 
         textContainer.style.top = `${initialTop}px`;
+        console.log(`[TM_BubbleManipulation] Initial position for canvas text: left=${initialLeft}px, top=${initialTop}px`);
         // textContainer.style.transform = 'translate(-50%, -50%)'; // REMOVE this centering transform
         textContainer.style.minWidth = '100px';
         textContainer.style.padding = '10px';
         textContainer.style.zIndex = zIndex; // Leave text elements at their default z-index
+        console.log('[TM_BubbleManipulation] Text container zIndex set to:', textContainer.style.zIndex);
 
         // Create editable text element
         const textElement = document.createElement('div');
@@ -261,6 +272,7 @@ export class TextManagerBubbleManipulation {
         textContainer.appendChild(deleteButton);
         textContainer.appendChild(rotationHandle);
         canvas.appendChild(textContainer); // Append directly to canvas
+        console.log('[TM_BubbleManipulation] Text container appended to canvas.', textContainer);
 
         // Make draggable (via ComicCreator)
         this.comicCreator.dragAndDropManager.makeCanvasTextDraggable(textContainer, dragHandle); // Use a new/adapted function

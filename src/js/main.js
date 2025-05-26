@@ -2071,52 +2071,56 @@ class ComicCreator {
             list.appendChild(listItem);
         });
 
-        // --- Drag and Drop Logic ---
+        // --- Drag and Drop Logic --- 
         let draggedItem = null;
 
-        list.addEventListener('dragstart', (e) => {
-            draggedItem = e.target;
-            setTimeout(() => e.target.classList.add('dragging'), 0); // Style the dragged item
-        });
+        // Define named event handlers for the list
+        const handleDragStart = (e) => {
+            draggedItem = e.target.closest('li'); // Ensure we get the li
+            if (draggedItem) {
+                setTimeout(() => draggedItem.classList.add('dragging'), 0);
+            }
+        };
 
-        list.addEventListener('dragend', (e) => {
-            setTimeout(() => {
-                if (draggedItem) {
-                    draggedItem.classList.remove('dragging');
-                }
-                draggedItem = null;
-                // Remove any lingering drag-over styles
-                list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-            }, 0);
-        });
+        const handleDragEnd = (e) => {
+            if (draggedItem) {
+                draggedItem.classList.remove('dragging');
+            }
+            draggedItem = null;
+            list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        };
 
-        list.addEventListener('dragover', (e) => {
+        const handleDragOver = (e) => {
             e.preventDefault();
             const targetItem = e.target.closest('li');
-            if (targetItem && targetItem !== draggedItem) {
+            if (targetItem && draggedItem && targetItem !== draggedItem) {
                 const listItems = Array.from(list.children);
                 const targetIndex = listItems.indexOf(targetItem);
                 const draggedIndex = listItems.indexOf(draggedItem);
 
-                // Remove previous drag-over styles
                 list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
-                targetItem.classList.add('drag-over'); // Add style to target
+                targetItem.classList.add('drag-over');
 
-                // Reorder visually in the list
                 if (targetIndex > draggedIndex) {
                     list.insertBefore(draggedItem, targetItem.nextSibling);
                 } else {
                     list.insertBefore(draggedItem, targetItem);
                 }
             }
-        });
-        
-        list.addEventListener('dragleave', (e) => {
+        };
+
+        const handleDragLeave = (e) => {
             const targetItem = e.target.closest('li');
             if (targetItem) {
                  targetItem.classList.remove('drag-over');
             }
-        });
+        };
+
+        // Add list event listeners using the named handlers
+        list.addEventListener('dragstart', handleDragStart);
+        list.addEventListener('dragend', handleDragEnd);
+        list.addEventListener('dragover', handleDragOver);
+        list.addEventListener('dragleave', handleDragLeave);
 
         // --- Modal Control Logic ---
         const closeModal = (confirm = false) => {
@@ -2125,31 +2129,27 @@ class ComicCreator {
             setTimeout(() => {
                 modal.style.display = 'none';
                 overlay.style.display = 'none';
-                // Clean up event listeners (important!)
-                confirmBtn.removeEventListener('click', handleConfirm);
-                cancelBtn.removeEventListener('click', handleCancel);
-                list.removeEventListener('dragstart', list.dragStartHandler);
-                list.removeEventListener('dragend', list.dragEndHandler);
-                list.removeEventListener('dragover', list.dragOverHandler);
-                 list.removeEventListener('dragleave', list.dragLeaveHandler);
-            }, 300); // Wait for transition
+                
+                // Remove event listeners using the same named handlers
+                confirmBtn.removeEventListener('click', handleConfirmClick);
+                cancelBtn.removeEventListener('click', handleCancelClick);
+                list.removeEventListener('dragstart', handleDragStart);
+                list.removeEventListener('dragend', handleDragEnd);
+                list.removeEventListener('dragover', handleDragOver);
+                list.removeEventListener('dragleave', handleDragLeave);
+            }, 300); 
 
             if (confirm) {
                 this.applyPageReorder(list);
             }
         };
 
-        const handleConfirm = () => closeModal(true);
-        const handleCancel = () => closeModal(false);
+        // Define named handlers for confirm/cancel buttons
+        const handleConfirmClick = () => closeModal(true);
+        const handleCancelClick = () => closeModal(false);
 
-        // Add temporary references to handlers for removal
-        list.dragStartHandler = list.listeners?.['dragstart'];
-        list.dragEndHandler = list.listeners?.['dragend'];
-        list.dragOverHandler = list.listeners?.['dragover'];
-        list.dragLeaveHandler = list.listeners?.['dragleave'];
-
-        confirmBtn.addEventListener('click', handleConfirm);
-        cancelBtn.addEventListener('click', handleCancel);
+        confirmBtn.addEventListener('click', handleConfirmClick);
+        cancelBtn.addEventListener('click', handleCancelClick);
 
         // Show the modal
         overlay.style.display = 'block';
