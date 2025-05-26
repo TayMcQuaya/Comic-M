@@ -63,6 +63,8 @@ class ComicCreator {
     }
 
     async init() { 
+        console.log("[ComicCreator] Initializing...");
+        this.autoSaveRestoredSuccessfully = false; // Initialize the flag
         console.log("[Main] ComicCreator init called.");
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.thumbnail-container') && 
@@ -102,8 +104,38 @@ class ComicCreator {
         await this.autoSaveManager.init(); 
         console.log("[Main] AutoSaveManager initialized.");
 
-        this.setCanvasDimension(this.selectedCanvasDimension); 
-        console.log("[Main] Initial canvas dimension set.");
+        // Check for auto-save after AutoSaveManager is initialized
+        const autoSaveFlag = localStorage.getItem('comicCreator_autoSaveExists');
+        if (autoSaveFlag === 'true' && !window.IS_PUPPETEER_EXPORT) {
+            console.log("[ComicCreator.init] Auto-save flag is true. Prompting user.");
+            await this.autoSaveManager.promptLoadAutoSave(); // This will set autoSaveRestoredSuccessfully if loaded
+        } else {
+            console.log("[ComicCreator.init] No auto-save flag or in Puppeteer mode. Skipping prompt.");
+        }
+
+        console.log("[ComicCreator.init] After auto-save check and potential prompt, autoSaveRestoredSuccessfully is:", this.autoSaveRestoredSuccessfully);
+        console.log("[ComicCreator.init] window.IS_PUPPETEER_EXPORT is:", window.IS_PUPPETEER_EXPORT);
+
+        // Initialize canvas dimensions only if not restoring from auto-save and not in Puppeteer export mode (where dimensions are set differently)
+        if (!this.autoSaveRestoredSuccessfully && !window.IS_PUPPETEER_EXPORT) {
+            console.log("[ComicCreator.init] Setting canvas dimension via init flow because not restored from auto-save and not puppeteer.");
+            this.setCanvasDimension(this.selectedCanvasDimension);
+
+            console.log("[ComicCreator.init] Ensuring #upload-page is active for a new session.");
+            document.getElementById('upload-page')?.classList.add('active');
+            document.getElementById('layout-page')?.classList.remove('active');
+            document.getElementById('editor-page')?.classList.remove('active');
+            
+            // Ensure timer is stopped if starting fresh on upload page
+            if (this.autoSaveManager) {
+                this.autoSaveManager.stopPeriodicAutoSave();
+            }
+
+        } else {
+            console.log("[ComicCreator.init] Skipping canvas dimension setting in init flow due to auto-save restore or Puppeteer.");
+        }
+
+        // this.setupInitialPage(); // Commented out as the function doesn't exist / to prevent error
         console.log("[Main] ComicCreator init finished.");
     }
 
@@ -567,6 +599,10 @@ class ComicCreator {
         if (backToUploadBtn) {
             backToUploadBtn.addEventListener('click', () => {
                 console.log("[Main] Back to Upload button clicked (Layout to Upload).");
+                if (this.autoSaveManager) {
+                    console.log("[ComicCreator.backToUpload] Stopping periodic auto-save.");
+                    this.autoSaveManager.stopPeriodicAutoSave();
+                }
                 document.getElementById('layout-page').classList.remove('active');
                 document.getElementById('upload-page').classList.add('active');
             });
@@ -576,6 +612,14 @@ class ComicCreator {
         if (backToLayoutBtn) {
             backToLayoutBtn.addEventListener('click', () => {
                 console.log("[Main] Back to Layout button clicked (Editor to Layout).");
+                if (this.autoSaveManager) {
+                    console.log("[ComicCreator.backToLayout] Stopping periodic auto-save (from editor) and starting for layout page.");
+                    this.autoSaveManager.stopPeriodicAutoSave(); // Stop it from editor context
+                    // No initial save for layout page, just start the timer
+                    this.autoSaveManager.startPeriodicAutoSave(); 
+                } else {
+                    console.warn("[ComicCreator.backToLayout] AutoSaveManager not available.");
+                }
                 document.getElementById('editor-page').classList.remove('active');
                 document.getElementById('layout-page').classList.add('active');
             });
@@ -895,19 +939,24 @@ class ComicCreator {
             // Pass the currently selected layout for the current page.
              const currentPageLayout = this.pages[this.currentPageIndex]?.layout;
              if (currentPageLayout) {
-                this.createComic(currentPageLayout); 
+                this.createComic(currentPageLayout, false); 
              } else if (this.selectedLayout) { // Fallback to overall selected layout if page has no specific one
-                this.createComic(this.selectedLayout);
+                this.createComic(this.selectedLayout, false);
                             } else {
-                this.createComic('empty'); // Or just create an empty canvas
+                this.createComic('empty', false); // Or just create an empty canvas
              }
         }
         
-        this.historyManager.addState(); // Save state after dimension change
+        // Record state after dimension change using the existing method
+        if (this.historyManager && typeof this.historyManager.recordSnapshotBeforeAction === 'function') {
+            this.historyManager.recordSnapshotBeforeAction(false, 'canvas_dimension_change'); 
+        } else {
+            console.warn("[ComicCreator.setCanvasDimension] HistoryManager or recordSnapshotBeforeAction not available.");
+        }
         console.log(`Canvas dimension set to: ${dimensionKey} (${newDim.width}x${newDim.height}px)`);
     }
 
-    createComic(layout = null) {
+    createComic(layout = null, isNewPageCreation = true) {
         // Use provided layout or get from selected layout
         const layoutConfig = layout || this.getLayoutConfig(this.selectedLayout);
         if (!layoutConfig) {
@@ -920,6 +969,23 @@ class ComicCreator {
         // Navigate to editor page
         document.querySelector('#layout-page').classList.remove('active');
         document.querySelector('#editor-page').classList.add('active');
+        console.log("[ComicCreator.createComic] Navigated to editor page.");
+
+        // --- Auto-save calls --- 
+        if (isNewPageCreation && this.autoSaveManager) {
+            console.log("[ComicCreator.createComic] Called by new page creation. Calling performInitialSaveOnEditorEntry and startPeriodicAutoSave.");
+            this.autoSaveManager.performInitialSaveOnEditorEntry();
+            this.autoSaveManager.startPeriodicAutoSave();
+        } else if (this.autoSaveManager) {
+            console.log("[ComicCreator.createComic] Called by page load or redraw. Skipping initial save, ensuring periodic save is running if not already.");
+            // Ensure timer is running if we are in editor, but don't do an initial destructive save.
+            // This might already be handled by loadPageState's own auto-save calls at the end.
+            // For now, let's just ensure it starts if not running.
+            this.autoSaveManager.startPeriodicAutoSave(); 
+        } else {
+            console.warn("[ComicCreator.createComic] AutoSaveManager not available.");
+        }
+        // --- End Auto-save calls ---
 
         // Update the editor sidebar with uploaded images and upload button
         const editorSidebar = document.querySelector('.editor-sidebar');
@@ -991,13 +1057,33 @@ class ComicCreator {
         const currentPageForLayoutUpdate = this.pages[this.currentPageIndex];
         if (currentPageForLayoutUpdate) {
             // Use the ID stored in this.selectedLayout if createComic was called without a specific layout argument
-            currentPageForLayoutUpdate.layout = layout ? (typeof layout === 'string' ? layout : this.selectedLayout) : this.selectedLayout;
+            // Or if layout is an object, try to find its ID or use the object itself (though ID is preferred for consistency)
+            let layoutToSave = layout;
+            if (typeof layout === 'object' && layout !== null && layout.name) {
+                // Attempt to find a matching ID for the layout object
+                const foundLayoutId = Object.keys(this.layouts).find(id => this.layouts[id] === layout);
+                if (foundLayoutId) {
+                    layoutToSave = foundLayoutId;
+                } else {
+                    // If no ID found (e.g. 'empty' object), this could be problematic for saving/reloading
+                    // For 'empty', page.layout should ideally be 'empty' (string)
+                    if (layout.name === "Empty Canvas" && Array.isArray(layout.panels) && layout.panels.length === 0) {
+                        layoutToSave = 'empty'; 
+                    }
+                }
+            } else if (typeof layout === 'string') {
+                layoutToSave = layout;
+            } else {
+                layoutToSave = this.selectedLayout; // Fallback
+            }
+            currentPageForLayoutUpdate.layout = layoutToSave;
             console.log(`[createComic] Updated page ${this.currentPageIndex} layout to: ${currentPageForLayoutUpdate.layout}`);
         }
         // --- End layout update ---
 
         // Apply default background style if no layout is provided
-        if (!layout) {
+        // This logic might need refinement: when is 'layout' null vs when is it 'empty'?
+        if (!layout || (typeof layout === 'string' && layout === 'empty')) { 
             // Call the method on the BackgroundManager instance
             this.backgroundManager.applyBackgroundStyle('classic-white'); 
         }
@@ -1006,8 +1092,9 @@ class ComicCreator {
         // This is important to avoid overriding existing page states
         // Check if we're creating a new page vs loading an existing one
         const currentPage = this.pages[this.currentPageIndex];
-        if (!layout && (!currentPage.panelStates || currentPage.panelStates.length === 0)) {
-            console.log("Creating new page state from scratch");
+        // If isNewPageCreation is true, and the page is genuinely blank (no panelStates yet)
+        if (isNewPageCreation && (!currentPage.panelStates || currentPage.panelStates.length === 0)) {
+            console.log("[createComic] Creating new page state from scratch because isNewPageCreation is true.");
             this.saveCurrentPageState();
         }
     }
@@ -1094,29 +1181,29 @@ class ComicCreator {
         // Add event listeners for direct page navigation
         const handlePageNavigation = () => {
             if (pageNumberInput) { // Check if input exists
-                const pageNum = parseInt(pageNumberInput.value, 10);
-                if (pageNum && pageNum >= 1 && pageNum <= this.pages.length) {
-                    this.navigateToPage(pageNum - 1);
-                } else {
-                    // Reset to current page if invalid
-                    pageNumberInput.value = this.currentPageIndex + 1;
+            const pageNum = parseInt(pageNumberInput.value, 10);
+            if (pageNum && pageNum >= 1 && pageNum <= this.pages.length) {
+                this.navigateToPage(pageNum - 1);
+            } else {
+                // Reset to current page if invalid
+                pageNumberInput.value = this.currentPageIndex + 1;
                 }
             }
         };
 
         if (goToPageBtn) goToPageBtn.addEventListener('click', handlePageNavigation);
         if (pageNumberInput) {
-            pageNumberInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handlePageNavigation();
-                }
-            });
+        pageNumberInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handlePageNavigation();
+            }
+        });
         }
-        
+
         // Define updatePageIndicator within initializeUI as it's closely tied to these elements
         this.updatePageIndicator = () => {
             const indicatorSpan = document.querySelector('.page-indicator'); 
-            const input = document.getElementById('pageNumberInput'); 
+            const input = document.getElementById('pageNumberInput');
         
             if (indicatorSpan) {
                 indicatorSpan.textContent = `Page ${this.currentPageIndex + 1} of ${this.pages.length}`;
@@ -1211,6 +1298,16 @@ class ComicCreator {
         
         // Update the sidebar content to show panel controls
         this.uiManager.updateRightSidebarView();
+
+        // --- Auto-save calls ---
+        if (this.autoSaveManager) {
+            console.log("[ComicCreator.addNewPage] Calling performInitialSaveOnEditorEntry and startPeriodicAutoSave.");
+            this.autoSaveManager.performInitialSaveOnEditorEntry();
+            this.autoSaveManager.startPeriodicAutoSave();
+        } else {
+            console.warn("[ComicCreator.addNewPage] AutoSaveManager not available.");
+        }
+        // --- End Auto-save calls ---
     }
 
     navigateToPage(pageIndex, saveCurrentState = true) {
@@ -1317,11 +1414,15 @@ class ComicCreator {
         }
 
         // Create comic structure first (calls PanelManager.createPanels)
-        this.createComic(layoutConfig);
+        console.log(`[loadPageState] About to call createComic with layoutConfig for page ${pageIndex}:`, layoutConfig ? layoutConfig.name : 'undefined layoutConfig');
+        this.createComic(layoutConfig, false); // Pass false to prevent premature auto-save
         
-        // Log panels created
+        // Log panels created by createComic
         const panelsAfterCreation = comicCanvas.querySelectorAll('.comic-panel').length;
-        console.log(`After createComic - Panels created: ${panelsAfterCreation}`);
+        console.log(`[loadPageState] After createComic for page ${pageIndex} - Panels found in DOM: ${panelsAfterCreation}`);
+        if(panelsAfterCreation === 0 && layoutConfig && layoutConfig.panels && layoutConfig.panels.length > 0){
+            console.error(`[loadPageState] CRITICAL: createComic was called for a layout with ${layoutConfig.panels.length} panels, but 0 .comic-panel elements were found in the DOM immediately after.`);
+        }
 
         // Set canvas background style using BackgroundManager
         this.backgroundManager.loadCurrentPageBackground();
@@ -1356,23 +1457,15 @@ class ComicCreator {
         }
 
         // Restore panel states
-        const panels = document.querySelectorAll('.comic-panel');
+        const panels = document.querySelectorAll('.comic-panel'); // Re-query for panels
+        console.log(`[loadPageState] Page ${pageIndex} - Panel states to load:`, JSON.stringify(panelStates));
+        console.log(`[loadPageState] Page ${pageIndex} - Panels found in DOM before panelManager.loadPanelStates: ${panels.length}`);
         // Call PanelManager to handle image/transform loading
         this.panelManager.loadPanelStates(panelStates);
 
         // --- Restore Text Elements (via TextManager) ---
-        console.log(`Main.loadPageState: Preparing to restore text elements. Page has ${page.panelStates?.length || 0} panel states and ${page.canvasTextElements?.length || 0} canvas text elements`);
-        
-        // Debug log the canvas text elements before restoration
-        if (page.canvasTextElements && page.canvasTextElements.length > 0) {
-            console.log(`Main.loadPageState: Canvas text elements before restoration:`);
-            page.canvasTextElements.forEach((element, idx) => {
-                console.log(`Main.loadPageState: Canvas text element ${idx}: id=${element.id}, position: (${element.style?.left || 'none'}, ${element.style?.top || 'none'}), transform=${element.style?.transform || 'none'}`);
-            });
-        } else {
-            console.log(`Main.loadPageState: No canvas text elements to restore.`);
-        }
-        
+        console.log(`[loadPageState] Page ${pageIndex} - canvasTextElements to load:`, JSON.stringify(page.canvasTextElements));
+        console.log(`[loadPageState] Page ${pageIndex} - Full page object for textManager:`, JSON.stringify(page));
         this.textManager.loadTextStates(page); // Pass the whole page state
         console.log(`Main.loadPageState: Text restoration completed. Canvas now has ${comicCanvas.querySelectorAll(':scope > .text-bubble').length} direct text bubbles.`);
         // --- End Text Restoration --- 
@@ -1380,6 +1473,18 @@ class ComicCreator {
         // --- Restore Sticker Elements (via StickerManager) ---
         this.stickerManager.loadStickerStates(page);
         // --- End Sticker Restoration ---
+
+        // --- Auto-save calls after successfully loading page state to editor ---
+        if (this.autoSaveManager) {
+            console.log("[ComicCreator.loadPageState] Calling performInitialSaveOnEditorEntry and startPeriodicAutoSave.");
+            // It might be good to perform an initial save of the just-loaded state.
+            // This ensures the auto-save is up-to-date with what the user is now seeing.
+            this.autoSaveManager.performInitialSaveOnEditorEntry(); 
+            this.autoSaveManager.startPeriodicAutoSave();
+        } else {
+            console.warn("[ComicCreator.loadPageState] AutoSaveManager not available.");
+        }
+        // --- End Auto-save calls ---
 
         return true;
     }
@@ -1679,7 +1784,10 @@ class ComicCreator {
         const imagesToSave = await Promise.all(imageProcessingPromises);
 
         const projectState = {
-            version: '1.3-autosave-puppeteer', // New version marker
+            version: '1.4-dimensions', // New version marker for dimension awareness
+            canvasDimensionKey: this.selectedCanvasDimension, // Save the key e.g., "current", "amazonKDP"
+            canvasWidth: this.canvasDimensions[this.selectedCanvasDimension]?.width || 700, // Save actual width
+            canvasHeight: this.canvasDimensions[this.selectedCanvasDimension]?.height || 700, // Save actual height
             useGlobalBackgroundStyle: this.useGlobalBackgroundStyle,
             globalBackgroundStyle: this.globalBackgroundStyle,
             pages: this.pages.map(page => ({
@@ -1696,7 +1804,7 @@ class ComicCreator {
         return projectState;
     }
 
-    async loadProject(file) {
+    async loadProject(file) { // Make async
          // --- Clear any existing auto-save data before loading a manual project ---
          await this.autoSaveManager.clearAutoSave();
          console.log("Loading manual project, cleared any existing auto-save data.");
@@ -1714,6 +1822,36 @@ class ComicCreator {
             if (!projectState.version) {
                 throw new Error('Invalid project file format');
             }
+            
+            // --- Load and Set Canvas Dimension from Project State (MUST be done early) ---
+            if (projectState.canvasDimensionKey && this.canvasDimensions[projectState.canvasDimensionKey]) {
+                this.setCanvasDimension(projectState.canvasDimensionKey);
+                console.log(`[loadProject] Canvas dimension set from project file to: ${projectState.canvasDimensionKey}`);
+            } else if (projectState.canvasWidth && projectState.canvasHeight) {
+                // Fallback if key is missing but width/height are present (e.g. older interim save)
+                // This requires finding a matching key or creating a temporary custom one.
+                // For simplicity, we'll try to match an existing key first.
+                let foundKey = null;
+                for (const key in this.canvasDimensions) {
+                    if (this.canvasDimensions[key].width === projectState.canvasWidth && this.canvasDimensions[key].height === projectState.canvasHeight) {
+                        foundKey = key;
+                        break;
+                    }
+                }
+                if (foundKey) {
+                    this.setCanvasDimension(foundKey);
+                    console.log(`[loadProject] Canvas dimension (W/H) matched to existing key: ${foundKey}`);
+                } else {
+                    // If no matching key, create a temporary custom entry for these dimensions if needed
+                    // or default. For now, log a warning and potentially default.
+                    console.warn(`[loadProject] Saved canvas dimensions (${projectState.canvasWidth}x${projectState.canvasHeight}) do not match a predefined key. Using current default.`);
+                    // this.setCanvasDimension(this.selectedCanvasDimension); // Or a fixed default like 'current'
+                }
+            } else {
+                console.warn('[loadProject] No canvas dimension information found in project file. Using current default.');
+                // this.setCanvasDimension(this.selectedCanvasDimension); // Use current app default if not in project
+            }
+            // --- End Canvas Dimension Loading ---
             
             // Load custom layouts from the project file if they exist (v1.2+)
             if (projectState.customLayouts) {
@@ -1925,27 +2063,17 @@ class ComicCreator {
             this.updateNavigationButtons();
 
             console.log('Project loaded successfully');
-            
-            // Verify text elements were loaded correctly
-            const canvasTextElements = document.querySelectorAll('#comic-canvas > .text-bubble');
-            const currentPage = this.pages[this.currentPageIndex];
-            
-            if (currentPage && currentPage.canvasTextElements) {
-                console.log(`Verification: Found ${canvasTextElements.length} canvas text elements in DOM vs ${currentPage.canvasTextElements.length} in page state`);
-                
-                // If there's a mismatch and we should have text elements but don't, try loading again
-                if (canvasTextElements.length === 0 && currentPage.canvasTextElements.length > 0) {
-                    console.warn("Text elements missing after load - attempting to reload text state");
-                    this.textManager.loadTextStates(currentPage);
-                }
-            }
-            
-            // Restart the auto-save timer after successfully loading a project
-            // Reference the constant from AutoSaveManager
-            const AUTOSAVE_INTERVAL = 30000; // 30 seconds, matching the value in AutoSaveManager
-            this.autoSaveManager.saveIntervalId = setInterval(this.autoSaveManager.performAutoSave, AUTOSAVE_INTERVAL);
-            window.addEventListener('beforeunload', this.autoSaveManager.handleBeforeUnload);
             this.uiManager.showNotification("Project loaded successfully!", "success");
+
+            // --- Auto-save calls after project load to editor ---
+            if (this.autoSaveManager) {
+                console.log("[ComicCreator.loadProject] Calling performInitialSaveOnEditorEntry and startPeriodicAutoSave.");
+                await this.autoSaveManager.performInitialSaveOnEditorEntry();
+                this.autoSaveManager.startPeriodicAutoSave();
+            } else {
+                console.warn("[ComicCreator.loadProject] AutoSaveManager not available.");
+            }
+            // --- End Auto-save calls ---
 
         } catch (error) {
             console.error('Error loading project:', error);
@@ -2071,7 +2199,7 @@ class ComicCreator {
             list.appendChild(listItem);
         });
 
-        // --- Drag and Drop Logic --- 
+        // --- Drag and Drop Logic ---
         let draggedItem = null;
 
         // Define named event handlers for the list
@@ -2083,11 +2211,11 @@ class ComicCreator {
         };
 
         const handleDragEnd = (e) => {
-            if (draggedItem) {
-                draggedItem.classList.remove('dragging');
-            }
-            draggedItem = null;
-            list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+                if (draggedItem) {
+                    draggedItem.classList.remove('dragging');
+                }
+                draggedItem = null;
+                list.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
         };
 
         const handleDragOver = (e) => {
@@ -2108,7 +2236,7 @@ class ComicCreator {
                 }
             }
         };
-
+        
         const handleDragLeave = (e) => {
             const targetItem = e.target.closest('li');
             if (targetItem) {
@@ -2231,7 +2359,13 @@ class ComicCreator {
      */
     async resetProject(navigateToLayout = true) { // Make async
         // Stop the auto-save timer during reset
-        this.autoSaveManager.stopAutoSaveTimer();
+        if (this.autoSaveManager) {
+            console.log("[ComicCreator.resetProject] Stopping periodic auto-save and clearing data.");
+            this.autoSaveManager.stopPeriodicAutoSave();
+            await this.autoSaveManager.clearAutoSave(true); // Clear flag and data
+        } else {
+            console.warn("[ComicCreator.resetProject] AutoSaveManager not available for stopping/clearing.");
+        }
 
         // Reset pages
         this.pages = [{
@@ -2301,7 +2435,11 @@ class ComicCreator {
         // Restart the auto-save timer for the new blank project by re-initializing the manager
         // this.autoSaveManager.saveIntervalId = setInterval(this.autoSaveManager.performAutoSave, AUTOSAVE_INTERVAL); // Removed: Incorrect approach
         // window.addEventListener('beforeunload', this.autoSaveManager.handleBeforeUnload); // Removed: Handled by init
-        await this.autoSaveManager.init(); // Re-initialize the manager to restart timer/listeners
+        // await this.autoSaveManager.init(); // Re-initialize the manager to restart timer/listeners. This will be handled by navigation if it goes to editor.
+
+        // If navigating to layout, no timer should be started yet.
+        // If for some reason resetProject was called and we remain on editor (not typical), then timer would need restart.
+        // For now, assume resetProject leads away from editor or to a state where editor entry will handle timer.
     }
 
     // --- Update Sticker Controls ---
@@ -2571,10 +2709,37 @@ class ComicCreator {
 
     async _loadProjectFromState(projectState) {
         console.log('[ComicCreator Headless] Loading project from state object...');
-        await this.autoSaveManager.clearAutoSave();
-        this.autoSaveManager.stopAutoSaveTimer();
+        // await this.autoSaveManager.clearAutoSave(); // AutoSaveManager calls this *before* _loadProjectFromState
+        // this.autoSaveManager.stopAutoSaveTimer(); // AutoSaveManager also calls this
 
         try {
+            // --- Load and Set Canvas Dimension from Project State (MUST be done early) ---
+            if (projectState.canvasDimensionKey && this.canvasDimensions[projectState.canvasDimensionKey]) {
+                this.setCanvasDimension(projectState.canvasDimensionKey);
+                console.log('[_loadProjectFromState] Canvas dimension set from project state to:', projectState.canvasDimensionKey);
+            } else if (projectState.canvasWidth && projectState.canvasHeight) {
+                let foundKey = null;
+                for (const key in this.canvasDimensions) {
+                    if (this.canvasDimensions[key].width === projectState.canvasWidth && this.canvasDimensions[key].height === projectState.canvasHeight) {
+                        foundKey = key;
+                        break;
+                    }
+                }
+                if (foundKey) {
+                    this.setCanvasDimension(foundKey);
+                    console.log('[_loadProjectFromState] Canvas dimension (W/H) matched to existing key:', foundKey);
+                } else {
+                    console.warn(`[_loadProjectFromState] Saved canvas dimensions (${projectState.canvasWidth}x${projectState.canvasHeight}) do not match a predefined key. Using current default.`);
+                    // Consider if a default should be forced here if a project is restored without dimension info
+                    // Forcing a default might be safer than using whatever the app was last set to.
+                    // this.setCanvasDimension('current'); 
+                }
+            } else {
+                console.warn('[_loadProjectFromState] No canvas dimension information found in project state. Using current default.');
+                // this.setCanvasDimension('current'); // Default for older auto-saves
+            }
+            // --- End Canvas Dimension Loading ---
+
             this.loadCustomLayouts(); // Load from localStorage first
 
             if (projectState.customLayouts) {

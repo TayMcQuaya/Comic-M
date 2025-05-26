@@ -50,16 +50,19 @@ export class AutoSaveManager {
 
             if (autoSaveExists) {
                 console.log("[AutoSave] Existing auto-save found. Preparing to prompt user...");
-                await this.promptLoadAutoSave(); // Ask user if they want to load it
+                // Prompt is handled by ComicCreator calling promptLoadAutoSave if needed after its own init
+                // await this.promptLoadAutoSave(); // Moved to be called from ComicCreator.init if needed
             } else {
                 console.log("[AutoSave] No existing auto-save found or flag not set to 'true'.");
             }
 
-            // Start the periodic auto-save timer
-            this.saveIntervalId = setInterval(this.performAutoSave, AUTOSAVE_INTERVAL);
-            console.log(`Auto-save interval started (${AUTOSAVE_INTERVAL / 1000} seconds).`);
+            // DO NOT Start the periodic auto-save timer here.
+            // It will be started by ComicCreator when entering the editor.
+            // this.saveIntervalId = setInterval(this.performAutoSave, AUTOSAVE_INTERVAL);
+            // console.log(`Auto-save interval started (${AUTOSAVE_INTERVAL / 1000} seconds).`);
 
-            // Add listener for final save before leaving
+            // Add listener for final save before leaving - this might still be problematic / unreliable.
+            // Consider removing if it causes issues and relying on saves when leaving editor.
             window.addEventListener('beforeunload', this.handleBeforeUnload);
 
         } catch (error) {
@@ -145,14 +148,14 @@ export class AutoSaveManager {
 
             if (choice === "Restore") {
                 console.log("[AutoSave] User chose to restore auto-save.");
-                // --- Clear the flag *before* loading to prevent loop --- 
+                // --- Clear the flag *before* loading to prevent loop if loadAutoSave fails early ---
                 localStorage.removeItem(AUTOSAVE_FLAG_KEY);
                 console.log("[AutoSave] Cleared auto-save flag before attempting load.");
                 // --- End flag clearing ---
 
-                await this.loadAutoSave();
-                // Clear the rest of the auto-save data (metadata + IndexedDB) after successful load
-                await this.clearAutoSave(false); // Pass false to skip clearing the flag again
+                await this.loadAutoSave(); // This now performs an initial save of the restored state
+                // DO NOT Clear the rest of the auto-save data (metadata + IndexedDB) immediately after successful load IF loadAutoSave did a new save.
+                // The new save from loadAutoSave IS the current auto-save.
                 this.comicCreator.uiManager.showNotification("Session restored from auto-save.", "success");
             } else {
                 console.log("[AutoSave] User chose to discard auto-save.");
@@ -179,7 +182,10 @@ export class AutoSaveManager {
 
             // Prepare metadata structure (similar to saveProject but without images array)
              const metadata = {
-                version: '1.3-autosave', // Indicate format
+                version: '1.3-autosave', // Indicate format. Consider bumping if schema changes significantly.
+                canvasDimensionKey: this.comicCreator.selectedCanvasDimension, // SAVE THE KEY
+                canvasWidth: this.comicCreator.canvasDimensions[this.comicCreator.selectedCanvasDimension]?.width, // SAVE ACTUAL WIDTH
+                canvasHeight: this.comicCreator.canvasDimensions[this.comicCreator.selectedCanvasDimension]?.height, // SAVE ACTUAL HEIGHT
                 useGlobalBackgroundStyle: this.comicCreator.useGlobalBackgroundStyle,
                 globalBackgroundStyle: this.comicCreator.globalBackgroundStyle,
                 pages: this.comicCreator.pages, // Keep full page data (panel/text/sticker state)
@@ -203,8 +209,17 @@ export class AutoSaveManager {
     async performAutoSave() {
         if (this.isSaving) {
             console.log("[AutoSave] Auto-save already in progress, queuing next save.");
-            this.saveQueued = true; // Queue a save to run after the current one finishes
+            this.saveQueued = true;
             return;
+        }
+
+        // Check if the editor or layout page is active before saving
+        const editorPageActive = document.getElementById('editor-page')?.classList.contains('active');
+        const layoutPageActive = document.getElementById('layout-page')?.classList.contains('active');
+
+        if (!editorPageActive && !layoutPageActive) {
+            console.log("[AutoSave] Neither editor nor layout page active. Skipping periodic auto-save.");
+            return; 
         }
 
         this.isSaving = true;
@@ -367,6 +382,29 @@ export class AutoSaveManager {
             const projectState = JSON.parse(metadataString);
             console.log("[AutoSave] Parsed metadata successfully.", projectState);
 
+            // --- Set Canvas Dimension from Auto-Saved Project State ---
+            if (projectState.canvasDimensionKey && this.comicCreator.canvasDimensions[projectState.canvasDimensionKey]) {
+                this.comicCreator.setCanvasDimension(projectState.canvasDimensionKey);
+                console.log('[AutoSaveManager.loadAutoSave] Canvas dimension set from auto-save to:', projectState.canvasDimensionKey);
+            } else if (projectState.canvasWidth && projectState.canvasHeight) {
+                let foundKey = null;
+                for (const key in this.comicCreator.canvasDimensions) {
+                    if (this.comicCreator.canvasDimensions[key].width === projectState.canvasWidth && this.comicCreator.canvasDimensions[key].height === projectState.canvasHeight) {
+                        foundKey = key;
+                        break;
+                    }
+                }
+                if (foundKey) {
+                    this.comicCreator.setCanvasDimension(foundKey);
+                    console.log('[AutoSaveManager.loadAutoSave] Canvas dimension (W/H) matched existing key:', foundKey);
+                } else {
+                    console.warn(`[AutoSaveManager.loadAutoSave] Auto-saved canvas dimensions (${projectState.canvasWidth}x${projectState.canvasHeight}) do not match a predefined key. Editor will use its current/default setting.`);
+                }
+            } else {
+                console.warn('[AutoSaveManager.loadAutoSave] No canvas dimension information in auto-save. Editor will use its current/default setting.');
+            }
+            // --- End Canvas Dimension Setting ---
+
             // 2. Load images from IndexedDB
             console.log("[AutoSave] Starting transaction to load images from IndexedDB...");
             const transaction = this.db.transaction(AUTOSAVE_IMAGE_STORE, 'readonly');
@@ -441,6 +479,12 @@ export class AutoSaveManager {
             console.log("[AutoSave] Switched view to editor page.");
 
             console.log("[AutoSave] Auto-save loaded successfully.");
+            this.comicCreator.autoSaveRestoredSuccessfully = true; // Set flag on successful load
+
+            // After successful restore and navigation to editor, trigger initial save and start timer
+            console.log("[AutoSave.loadAutoSave] Triggering initial save and starting periodic auto-save.");
+            await this.performInitialSaveOnEditorEntry(); // Perform an immediate save of the restored state
+            this.startPeriodicAutoSave(); // Start the timer for subsequent changes
 
         } catch (error) {
             console.error("[AutoSave] Failed during loadAutoSave process:", error);
@@ -500,5 +544,43 @@ export class AutoSaveManager {
             console.log("Auto-save interval stopped.");
         }
         window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    }
+
+    stopPeriodicAutoSave() {
+        if (this.saveIntervalId) {
+            clearInterval(this.saveIntervalId);
+            this.saveIntervalId = null;
+            console.log("[AutoSave] Periodic auto-save timer stopped.");
+        }
+        // We might want to remove the beforeunload listener too if we're stopping auto-save entirely
+        // window.removeEventListener('beforeunload', this.handleBeforeUnload);
+    }
+
+    startPeriodicAutoSave() {
+        if (this.saveIntervalId) {
+            console.log("[AutoSave] Periodic auto-save timer already running.");
+            return;
+        }
+        // Ensure any queued saves are cleared before starting a new interval.
+        this.saveQueued = false; 
+        this.isSaving = false; // Reset saving flag too
+
+        this.saveIntervalId = setInterval(this.performAutoSave, AUTOSAVE_INTERVAL);
+        console.log(`[AutoSave] Periodic auto-save timer started (${AUTOSAVE_INTERVAL / 1000} seconds).`);
+        // Add beforeunload listener when timer starts, remove when it stops
+        // window.addEventListener('beforeunload', this.handleBeforeUnload);
+    }
+
+    async performInitialSaveOnEditorEntry() {
+        console.log("[AutoSave] Performing initial save on editor entry...");
+        // This is essentially a direct call to performAutoSave, 
+        // but we manage the isSaving flag carefully.
+        if (this.isSaving) {
+            console.log("[AutoSave] Initial save: A save is already in progress. Queuing this one.");
+            this.saveQueued = true;
+            return;
+        }
+        await this.performAutoSave(); // Perform one save immediately
+        console.log("[AutoSave] Initial save on editor entry completed.");
     }
 } 
