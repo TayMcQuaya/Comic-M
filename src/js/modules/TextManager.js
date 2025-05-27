@@ -238,7 +238,7 @@ export class TextManager {
         return this.utils.resetTextPositionGrid(textBox);
     }
 
-    finalizeTextBubblePosition(textBubble, textState) { // Also potentially called during export process
-        return this.utils.finalizeTextBubblePosition(textBubble, textState);
+    finalizeTextBubblePosition(textBubble, textState, K_avg_scale) { // Also potentially called during export process
+        return this.utils.finalizeTextBubblePosition(textBubble, textState, K_avg_scale);
     }
 } 

@@ -171,8 +171,9 @@ export class TextManagerUtils {
      * Finalizes text bubble positioning to ensure it matches the saved position exactly.
      * @param {HTMLElement} textBubble - The text bubble element to position.
      * @param {Object} textState - The saved state for the text bubble.
+     * @param {number} [K_avg_scale=1] - The average scaling factor, defaults to 1 if not provided.
      */
-    finalizeTextBubblePosition(textBubble, textState) {
+    finalizeTextBubblePosition(textBubble, textState, K_avg_scale = 1) {
         // Skip if there's no style data or essential position data in style
         if (!textState || !textState.style || textState.style.left == null || textState.style.top == null) {
             console.warn(`TextManagerUtils.finalizeTextBubblePosition: Missing textState.style or essential position data for ${textBubble.id}. Using originalPosition as fallback or skipping.`);
@@ -216,16 +217,15 @@ export class TextManagerUtils {
         const textContent = textBubble.querySelector('.text-content');
         if (textContent) {
             textContent.style.margin = '0';
-            textContent.style.padding = '0';
-            textContent.style.paddingTop = '2px';
-            textContent.style.lineHeight = textState.style.lineHeight || 'normal';
+            textContent.style.padding = '0'; // Ensures no inherited padding on textContent itself
+            textContent.style.lineHeight = textState.style.lineHeight || 'normal'; // This will likely be overridden by !important in TextManagerState during export
             textContent.style.display = 'inline-block';
             textContent.style.whiteSpace = 'pre-wrap';
             textContent.style.textRendering = 'geometricPrecision';
             // Ensure text content height matches bubble height from style, not originalPosition
-            textContent.style.height = textState.style.height; 
+            // textContent.style.height = textState.style.height; // Commented out as per plan
         }
         
-        console.log(`TextManagerUtils.finalizeTextBubblePosition: Styled ${textBubble.id} to L:${textBubble.style.left}, T:${textBubble.style.top}, W:${textBubble.style.width}, H:${textBubble.style.height}`);
+        console.log(`TextManagerUtils.finalizeTextBubblePosition: Styled ${textBubble.id} to L:${textBubble.style.left}, T:${textBubble.style.top}, W:${textBubble.style.width}, H:${textBubble.style.height}, K_avg_scale: ${K_avg_scale}`);
     }
 } 

@@ -795,6 +795,8 @@ img[draggable="false"] {
     gap: 15px; /* Add space between items */
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&family=Permanent+Marker&family=Boogaloo&family=Acme&family=Comic+Neue&family=Anton&family=Russo+One&family=Fredoka+One&family=Gloria+Hallelujah&family=Architects+Daughter&family=Shadows+Into+Light&family=Press+Start+2P&family=Creepster&family=Bowlby+One+SC&family=Bungee&family=Freckle+Face&family=Ceviche+One&family=Finger+Paint&family=Kablammo&family=Rubik+Puddles&family=Londrina+Sketch&family=Rock+Salt&display=swap');
+
 .position-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr); /* Create a 3-column grid */

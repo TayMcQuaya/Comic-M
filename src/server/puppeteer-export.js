@@ -204,8 +204,10 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
           visibility: visible !important;
           display: block !important;
         }
-        .text-bubble {
-          transform-origin: center center !important;
+        /* Ensure text bubbles are rendered statically and centered for rotation */
+        body.exporting .text-bubble,
+        .text-bubble.exporting-direct-style {
+          transform-origin: center center !important; 
           transition: none !important;
           opacity: 1 !important;
           visibility: visible !important;
@@ -266,6 +268,11 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
       throw new Error(`Failed comic creator sanity check: ${errorMessage}`);
     }
     console.log('[Puppeteer] window.comicCreator and method _loadProjectFromState verified.');
+
+    // Ensure fonts are loaded before attempting to load the project state
+    console.log('[Puppeteer] Waiting for document fonts to be ready...');
+    await page.evaluate(() => document.fonts.ready);
+    console.log('[Puppeteer] Document fonts are ready.');
 
     // Expose a function to the page that can return the projectState.
     // This avoids serializing the potentially huge projectState as a direct argument to page.evaluate.
@@ -746,7 +753,7 @@ export default function configurePuppeteerExport(router, comicCreatorUrl, output
                     try {
                         if (await fs.pathExists(tempPdfDir)) {
                             await fs.remove(tempPdfDir);
-                            console.log(`[Vite Server Job ${jobId}] Cleaned up temporary PDF pages directory: ${tempPdfDir}`);
+                            console.log(`[Vite Server Job ${jobId}] Cleaned up temporary PDF pages directory ${tempPdfDir}`);
                         }
                     } catch (cleanupError) {
                         console.error(`[Vite Server Job ${jobId}] Error cleaning up temporary PDF pages directory ${tempPdfDir}:`, cleanupError);
