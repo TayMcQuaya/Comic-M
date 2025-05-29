@@ -1,0 +1,38 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Comic Project Structure Guide
+
+## Main Files
+The main entry point is [index.html](mdc:index.html), which contains the core structure of the comic creation application. Styling is managed through [src/styles/main.css](mdc:src/styles/main.css).
+
+## UI Components
+The application uses several key UI components:
+
+### Canvas Size Selection
+- Located in the upload page section
+- Uses `.canvas-size-selection` class for styling
+- Contains horizontally aligned buttons in `.button-row` for selecting canvas dimensions:
+  - DEFAULT 1:1 (700x700px)
+  - Amazon KDP (7"x10")
+
+### Upload Section
+- Styled with `.upload-section` class
+- Contains image upload functionality and library management
+- Includes `.upload-area` for drag-and-drop functionality
+- `.image-library` displays uploaded images in a grid layout
+
+### Editor Interface
+- Main editing area uses `.editor-container` class
+- Sidebar navigation with `.editor-sidebar` class
+- Comic panels styled with `.comic-panel` class
+- Text bubble system with various styles (speech, thought, caption)
+
+## Style Guidelines
+- Primary buttons use `.primary-btn` class
+- Active states indicated with `.active` or `.selected` classes
+- Consistent color scheme defined in CSS root variables
+
+- Responsive design breakpoints at 1400px and 1200px

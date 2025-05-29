@@ -171,9 +171,8 @@ export class TextManagerUtils {
      * Finalizes text bubble positioning to ensure it matches the saved position exactly.
      * @param {HTMLElement} textBubble - The text bubble element to position.
      * @param {Object} textState - The saved state for the text bubble.
-     * @param {number} [K_avg_scale=1] - The average scaling factor, defaults to 1 if not provided.
      */
-    finalizeTextBubblePosition(textBubble, textState, K_avg_scale = 1) {
+    finalizeTextBubblePosition(textBubble, textState) {
         // Skip if there's no style data or essential position data in style
         if (!textState || !textState.style || textState.style.left == null || textState.style.top == null) {
             console.warn(`TextManagerUtils.finalizeTextBubblePosition: Missing textState.style or essential position data for ${textBubble.id}. Using originalPosition as fallback or skipping.`);
@@ -226,6 +225,6 @@ export class TextManagerUtils {
             // textContent.style.height = textState.style.height; // Commented out as per plan
         }
         
-        console.log(`TextManagerUtils.finalizeTextBubblePosition: Styled ${textBubble.id} to L:${textBubble.style.left}, T:${textBubble.style.top}, W:${textBubble.style.width}, H:${textBubble.style.height}, K_avg_scale: ${K_avg_scale}`);
+        console.log(`TextManagerUtils.finalizeTextBubblePosition: Styled ${textBubble.id} to L:${textBubble.style.left}, T:${textBubble.style.top}, W:${textBubble.style.width}, H:${textBubble.style.height}`);
     }
 } 

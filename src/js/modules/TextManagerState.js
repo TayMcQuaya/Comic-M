@@ -15,8 +15,8 @@ export class TextManagerState {
         const panelTextStates = [];
         const canvasTextElements = [];
         const canvas = document.querySelector('#comic-canvas');
-        const mainCanvasWidth = canvas ? canvas.offsetWidth : 700; // Fallback if canvas not found
-        const mainCanvasHeight = canvas ? canvas.offsetHeight : 700; // Fallback if canvas not found
+        // const mainCanvasWidth = canvas ? canvas.offsetWidth : 700; // No longer needed for scaling text properties
+        // const mainCanvasHeight = canvas ? canvas.offsetHeight : 700; // No longer needed for scaling text properties
         
         // Save panel text elements
         const panels = Array.from(document.querySelectorAll('.comic-panel'));
@@ -25,10 +25,11 @@ export class TextManagerState {
         panels.forEach((panel, panelIndex) => {
             const panelTexts = [];
             const textBubbles = Array.from(panel.querySelectorAll('.text-bubble'));
-            console.log(`TextManagerState.saveTextStates: Panel ${panelIndex} has ${textBubbles.length} text bubbles`);
+            // console.log(`TextManagerState.saveTextStates: Panel ${panelIndex} has ${textBubbles.length} text bubbles`);
             
             const panelWidth = panel.offsetWidth; // Panel dimensions for relative panel text
             const panelHeight = panel.offsetHeight; // Panel dimensions for relative panel text
+            console.log(`TextManagerState.saveTextStates: Panel ${panelIndex} (ID: ${panel.id || 'no-id'}) - panelWidth: ${panelWidth}, panelHeight: ${panelHeight}`);
 
             textBubbles.forEach((textBubble, bubbleIndex) => {
                 const textElement = textBubble.querySelector('.text-content');
@@ -130,6 +131,7 @@ export class TextManagerState {
                     originalPosTopPercent = `${(parseFloat(exactTopForOriginalPos) / panelHeight) * 100}%`;
                 }
 
+                console.log(`TextManagerState.saveTextStates: Panel Text Bubble ${textBubble.id} - Style L/T: ${textBubble.style.left}/${textBubble.style.top}, Style W/H: ${textBubble.style.width}/${textBubble.style.height} | Saved L/T: ${savedLeft}/${savedTop}, Saved W/H: ${savedWidthPercent}/${savedHeightPercent} | exactL/T: ${exactLeftForOriginalPos}/${exactTopForOriginalPos} | origPosL/T: ${originalPosLeftPercent}/${originalPosTopPercent}`);
                 panelTexts.push({
                     id: textBubble.id || `text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
@@ -138,8 +140,6 @@ export class TextManagerState {
                     tailSettings: textBubble.dataset.tailSettings || '',
                     positionGrid: textBubble.dataset.positionGrid || 'custom',
                     content: textElement.innerHTML,
-                    sourceCanvasWidth: mainCanvasWidth,  // Use main canvas width for scaling context
-                    sourceCanvasHeight: mainCanvasHeight, // Use main canvas height for scaling context
                     originalPosition: {
                         left: originalPosLeftPercent, // Store as percentage relative to panel
                         top: originalPosTopPercent,   // Store as percentage relative to panel
@@ -217,25 +217,25 @@ export class TextManagerState {
                     let savedCanvasTop = textBubble.style.top;
 
                     // Convert style.left to percentage if it's pixels, or calculate if not set
-                    if (textBubble.style.left && textBubble.style.left.endsWith('px') && mainCanvasWidth > 0) {
-                        savedCanvasLeft = `${(parseFloat(textBubble.style.left) / mainCanvasWidth) * 100}%`;
+                    if (textBubble.style.left && textBubble.style.left.endsWith('px') && canvas.offsetWidth > 0) {
+                        savedCanvasLeft = `${(parseFloat(textBubble.style.left) / canvas.offsetWidth) * 100}%`;
                     } else if (textBubble.style.left && textBubble.style.left.endsWith('%')) {
                         savedCanvasLeft = textBubble.style.left; // Already a percentage
-                    } else if ((!textBubble.style.left || textBubble.style.left === 'auto') && mainCanvasWidth > 0) {
-                        savedCanvasLeft = `${(exactLeftPx / mainCanvasWidth) * 100}%`;
-                    } else if (mainCanvasWidth === 0) {
+                    } else if ((!textBubble.style.left || textBubble.style.left === 'auto') && canvas.offsetWidth > 0) {
+                        savedCanvasLeft = `${(exactLeftPx / canvas.offsetWidth) * 100}%`;
+                    } else if (canvas.offsetWidth === 0) {
                         savedCanvasLeft = '0%'; // Fallback for zero width canvas
                     }
                     // If already a percentage, keep it as is (implicitly handled by not entering above conditions)
 
                     // Convert style.top to percentage if it's pixels, or calculate if not set
-                    if (textBubble.style.top && textBubble.style.top.endsWith('px') && mainCanvasHeight > 0) {
-                        savedCanvasTop = `${(parseFloat(textBubble.style.top) / mainCanvasHeight) * 100}%`;
+                    if (textBubble.style.top && textBubble.style.top.endsWith('px') && canvas.offsetHeight > 0) {
+                        savedCanvasTop = `${(parseFloat(textBubble.style.top) / canvas.offsetHeight) * 100}%`;
                     } else if (textBubble.style.top && textBubble.style.top.endsWith('%')) {
                         savedCanvasTop = textBubble.style.top; // Already a percentage
-                    } else if ((!textBubble.style.top || textBubble.style.top === 'auto') && mainCanvasHeight > 0) {
-                        savedCanvasTop = `${(exactTopPx / mainCanvasHeight) * 100}%`;
-                    } else if (mainCanvasHeight === 0) {
+                    } else if ((!textBubble.style.top || textBubble.style.top === 'auto') && canvas.offsetHeight > 0) {
+                        savedCanvasTop = `${(exactTopPx / canvas.offsetHeight) * 100}%`;
+                    } else if (canvas.offsetHeight === 0) {
                         savedCanvasTop = '0%'; // Fallback for zero height canvas
                     }
                     // If already a percentage, keep it as is
@@ -254,17 +254,18 @@ export class TextManagerState {
                     let savedCanvasWidthPercent = finalCanvasWidth;
                     let savedCanvasHeightPercent = finalCanvasHeight;
 
-                    if (finalCanvasWidth.endsWith('px') && mainCanvasWidth > 0) {
-                        savedCanvasWidthPercent = `${(parseFloat(finalCanvasWidth) / mainCanvasWidth) * 100}%`;
+                    if (finalCanvasWidth.endsWith('px') && canvas.offsetWidth > 0) {
+                        savedCanvasWidthPercent = `${(parseFloat(finalCanvasWidth) / canvas.offsetWidth) * 100}%`;
                     } else if (finalCanvasWidth.endsWith('%')) {
                         savedCanvasWidthPercent = finalCanvasWidth; // Already a percentage
                     }
-                    if (finalCanvasHeight.endsWith('px') && mainCanvasHeight > 0) {
-                        savedCanvasHeightPercent = `${(parseFloat(finalCanvasHeight) / mainCanvasHeight) * 100}%`;
+                    if (finalCanvasHeight.endsWith('px') && canvas.offsetHeight > 0) {
+                        savedCanvasHeightPercent = `${(parseFloat(finalCanvasHeight) / canvas.offsetHeight) * 100}%`;
                     } else if (finalCanvasHeight.endsWith('%')) {
                         savedCanvasHeightPercent = finalCanvasHeight; // Already a percentage
                     }
                     
+                    console.log(`TextManagerState.saveTextStates: Canvas Text Bubble ${textBubble.id} - Canvas W/H for calc: ${canvas.offsetWidth}/${canvas.offsetHeight} | Style L/T: ${textBubble.style.left}/${textBubble.style.top}, Style W/H: ${textBubble.style.width}/${textBubble.style.height} | Saved L/T: ${savedCanvasLeft}/${savedCanvasTop}, Saved W/H: ${savedCanvasWidthPercent}/${savedCanvasHeightPercent} | exactL/T (rel to canvas): ${exactLeftPx}px/${exactTopPx}px`);
                     canvasTextElements.push({
                         id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
@@ -273,8 +274,6 @@ export class TextManagerState {
                         tailSettings: textBubble.dataset.tailSettings || '',
                         positionGrid: textBubble.dataset.positionGrid || 'custom', // Store grid position
                         content: textElement.innerHTML,
-                        sourceCanvasWidth: mainCanvasWidth, // Use main canvas width
-                        sourceCanvasHeight: mainCanvasHeight, // Use main canvas height
                         originalPosition: {
                             left: savedCanvasLeft,
                             top: savedCanvasTop, 
@@ -448,10 +447,34 @@ export class TextManagerState {
     /**
      * Helper function to create and append a text bubble from saved state.
      * @param {object} textState - The saved state for a single text bubble.
-     * @param {HTMLElement} parentElement - The element to append the bubble to (panel or canvas).
+     * @param {HTMLElement} parentContainer - The element to append the bubble to (panel or canvas).
      */
-    restoreTextBubble(textState, parentElement) {
-        console.log('[TextManagerState.restoreTextBubble] Restoring text bubble:', textState.id, 'Content:', textState.content?.substring(0, 50));
+    restoreTextBubble(textState, parentContainer) {
+        console.log(`[TextManagerState.restoreTextBubble] Restoring text bubble with ID: ${textState.id || 'new_id'}, to parent:`, parentContainer);
+        if (!textState) {
+            console.warn("[TextManagerState.restoreTextBubble] textState is undefined. Cannot restore bubble.");
+            return null;
+        }
+
+        const comicCanvas = document.querySelector('#comic-canvas'); // Used for targetWidth/Height context for canvas text
+        const isPanelText = parentContainer.classList.contains('comic-panel');
+        
+        // Determine target dimensions for percentage calculations
+        // For panel text, it's the panel itself. For canvas text, it's the main canvas.
+        let targetWidth, targetHeight;
+        if (isPanelText) {
+            targetWidth = parentContainer.offsetWidth;
+            targetHeight = parentContainer.offsetHeight;
+        } else if (comicCanvas) { // For canvas text, parentContainer IS the comicCanvas
+            targetWidth = comicCanvas.offsetWidth;
+            targetHeight = comicCanvas.offsetHeight;
+        } else {
+            console.warn(`[TextManagerState.restoreTextBubble ID: ${textState.id}] Could not determine target dimensions. Defaulting to 700x700`);
+            targetWidth = 700;
+            targetHeight = 700;
+        }
+        
+        // Create bubble element
         const textBubble = document.createElement('div');
         textBubble.id = textState.id;
         textBubble.className = 'text-bubble'; // Base class
@@ -477,25 +500,6 @@ export class TextManagerState {
         }
 
         textBubble.style.position = 'absolute';
-
-        // Scaling Logic
-        const targetCanvasDim = this.comicCreator.canvasDimensions[this.comicCreator.selectedCanvasDimension];
-        const targetWidth = targetCanvasDim.width;
-        const targetHeight = targetCanvasDim.height;
-
-        const fallbackSourceWidth = (this.comicCreator.pages[this.comicCreator.currentPageIndex]?.canvasWidth) || 700;
-        const fallbackSourceHeight = (this.comicCreator.pages[this.comicCreator.currentPageIndex]?.canvasHeight) || 700;
-
-        const sourceWidth = textState.sourceCanvasWidth || fallbackSourceWidth;
-        const sourceHeight = textState.sourceCanvasHeight || fallbackSourceHeight;
-        
-        console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] Target dims: ${targetWidth}x${targetHeight}. Source dims (expected main canvas): ${sourceWidth}x${sourceHeight}`);
-
-        const scaleX = (sourceWidth !== 0 && !isNaN(sourceWidth) && targetWidth !== 0 && !isNaN(targetWidth)) ? targetWidth / sourceWidth : 1;
-        const scaleY = (sourceHeight !== 0 && !isNaN(sourceHeight) && targetHeight !== 0 && !isNaN(targetHeight)) ? targetHeight / sourceHeight : 1;
-        const K_avg_scale = (scaleX + scaleY) / 2.0; 
-
-        console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] Scale factors: scaleX=${scaleX}, scaleY=${scaleY}, K_avg_scale=${K_avg_scale}`);
 
         // Apply Position and Dimensions (expected to be percentages from saveTextStates)
         if (textState.style) {
@@ -531,33 +535,17 @@ export class TextManagerState {
                 }
             });
 
-            // Scaled Font Size (ALWAYS)
+            // Scaled Font Size (ALWAYS) -> Apply directly now
             if (textState.style.fontSize) {
-                const originalFontSize = parseFloat(textState.style.fontSize);
-                if (!isNaN(originalFontSize)) {
-                    const newSize = originalFontSize * K_avg_scale;
-                    textContentElement.style.fontSize = newSize + 'px';
-                    console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] General Font size: original=${originalFontSize}px, scaled=${newSize}px (K_avg_scale: ${K_avg_scale})`);
-                } else {
-                    textContentElement.style.fontSize = textState.style.fontSize; 
-                }
+                textContentElement.style.fontSize = textState.style.fontSize; // Apply directly
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] General Font size: applied directly=${textState.style.fontSize}`);
             }
 
-            // Scaled Line Height (if pixel value)
+            // Scaled Line Height (if pixel value) -> Apply directly now
             if (textState.style.lineHeight) {
                 const lh = textState.style.lineHeight;
-                if (lh.endsWith('px')) {
-                    const originalLineHeight = parseFloat(lh);
-                    if (!isNaN(originalLineHeight)) {
-                        const newLh = originalLineHeight * K_avg_scale; // Use K_avg_scale for consistency with font
-                        textContentElement.style.lineHeight = newLh + 'px';
-                        console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] General Line height: original=${originalLineHeight}px, scaled=${newLh}px`);
-                    } else {
-                        textContentElement.style.lineHeight = lh;
-                    }
-                } else { // Unitless or "normal"
-                    textContentElement.style.lineHeight = lh;
-                }
+                textContentElement.style.lineHeight = lh; // Apply directly
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] General Line height: applied directly=${lh}`);
             }
         }
 
@@ -574,60 +562,26 @@ export class TextManagerState {
             textContentElement.style.whiteSpace = 'pre-wrap';
             textContentElement.style.textRendering = 'geometricPrecision';
             
-            // Line Height for EXPORT - CRITICAL: Use scaled value if original was px, or apply as is.
+            // Line Height for EXPORT - CRITICAL: Use scaled value if original was px, or apply as is. -> Apply directly now
             if (textState.style && textState.style.lineHeight) {
                 const lh = textState.style.lineHeight;
-                if (lh.endsWith('px')) {
-                    const originalLineHeight = parseFloat(lh);
-                    if (!isNaN(originalLineHeight)) {
-                        const newLh = originalLineHeight * K_avg_scale;
-                        textContentElement.style.setProperty('line-height', newLh + 'px', 'important');
-                        console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from textState): original=${originalLineHeight}px, scaled=${newLh}px !important`);
-                    } else { 
-                        textContentElement.style.setProperty('line-height', lh, 'important'); 
-                    }
-                } else { 
-                    textContentElement.style.setProperty('line-height', lh, 'important'); 
-                }
-            } else {
-                const computedLh = computedStyle.lineHeight; // computedStyle is from textContentElement BEFORE export specific styles
-                if (computedLh && computedLh !== 'normal' && computedLh.endsWith('px')) {
-                     const newLh = parseFloat(computedLh) * K_avg_scale; // Scale computed if it's pixels
-                     textContentElement.style.setProperty('line-height', newLh + 'px', 'important');
-                     console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from computed): original=${computedLh}, scaled=${newLh}px !important`);
-                } else if (computedLh && computedLh !== 'normal') {
-                     textContentElement.style.setProperty('line-height', computedLh, 'important');
-                }
-                else { 
-                    textContentElement.style.setProperty('line-height', 'normal', 'important'); 
-                }
+                textContentElement.style.setProperty('line-height', lh, 'important');
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from textState): applied directly=${lh} !important`);
             }
             
-            // Font Size for EXPORT - CRITICAL: Apply scaled font size
+            // Font Size for EXPORT - CRITICAL: Apply scaled font size -> Apply directly now
             if (textState.style && textState.style.fontSize) {
-                const originalFontSize = parseFloat(textState.style.fontSize);
-                if (!isNaN(originalFontSize)) {
-                    const newSize = originalFontSize * K_avg_scale;
-                    textContentElement.style.setProperty('font-size', newSize + 'px', 'important');
-                    console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Font size (from textState): original=${originalFontSize}px, scaled=${newSize}px !important`);
-                } else {
-                    textContentElement.style.setProperty('font-size', textState.style.fontSize, 'important'); 
-                }
-            } else { // Fallback to computed style if not in textState, then scale it
-                const computedFontSize = parseFloat(computedStyle.fontSize);
-                 if (!isNaN(computedFontSize)) {
-                    textContentElement.style.setProperty('font-size', (computedFontSize * K_avg_scale) + 'px', 'important');
-                    console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Font size (from computed): original=${computedFontSize}px, scaled=${(computedFontSize * K_avg_scale)}px !important`);
-                }
-            }
+                textContentElement.style.setProperty('font-size', textState.style.fontSize, 'important');
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Font size (from textState): applied directly=${textState.style.fontSize} !important`);
+            } 
             
             if (textState.style && textState.style.fontWeight) {
                 textContentElement.style.fontWeight = textState.style.fontWeight;
-            } else { textContentElement.style.fontWeight = computedStyle.fontWeight; }
+            }
             
             if (textState.style && textState.style.fontStyle) {
                 textContentElement.style.fontStyle = textState.style.fontStyle;
-            } else { textContentElement.style.fontStyle = computedStyle.fontStyle; }
+            }
             
             textContentElement.style.transformOrigin = 'top left';
             textContentElement.style.transform = 'scale(1)'; // Usually for export, direct scaling might not be needed if font-size is scaled
@@ -685,22 +639,8 @@ export class TextManagerState {
             }
             if (textState.style.padding) {
                 const paddingValue = textState.style.padding;
-                if (typeof paddingValue === 'string') {
-                    const parts = paddingValue.split(' ').map(part => {
-                        if (part.endsWith('px')) {
-                            const num = parseFloat(part);
-                            if (!isNaN(num)) {
-                                return (num * K_avg_scale) + 'px';
-                            }
-                        }
-                        return part; // Return original part if not a parsable px value
-                    });
-                    textBubble.style.padding = parts.join(' ');
-                    console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] Scaled bubble padding: original='${paddingValue}', scaled='${textBubble.style.padding}' (K_avg_scale: ${K_avg_scale})`);
-                } else {
-                    // If padding is not a string (e.g. already an object, though not expected from save), apply directly
-                    textBubble.style.padding = paddingValue; 
-                }
+                textBubble.style.padding = paddingValue; // Apply directly
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] Applied bubble padding directly: original='${paddingValue}', applied='${textBubble.style.padding}'`);
             }
             
             if (textState.style.paddingVertical) textBubble.dataset.paddingVertical = textState.style.paddingVertical;
@@ -726,7 +666,7 @@ export class TextManagerState {
         textBubble.appendChild(resizeHandle);
         textBubble.appendChild(formatButton);
         textBubble.appendChild(deleteButton);
-        parentElement.appendChild(textBubble);
+        parentContainer.appendChild(textBubble);
 
         // Make draggable - Ensure drag functionality is applied after all styles
         console.log(`TextManagerState.restoreTextBubble: Making text bubble ${textBubble.id} draggable and resizable`);
@@ -851,7 +791,7 @@ export class TextManagerState {
         
         // Apply final position fixing to ensure exact positioning
         if (this.comicCreator && this.comicCreator.textManagerUtils && this.comicCreator.textManagerUtils.finalizeTextBubblePosition) {
-            this.comicCreator.textManagerUtils.finalizeTextBubblePosition(textBubble, textState, K_avg_scale);
+            this.comicCreator.textManagerUtils.finalizeTextBubblePosition(textBubble, textState); // REMOVE K_avg_scale from call
         } else {
             console.warn('TextManagerState: comicCreator.textManagerUtils.finalizeTextBubblePosition not found. Final positioning may be inexact.');
             // The old fallback: // this.comicCreator.finalizeTextBubblePosition?.(textBubble, textState);

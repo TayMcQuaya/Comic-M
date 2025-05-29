@@ -27,10 +27,11 @@ class ComicCreator {
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
         
         this.canvasDimensions = {
-            current: { width: 700, height: 700, name: "Current (700x700px)" },
-            amazonKDP: { width: 490, height: 700, name: "Amazon KDP (7\"x10\")" } // Scaled for display
+            current: { width: 700, height: 700, name: "DEFAULT 1:1 (700x700px)" },
+            amazonKDP: { width: 490, height: 700, name: "Amazon KDP (7\"x10\")" },
+            landscape10x8: { width: 700, height: 560, name: "Landscape (10\"x8\")" }
         };
-        this.selectedCanvasDimension = 'current'; // Default dimension
+        this.selectedCanvasDimension = 'current'; // Default to 1:1
 
         // this.currentPanel = null; // Moved to PanelManager
         // this.currentTextBox = null; // Will be managed by TextManager
@@ -654,6 +655,11 @@ class ComicCreator {
             amazonKDPSizeBtn.addEventListener('click', () => this.setCanvasDimension('amazonKDP'));
         } else { console.error("[Main] #amazon-kdp-size-btn not found"); }
 
+        const landscape10x8Btn = document.getElementById('landscape-10x8-size-btn');
+        if (landscape10x8Btn) {
+        landscape10x8Btn.addEventListener('click', () => this.setCanvasDimension('landscape10x8'));
+        } else { console.error("[Main] #landscape-10x8-size-btn not found"); }
+
         // --- Add Text Button ---
         const addTextBtn = document.getElementById('add-text-btn');
         if (addTextBtn) {
@@ -910,9 +916,12 @@ class ComicCreator {
         // Update button active states
         const currentSizeBtn = document.getElementById('current-size-btn');
         const amazonKDPSizeBtn = document.getElementById('amazon-kdp-size-btn');
+        const landscape10x8Btn = document.getElementById('landscape-10x8-size-btn');
+        
 
         if (currentSizeBtn) currentSizeBtn.classList.toggle('active-size', dimensionKey === 'current');
         if (amazonKDPSizeBtn) amazonKDPSizeBtn.classList.toggle('active-size', dimensionKey === 'amazonKDP');
+        if (landscape10x8Btn) landscape10x8Btn.classList.toggle('active-size', dimensionKey === 'landscape10x8');
         
         // Update button text to reflect the selected dimension more clearly if needed (optional)
         // For instance, if you want the button text itself to change.
