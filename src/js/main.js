@@ -1321,36 +1321,24 @@ class ComicCreator {
         // --- End Auto-save calls ---
     }
 
-    navigateToPage(pageIndex, saveCurrentState = true) {
-        // Validate page index
+    async navigateToPage(pageIndex, saveCurrentState = true) {
         if (pageIndex < 0 || pageIndex >= this.pages.length) {
             console.error('Invalid page index:', pageIndex);
             return;
         }
-        
-        console.log(`Navigating from page ${this.currentPageIndex} to page ${pageIndex}`);
-        
-        // Save current page state if requested
+
         if (saveCurrentState) {
-            console.log(`Saving state of current page ${this.currentPageIndex} before navigation`);
             this.saveCurrentPageState();
         }
-        
-        // Update current page index
+
         this.currentPageIndex = pageIndex;
-        
-        // Load the page state
-        this.loadPageState(pageIndex);
-        
-        // Update page indicator and navigation buttons
-        this.updatePageIndicator();
+        await this.loadPageState(this.currentPageIndex); // Added await
         this.updateNavigationButtons();
-        
-        // This ensures the correct default message or empty state is shown.
+        this.updatePageIndicator();
         this.uiManager.updateRightSidebarView(); 
     }
     
-    loadPageState(pageIndex) {
+    async loadPageState(pageIndex) { // Made async
         const page = this.pages[pageIndex];
         if (!page) {
             console.error('Invalid page:', pageIndex);
@@ -1471,8 +1459,10 @@ class ComicCreator {
         const panels = document.querySelectorAll('.comic-panel'); // Re-query for panels
         console.log(`[loadPageState] Page ${pageIndex} - Panel states to load:`, JSON.stringify(panelStates));
         console.log(`[loadPageState] Page ${pageIndex} - Panels found in DOM before panelManager.loadPanelStates: ${panels.length}`);
-        // Call PanelManager to handle image/transform loading
-        this.panelManager.loadPanelStates(panelStates);
+        
+        // Call PanelManager to handle image/transform loading and WAIT for it to complete
+        await this.panelManager.loadPanelStates(panelStates);
+        console.log(`[loadPageState] Page ${pageIndex} - PanelManager.loadPanelStates COMPLETED.`);
 
         // --- Restore Text Elements (via TextManager) ---
         console.log(`[loadPageState] Page ${pageIndex} - canvasTextElements to load:`, JSON.stringify(page.canvasTextElements));

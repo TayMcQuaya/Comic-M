@@ -5,6 +5,12 @@ export class DragAndDropManager {
         // and methods (like showNotification, selectPanel) from the main application.
         this.comicCreator = comicCreator;
         
+        // Globally tracked active drag event handlers
+        this.activeDragMouseMove = null;
+        this.activeDragMouseUp = null;
+        // For setupImageDragging, which also uses window for mouseup
+        this.activeWindowMouseUp = null;
+
         // Create references to methods that will be used as event handlers
         this.handleDragStart = this.handleDragStart.bind(this);
         this.handleDragEnd = this.handleDragEnd.bind(this);
@@ -73,7 +79,24 @@ export class DragAndDropManager {
         let startX, startY;
         let startLeft, startTop;
 
+        // Store 'this' for use in handlers if not using arrow functions already for them
+        const self = this;
+
         const onMouseDown = (e) => {
+            // Clean up any existing global listeners from a previous, possibly orphaned, drag
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) {
+                document.removeEventListener('mouseup', self.activeDragMouseUp);
+                self.activeDragMouseUp = null;
+            }
+            if (self.activeWindowMouseUp) { // Specific to setupImageDragging
+                window.removeEventListener('mouseup', self.activeWindowMouseUp);
+                self.activeWindowMouseUp = null;
+            }
+
             // Initialize dragging state
             isDragging = true;
             startX = e.clientX;
@@ -89,10 +112,14 @@ export class DragAndDropManager {
             e.preventDefault();
             e.stopPropagation();
             
-            // Attach move and up listeners to document and window
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp);
-            window.addEventListener('mouseup', onMouseUp); // Added window listener
+            // Store these specific handlers globally and attach them
+            self.activeDragMouseMove = onMouseMove; // onMouseMove is defined below in this scope
+            self.activeDragMouseUp = onMouseUp;     // onMouseUp is defined below in this scope
+            self.activeWindowMouseUp = onMouseUp;   // For window listener
+
+            document.addEventListener('mousemove', self.activeDragMouseMove);
+            document.addEventListener('mouseup', self.activeDragMouseUp);
+            window.addEventListener('mouseup', self.activeWindowMouseUp); // Added window listener
         };
 
         const onMouseMove = (e) => {
@@ -124,10 +151,19 @@ export class DragAndDropManager {
             img.style.cursor = 'grab';
             img.style.opacity = '1';
             
-            // Remove listeners from both document and window
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
-            window.removeEventListener('mouseup', onMouseUp); // Removed window listener
+            // Remove listeners from both document and window using the globally stored refs
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) {
+                document.removeEventListener('mouseup', self.activeDragMouseUp);
+                self.activeDragMouseUp = null;
+            }
+            if (self.activeWindowMouseUp) { // Specific to setupImageDragging
+                window.removeEventListener('mouseup', self.activeWindowMouseUp);
+                self.activeWindowMouseUp = null;
+            }
             
             // Save state only AFTER listeners are removed
             this.comicCreator.saveCurrentPageState();
@@ -409,7 +445,25 @@ export class DragAndDropManager {
         let parentContainer;  // The parent container (panel or canvas)
         let hasTransform;
 
+        // Store 'this' for use in handlers
+        const self = this;
+
         const onMouseDown = (e) => {
+            // Clean up any existing global listeners from a previous, possibly orphaned, drag
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) {
+                document.removeEventListener('mouseup', self.activeDragMouseUp);
+                self.activeDragMouseUp = null;
+            }
+            // Clear window mouseup too, just in case
+            if (self.activeWindowMouseUp) { 
+                window.removeEventListener('mouseup', self.activeWindowMouseUp);
+                self.activeWindowMouseUp = null;
+            }
+
             // Get the parent container (either panel or canvas)
             parentContainer = element.parentElement;
             if (!parentContainer) return;
@@ -462,8 +516,12 @@ export class DragAndDropManager {
                 originalTop = parseFloat(element.style.top) || 0;
             }
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
+            // Store these specific handlers globally and attach them
+            self.activeDragMouseMove = onMouseMove; // onMouseMove is defined below
+            self.activeDragMouseUp = onMouseUp;     // onMouseUp is defined below (and uses {once: true})
+
+            document.addEventListener('mousemove', self.activeDragMouseMove);
+            document.addEventListener('mouseup', self.activeDragMouseUp, { once: true });
         };
 
         const onMouseMove = (e) => {
@@ -502,7 +560,16 @@ export class DragAndDropManager {
             isDragging = false;
             element.style.cursor = 'grab';
             element.style.zIndex = element.dataset.originalZIndex || '100';
-            document.removeEventListener('mousemove', onMouseMove);
+            
+            // Remove mousemove listener using the globally stored ref
+            // mouseup with {once: true} removes itself, but good practice to nullify our ref
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) { // Even if it was {once:true}, nullify our reference
+                self.activeDragMouseUp = null; 
+            }
             
             // If we had a rotation in the original transform, reapply it
             if (hasTransform && element.dataset.originalTransform) {
@@ -544,7 +611,25 @@ export class DragAndDropManager {
         let originalLeft, originalTop;
         let hasTransform;
 
+        // Store 'this' for use in handlers
+        const self = this;
+
         const onMouseDown = (e) => {
+            // Clean up any existing global listeners from a previous, possibly orphaned, drag
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) {
+                document.removeEventListener('mouseup', self.activeDragMouseUp);
+                self.activeDragMouseUp = null;
+            }
+            // Clear window mouseup too, just in case
+            if (self.activeWindowMouseUp) {
+                window.removeEventListener('mouseup', self.activeWindowMouseUp);
+                self.activeWindowMouseUp = null;
+            }
+
             if (e.button !== 0) return; // Only handle left mouse button
             e.preventDefault();
             e.stopPropagation();
@@ -595,8 +680,12 @@ export class DragAndDropManager {
                 options.onDragStart(element);
             }
 
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
+            // Store these specific handlers globally and attach them
+            self.activeDragMouseMove = onMouseMove; // onMouseMove is defined below
+            self.activeDragMouseUp = onMouseUp;     // onMouseUp is defined below (and uses {once: true})
+
+            document.addEventListener('mousemove', self.activeDragMouseMove);
+            document.addEventListener('mouseup', self.activeDragMouseUp, { once: true });
         };
 
         const onMouseMove = (e) => {
@@ -645,7 +734,15 @@ export class DragAndDropManager {
             element.style.cursor = 'grab';
             element.style.zIndex = '100'; // Reset z-index or use saved state
 
-            document.removeEventListener('mousemove', onMouseMove);
+            // Remove mousemove listener using the globally stored ref
+            // mouseup with {once: true} removes itself, but good practice to nullify our ref
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) { // Even if it was {once:true}, nullify our reference
+                self.activeDragMouseUp = null;
+            }
             
             // If we modified a transform during drag, reset the positioning method
             // to percentage-based without transforms for clean state
@@ -689,27 +786,46 @@ export class DragAndDropManager {
         let isResizing = false;
         let startX, startY;
         let startWidth, startHeight;
-        
-        handle.style.cursor = 'nwse-resize'; // Set appropriate resize cursor
-        
-        handle.addEventListener('mousedown', (e) => {
-            // Only resize with left mouse button
-            if (e.button !== 0) return;
-            
+        let startLeft, startTop; // Needed for aspect ratio lock
+
+        // Store 'this' for use in handlers
+        const self = this;
+
+        const onMouseDown = (e) => {
+            // Clean up any existing global listeners from a previous, possibly orphaned, drag/resize
+            // This is important if a resize can be interrupted like a drag
+            if (self.activeDragMouseMove) { // Using DragMouseMove as a generic name for active document mouse move
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) { // Using DragMouseUp as a generic name for active document mouse up
+                document.removeEventListener('mouseup', self.activeDragMouseUp);
+                self.activeDragMouseUp = null;
+            }
+            // Clear window mouseup too, just in case
+            if (self.activeWindowMouseUp) {
+                window.removeEventListener('mouseup', self.activeWindowMouseUp);
+                self.activeWindowMouseUp = null;
+            }
+
             isResizing = true;
             startX = e.clientX;
             startY = e.clientY;
             startWidth = element.offsetWidth;
             startHeight = element.offsetHeight;
             
-            // Prevent default text selection during resize
-            e.preventDefault();
+            e.preventDefault(); // Prevent text selection or other interactions
             e.stopPropagation();
-            
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
-        });
-        
+
+            // Store these specific handlers globally and attach them
+            // Reusing activeDragMouseMove and activeDragMouseUp for resize operation's global listeners
+            self.activeDragMouseMove = onMouseMove; // onMouseMove is defined below for resize
+            self.activeDragMouseUp = onMouseUp;     // onMouseUp is defined below for resize
+
+            document.addEventListener('mousemove', self.activeDragMouseMove);
+            document.addEventListener('mouseup', self.activeDragMouseUp, { once: true });
+        };
+
         const onMouseMove = (e) => {
             if (!isResizing) return;
             
@@ -727,10 +843,21 @@ export class DragAndDropManager {
         const onMouseUp = () => {
             if (!isResizing) return;
             isResizing = false;
-            document.removeEventListener('mousemove', onMouseMove);
+            element.style.cursor = 'default'; // Or whatever the default cursor should be
+            document.body.style.cursor = 'default'; // Reset body cursor
+
+            // Remove mousemove listener using the globally stored ref
+            // mouseup with {once: true} removes itself, but good practice to nullify our ref
+            if (self.activeDragMouseMove) {
+                document.removeEventListener('mousemove', self.activeDragMouseMove);
+                self.activeDragMouseMove = null;
+            }
+            if (self.activeDragMouseUp) { // Even if it was {once:true}, nullify our reference
+                self.activeDragMouseUp = null;
+            }
             
-            // Save state immediately after resizing finishes
-            this.comicCreator.saveCurrentPageState(); 
+            // Snap to grid or perform other cleanup if necessary
+            this.comicCreator.saveCurrentPageState();
         };
     }
 } 

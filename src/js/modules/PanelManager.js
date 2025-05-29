@@ -694,51 +694,40 @@ export class PanelManager {
         const panels = document.querySelectorAll('.comic-panel');
         if (!panelStates || panelStates.length === 0 || panels.length === 0) {
             console.log('No panel states to load or no panels found on canvas.');
-            return;
+            return Promise.resolve(); // Return a resolved promise if nothing to do
         }
 
         console.log(`PanelManager.loadPanelStates - Found ${panels.length} panels and ${panelStates.length} panel states`);
         
-        // Verify we have the same number of panels as states or handle the mismatch
         if (panels.length !== panelStates.length) {
             console.warn(`PanelManager.loadPanelStates - Panel count mismatch: ${panels.length} panels vs ${panelStates.length} states`);
         }
         
         const processablePanels = Math.min(panels.length, panelStates.length);
         console.log(`PanelManager: Restoring ${processablePanels} panel image states`);
-        
-        // --- Add logging for the input state array --- 
         console.log(`PanelManager: Received panelStates for loading:`, JSON.stringify(panelStates));
-        // --- End logging ---
+
+        const imageLoadPromises = []; // Array to store promises for each image load
             
         for (let index = 0; index < processablePanels; index++) {
             const panel = panels[index];
             const state = panelStates[index];
                 
-            // --- Add logging for each panel's state --- 
             console.log(`PanelManager: Processing panel index ${index}. State:`, JSON.stringify(state));
-            // --- End logging ---
 
-            // Check if state exists before accessing its properties
             if (state) { 
-                // Restore image if present (Check state AND state.imageId)
                 if (state.imageId) { 
-                    // --- Add logging for image restore attempt ---
                     console.log(`PanelManager: Panel ${index} has imageId: ${state.imageId}. Attempting to restore.`);
-                    // --- End logging ---
                     
-                    // Use comicCreator instance to access imageLibrary
                     const imageData = this.comicCreator.imageLibrary.getImageById(String(state.imageId));
-                    console.log(`[PanelManager] Loading panel ${index}. Found image data for ID ${state.imageId}:`, imageData); // Log lookup
-                    if (imageData && imageData.src) { // Check if image exists and has a src
+                    console.log(`[PanelManager] Loading panel ${index}. Found image data for ID ${state.imageId}:`, imageData);
+                    if (imageData && imageData.src) {
                         const img = document.createElement('img');
-                        console.log(`[PanelManager] Setting panel ${index} img.src to: ${imageData.src.substring(0, 100)}...`); // Log src
-                        img.src = imageData.src; // <-- Use the SRC from the ImageLibrary
+                        console.log(`[PanelManager] Setting panel ${index} img.src to: ${imageData.src.substring(0, 100)}...`);
                         img.alt = imageData.name || "Panel Image";
-                        img.draggable = false; // Prevent native dragging
+                        img.draggable = false;
                         img.dataset.imageId = state.imageId;
                         
-                        // Apply saved styles and transforms
                         Object.assign(img.style, {
                             position: 'absolute',
                             left: state.left || '50%',
@@ -746,45 +735,56 @@ export class PanelManager {
                             transform: state.transform || 'translate(-50%, -50%) scale(1)'
                         });
                         
-                        // Append the image
                         panel.appendChild(img);
-                        
-                        // --- Add logging after appending image --- 
                         console.log(`PanelManager: Appended image ${state.imageId} to panel ${index}.`);
-                        // --- End logging ---
+
+                        // Create a promise for this image
+                        const loadPromise = new Promise((resolve, reject) => {
+                            img.onload = () => {
+                                console.log(`PanelManager: Image ${state.imageId} in panel ${index} loaded.`);
+                                // Restore dataset attributes used by controls AFTER image is loaded
+                                if (state.initialScale) panel.dataset.initialScale = state.initialScale;
+                                if (state.currentScale) panel.dataset.currentScale = state.currentScale;
+                                if (state.rotation) panel.dataset.rotation = state.rotation;
+                                if (typeof state.isFlippedHorizontally === 'boolean') {
+                                    panel.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
+                                    if (state.isFlippedHorizontally && !img.style.transform.includes('scaleX(-1)')) {
+                                        img.style.transform = `${img.style.transform} scaleX(-1)`;
+                                    } else if (!state.isFlippedHorizontally && img.style.transform.includes('scaleX(-1)')) {
+                                        img.style.transform = img.style.transform.replace(/\s*scaleX\(-1\)/, '');
+                                    }
+                                }
+                                // Setup dragging for the restored image via ComicCreator AFTER image is loaded and dimensions are set
+                                this.comicCreator.dragAndDropManager.setupImageDragging(img);
+                                resolve(); // Resolve the promise for this image
+                            };
+                            img.onerror = () => {
+                                console.warn(`PanelManager: Panel ${index} - Image ID ${state.imageId} failed to load.`);
+                                resolve(); // Resolve even on error to not block everything
+                            };
+                        });
+                        imageLoadPromises.push(loadPromise);
                         
-                        // Restore dataset attributes used by controls
-                        if (state.initialScale) panel.dataset.initialScale = state.initialScale;
-                        if (state.currentScale) panel.dataset.currentScale = state.currentScale;
-                        if (state.rotation) panel.dataset.rotation = state.rotation;
-                        if (typeof state.isFlippedHorizontally === 'boolean') {
-                            panel.dataset.isFlippedHorizontally = state.isFlippedHorizontally.toString();
-                            // Ensure transform matches dataset (important if transform didn't save correctly)
-                            if (state.isFlippedHorizontally && !img.style.transform.includes('scaleX(-1)')) {
-                                img.style.transform = `${img.style.transform} scaleX(-1)`;
-                            } else if (!state.isFlippedHorizontally && img.style.transform.includes('scaleX(-1)')) {
-                                img.style.transform = img.style.transform.replace(/\s*scaleX\(-1\)/, '');
-                            }
-                        }
-                        
-                        // Setup dragging for the restored image via ComicCreator
-                        this.comicCreator.dragAndDropManager.setupImageDragging(img);
+                        img.src = imageData.src; // Set src AFTER onload/onerror are attached
+
                     } else {
                          console.warn(`PanelManager: Panel ${index} - Image ID ${state.imageId} not found in library.`);
                     }
                 } else {
-                    // --- Add logging if no imageId --- 
                     console.log(`PanelManager: Panel ${index} has no imageId in state. Skipping image restore.`);
-                    // --- End logging ---
                 }
-                // Text element restoration remains in ComicCreator.loadPageState
-
             } else {
                 console.warn(`PanelManager: Panel state at index ${index} is null or undefined. Skipping image restoration.`);
             }
-        } // End for loop
+        } 
         
-        console.log(`PanelManager.loadPanelStates - Completed restoration of ${processablePanels} panels`);
+        console.log(`PanelManager.loadPanelStates - Waiting for ${imageLoadPromises.length} images to load.`);
+        return Promise.all(imageLoadPromises).then(() => {
+            console.log(`PanelManager.loadPanelStates - All panel images processed for page.`);
+        }).catch(error => {
+            console.error(`PanelManager.loadPanelStates - Error during Promise.all for image loading:`, error);
+            // Still resolve so page load can continue
+        });
     }
 
     // Other methods will follow

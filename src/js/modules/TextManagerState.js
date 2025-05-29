@@ -50,29 +50,41 @@ export class TextManagerState {
                 const computedStyle = window.getComputedStyle(textBubble);
                 const textComputedStyle = window.getComputedStyle(textElement);
                 
-                let finalWidth = textBubble.style.width;
-                let finalHeight = textBubble.style.height;
+                // Revised logic for saving width/height to prevent drift
+                let savedWidthPercent;
+                const styleWidth = textBubble.style.width;
+                if (styleWidth && styleWidth.endsWith('%')) {
+                    savedWidthPercent = styleWidth;
+                } else if (styleWidth && styleWidth.endsWith('px') && panelWidth > 0) {
+                    savedWidthPercent = `${(parseFloat(styleWidth) / panelWidth) * 100}%`;
+                } else if (panelWidth > 0) { // Fallback for 'auto', not set, or other units
+                    const computedPxWidth = parseFloat(computedStyle.width);
+                    if (!isNaN(computedPxWidth)) {
+                        savedWidthPercent = `${(computedPxWidth / panelWidth) * 100}%`;
+                    } else {
+                        console.warn(`TextManagerState.saveTextStates: Panel Text - Could not parse computed width for ${textBubble.id}. Defaulting to 0%`);
+                        savedWidthPercent = '0%';
+                    }
+                } else {
+                    savedWidthPercent = '0%'; // Fallback if panelWidth is 0
+                }
 
-                // Ensure finalWidth and finalHeight are pixel values before conversion
-                if (!finalWidth || !finalWidth.endsWith('px')) {
-                    finalWidth = computedStyle.width; // This is a pixel value e.g., "150.34px"
-                }
-                if (!finalHeight || !finalHeight.endsWith('px')) {
-                    finalHeight = computedStyle.height; // This is a pixel value
-                }
-                
-                let savedWidthPercent = finalWidth; // Default to original if conversion fails
-                let savedHeightPercent = finalHeight;
-
-                if (finalWidth.endsWith('px') && panelWidth > 0) { // Use panelWidth for panel text context
-                    savedWidthPercent = `${(parseFloat(finalWidth) / panelWidth) * 100}%`;
-                } else if (finalWidth.endsWith('%')) {
-                    savedWidthPercent = finalWidth; // Already a percentage
-                }
-                if (finalHeight.endsWith('px') && panelHeight > 0) { // Use panelHeight for panel text context
-                    savedHeightPercent = `${(parseFloat(finalHeight) / panelHeight) * 100}%`;
-                } else if (finalHeight.endsWith('%')) {
-                    savedHeightPercent = finalHeight; // Already a percentage
+                let savedHeightPercent;
+                const styleHeight = textBubble.style.height;
+                if (styleHeight && styleHeight.endsWith('%')) {
+                    savedHeightPercent = styleHeight;
+                } else if (styleHeight && styleHeight.endsWith('px') && panelHeight > 0) {
+                    savedHeightPercent = `${(parseFloat(styleHeight) / panelHeight) * 100}%`;
+                } else if (panelHeight > 0) { // Fallback for 'auto', not set, or other units
+                    const computedPxHeight = parseFloat(computedStyle.height);
+                    if (!isNaN(computedPxHeight)) {
+                        savedHeightPercent = `${(computedPxHeight / panelHeight) * 100}%`;
+                    } else {
+                        console.warn(`TextManagerState.saveTextStates: Panel Text - Could not parse computed height for ${textBubble.id}. Defaulting to 0%`);
+                        savedHeightPercent = '0%';
+                    }
+                } else {
+                    savedHeightPercent = '0%'; // Fallback if panelHeight is 0
                 }
                 
                 const currentStyleLeft = textBubble.style.left; // Capture direct style.left
@@ -240,32 +252,48 @@ export class TextManagerState {
                     }
                     // If already a percentage, keep it as is
 
-                    let finalCanvasWidth = textBubble.style.width;
-                    let finalCanvasHeight = textBubble.style.height;
-    
-                    // Ensure finalCanvasWidth and finalCanvasHeight are pixel values before conversion
-                    if (!finalCanvasWidth || !finalCanvasWidth.endsWith('px')) {
-                        finalCanvasWidth = window.getComputedStyle(textBubble).width;
-                    }
-                    if (!finalCanvasHeight || !finalCanvasHeight.endsWith('px')) {
-                        finalCanvasHeight = window.getComputedStyle(textBubble).height;
+                    // Revised logic for saving canvas width/height to prevent drift
+                    let savedCanvasWidthPercent;
+                    const styleCanvasWidth = textBubble.style.width;
+                    const canvasOffsetWidth = canvas.offsetWidth; // Cache for multiple uses
+
+                    if (styleCanvasWidth && styleCanvasWidth.endsWith('%')) {
+                        savedCanvasWidthPercent = styleCanvasWidth;
+                    } else if (styleCanvasWidth && styleCanvasWidth.endsWith('px') && canvasOffsetWidth > 0) {
+                        savedCanvasWidthPercent = `${(parseFloat(styleCanvasWidth) / canvasOffsetWidth) * 100}%`;
+                    } else if (canvasOffsetWidth > 0) { // Fallback for 'auto', not set, or other units
+                        const computedPxWidth = parseFloat(window.getComputedStyle(textBubble).width);
+                         if (!isNaN(computedPxWidth)) {
+                            savedCanvasWidthPercent = `${(computedPxWidth / canvasOffsetWidth) * 100}%`;
+                        } else {
+                            console.warn(`TextManagerState.saveTextStates: Canvas Text - Could not parse computed width for ${textBubble.id}. Defaulting to 0%`);
+                            savedCanvasWidthPercent = '0%';
+                        }
+                    } else {
+                        savedCanvasWidthPercent = '0%'; // Fallback if canvas.offsetWidth is 0
                     }
 
-                    let savedCanvasWidthPercent = finalCanvasWidth;
-                    let savedCanvasHeightPercent = finalCanvasHeight;
+                    let savedCanvasHeightPercent;
+                    const styleCanvasHeight = textBubble.style.height;
+                    const canvasOffsetHeight = canvas.offsetHeight; // Cache for multiple uses
 
-                    if (finalCanvasWidth.endsWith('px') && canvas.offsetWidth > 0) {
-                        savedCanvasWidthPercent = `${(parseFloat(finalCanvasWidth) / canvas.offsetWidth) * 100}%`;
-                    } else if (finalCanvasWidth.endsWith('%')) {
-                        savedCanvasWidthPercent = finalCanvasWidth; // Already a percentage
-                    }
-                    if (finalCanvasHeight.endsWith('px') && canvas.offsetHeight > 0) {
-                        savedCanvasHeightPercent = `${(parseFloat(finalCanvasHeight) / canvas.offsetHeight) * 100}%`;
-                    } else if (finalCanvasHeight.endsWith('%')) {
-                        savedCanvasHeightPercent = finalCanvasHeight; // Already a percentage
+                    if (styleCanvasHeight && styleCanvasHeight.endsWith('%')) {
+                        savedCanvasHeightPercent = styleCanvasHeight;
+                    } else if (styleCanvasHeight && styleCanvasHeight.endsWith('px') && canvasOffsetHeight > 0) {
+                        savedCanvasHeightPercent = `${(parseFloat(styleCanvasHeight) / canvasOffsetHeight) * 100}%`;
+                    } else if (canvasOffsetHeight > 0) { // Fallback for 'auto', not set, or other units
+                        const computedPxHeight = parseFloat(window.getComputedStyle(textBubble).height);
+                        if (!isNaN(computedPxHeight)) {
+                            savedCanvasHeightPercent = `${(computedPxHeight / canvasOffsetHeight) * 100}%`;
+                        } else {
+                            console.warn(`TextManagerState.saveTextStates: Canvas Text - Could not parse computed height for ${textBubble.id}. Defaulting to 0%`);
+                            savedCanvasHeightPercent = '0%';
+                        }
+                    } else {
+                        savedCanvasHeightPercent = '0%'; // Fallback if canvas.offsetHeight is 0
                     }
                     
-                    console.log(`TextManagerState.saveTextStates: Canvas Text Bubble ${textBubble.id} - Canvas W/H for calc: ${canvas.offsetWidth}/${canvas.offsetHeight} | Style L/T: ${textBubble.style.left}/${textBubble.style.top}, Style W/H: ${textBubble.style.width}/${textBubble.style.height} | Saved L/T: ${savedCanvasLeft}/${savedCanvasTop}, Saved W/H: ${savedCanvasWidthPercent}/${savedCanvasHeightPercent} | exactL/T (rel to canvas): ${exactLeftPx}px/${exactTopPx}px`);
+                    console.log(`TextManagerState.saveTextStates: Canvas Text Bubble ${textBubble.id} - Canvas W/H for calc: ${canvasOffsetWidth}/${canvasOffsetHeight} | Style L/T: ${textBubble.style.left}/${textBubble.style.top}, Style W/H: ${textBubble.style.width}/${textBubble.style.height} | Saved L/T: ${savedCanvasLeft}/${savedCanvasTop}, Saved W/H: ${savedCanvasWidthPercent}/${savedCanvasHeightPercent} | exactL/T (rel to canvas): ${exactLeftPx}px/${exactTopPx}px`);
                     canvasTextElements.push({
                         id: textBubble.id || `canvas_text_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                         bubbleType: textBubble.dataset.bubbleType || (bubbleClasses.length > 0 ? bubbleClasses[0] : 'speech-bubble'),
