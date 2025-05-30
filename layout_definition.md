@@ -26,19 +26,80 @@ The system is designed to be reasonably modular, especially when adding new pane
 
 ## Adding New Canvas Dimensions
 
-1.  **Modify `src/js/main.js`:**
-    *   In the `ComicCreator` constructor, add a new entry to the `this.canvasDimensions` object. The key should be a unique identifier for the new dimension (e.g., `webtoonVertical`), and the value should be an object with `width` (in pixels), `height` (in pixels), and a `name` (user-friendly string).
-    *   Example: `webtoonVertical: { width: 800, height: 1280, name: "Webtoon Vertical (800x1280px)" }`
-2.  **Modify `src/js/layouts.js`:**
-    *   Create a new exported layout collection object for this dimension (e.g., `export const webtoonVerticalLayouts = { ... };`).
-    *   Populate this object with at least one layout definition, similar to how `amazonKDPLayouts` or `landscapeLayouts` were started (e.g., a simple 'single panel' layout).
-3.  **Update `this.layoutCollections` in `src/js/main.js`:**
-    *   In the `ComicCreator` constructor, add a new entry to `this.layoutCollections` that maps your new dimension key (from step 1) to the new layout collection object you created in `src/js/layouts.js` (from step 2).
-    *   Example: `webtoonVertical: webtoonVerticalLayouts,`
-4.  **Update UI for Dimension Selection (HTML & JS):**
-    *   Add a new button in your `index.html` for selecting this new canvas dimension.
-    *   In `src/js/main.js`, within `setupEventListeners()`, add an event listener for this new button that calls `this.setCanvasDimension('yourNewDimensionKey')`.
-    *   In `setCanvasDimension()`, ensure the new button's active state is correctly toggled.
+1.  **Modify `src/js/layouts.js`:**
+    *   Create a new exported layout collection object for this dimension (e.g., `export const webtoonVerticalLayouts = { /* ... layouts ... */ };`).
+    *   Populate this object with at least one layout definition (e.g., a simple 'single panel' layout).
+
+2.  **Modify `src/js/main.js`:**
+    *   **Import the new layout collection:** At the top of the file, add your new layout collection to the import statement from `'./layouts.js'`.
+        *   Example: `import { layouts, amazonKDPLayouts, landscapeLayouts, webtoonVerticalLayouts } from './layouts.js';`
+    *   **Add to `ComicCreator` constructor:**
+        *   Add a new entry to the `this.canvasDimensions` object. The key should be a unique identifier for the new dimension (e.g., `webtoonVertical`), and the value should be an object with `width` (in pixels), `height` (in pixels), and a `name` (user-friendly string).
+            *   Example: `webtoonVertical: { width: 800, height: 1280, name: "Webtoon Vertical (800x1280px)" }`
+        *   Assign the imported layout collection to a new property on `this`.
+            *   Example: `this.webtoonVerticalLayouts = webtoonVerticalLayouts;`
+    *   **Update `setupLayoutSelection()` method:**
+        *   Add a new `case` to the `switch (this.selectedCanvasDimension)` statement to handle your new dimension key. This case should set `activeLayoutCollection` to the new layout property you defined on `this`.
+            *   Example:
+                ```javascript
+                // ...
+                switch (this.selectedCanvasDimension) {
+                    // ... existing cases ...
+                    case 'webtoonVertical':
+                        activeLayoutCollection = this.webtoonVerticalLayouts;
+                        break;
+                    default:
+                        activeLayoutCollection = this.layouts;
+                        break;
+                }
+                // ...
+                ```
+    *   **Update `getLayoutConfig()` method:**
+        *   Modify the section where `config` is assigned to include your new layout collection in the search order. It's generally best to add it before the default `this.layouts` if these are dimension-specific, or in an order that makes sense for your desired fallback behavior.
+            *   Example (adding `this.webtoonVerticalLayouts`):
+                ```javascript
+                // ...
+                if (typeof layoutName === 'string') {
+                    config = this.amazonKDPLayouts[layoutName] ||      // Existing
+                             this.landscapeLayouts[layoutName] ||     // Existing
+                             this.webtoonVerticalLayouts[layoutName] || // New
+                             this.layouts[layoutName];                // Default/Square (often last)
+                }
+                // ...
+                ```
+
+3.  **Update UI for Dimension Selection (HTML & JS):**
+    *   Add a new button in your `index.html` (likely within the `.canvas-size-selection .button-row`) for selecting this new canvas dimension. Give it a unique ID.
+        *   Example: `<button class="primary-btn" id="set-canvas-webtoonVertical">Webtoon Vertical</button>`
+    *   In `src/js/main.js`, within the `setupEventListeners()` method (specifically in the canvas dimension button listeners part):
+        *   Add an event listener for your new button that calls `this.setCanvasDimension('yourNewDimensionKey')`.
+            *   Example: `document.getElementById('set-canvas-webtoonVertical').addEventListener('click', () => this.setCanvasDimension('webtoonVertical'));`
+    *   In the `setCanvasDimension(dimensionKey)` method:
+        *   Ensure the new button's active state is correctly managed (add `classList.add('active-size')` to the new button and `classList.remove('active-size')` from others).
+
+**Note on Scalability:** The current system uses individual properties for each dimension's layouts (e.g., `this.amazonKDPLayouts`) and a `switch` statement in `setupLayoutSelection`. The `getLayoutConfig` method also requires manual updates. For significantly more dimensions, consider refactoring to use a single `this.layoutCollections` map in the `ComicCreator` constructor. This map could store all layout objects (predefined and custom) keyed by dimension. Such a change would simplify `setupLayoutSelection` and `getLayoutConfig`, making them more dynamic and less prone to needing manual updates for each new dimension.
+
+## Custom Layouts and Dimensions
+
+Currently, the comic creator handles custom layouts (those created via the "Layout Builder" or uploaded as `.layout` files) in the following way:
+
+*   **Storage:** All custom layouts are stored within the primary `this.layouts` object in the `ComicCreator` instance. This is the same object that holds the predefined layouts for the default (square 1:1) canvas dimension.
+*   **Availability:** Because they are in `this.layouts`, and `getLayoutConfig` searches `this.layouts` (typically as a fallback), these custom layouts become technically available regardless of which canvas dimension is currently selected.
+*   **Behavior:** When a custom layout is applied, its panel definitions (which are percentage-based: `x, y, width, height`) are rendered relative to the currently active canvas dimensions. This means a custom layout designed visually while the "Amazon KDP" dimension was active will still have its percentages applied to an "Amazon KDP" sized canvas if selected under that dimension.
+
+**Limitations and Considerations:**
+
+*   **No Formal Dimension Link:** Custom layouts do not have a formal, stored association with the specific canvas dimension that was active when they were created. Their "link" is implicit based on the user's design intent and current selection.
+*   **Naming Conflicts:** If a custom layout is given an ID (filename) that matches a predefined layout ID in one of the dimension-specific collections (e.g., `amazonKDPLayouts`), the predefined layout might be found first by `getLayoutConfig` depending on its search order, potentially overriding the user's custom layout if they intended to use that ID.
+
+**Future Enhancements (Advanced):**
+
+For a more robust system where custom layouts are explicitly tied to dimensions:
+
+1.  **Dimension-Specific Custom Layout Storage:** Modify the custom layout saving/loading logic (e.g., in `LayoutBuilderManager.js` or when handling `.layout` file uploads) to store custom layouts in a structure that associates them with the `selectedCanvasDimension` active at the time of creation/upload. This might involve creating dynamic properties on `this` like `this.customAmazonKDPLayouts`, or a nested object structure.
+2.  **Update `getLayoutConfig`:** Enhance `getLayoutConfig` to first search for custom layouts associated with the current dimension before falling back to the general `this.layouts` or predefined dimension-specific layouts.
+
+These advanced changes would require more significant modifications to the JavaScript logic. For now, the system relies on the flexibility of percentage-based layouts and the current search order in `getLayoutConfig`.
 
 ## Potential Areas for Future Adjustments
 
