@@ -411,10 +411,10 @@ body {
     background: var(--input-bg);
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 1rem;
+    padding: 0.4rem;
     margin-bottom: 1rem;
     width: 100%;
-    aspect-ratio: 1;
+    /* aspect-ratio: 1; */ /* Removed to allow dynamic aspect ratios for different canvas dimensions */
     display: grid;
     gap: 4px;
 }

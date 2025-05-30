@@ -29,9 +29,9 @@ class ComicCreator {
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
         
         this.canvasDimensions = {
-            current: { width: 700, height: 700, name: "DEFAULT 1:1 (700x700px)" },
-            amazonKDP: { width: 490, height: 700, name: "Amazon KDP (7\"x10\")" },
-            landscape10x8: { width: 700, height: 560, name: "Landscape (10\"x8\")" }
+            current: { width: 700, height: 700, name: "Square (1:1)" },
+            amazonKDP: { width: 490, height: 700, name: "Portrait (7:10)" },
+            landscape10x8: { width: 700, height: 560, name: "Landscape (10:8)" }
         };
         this.selectedCanvasDimension = 'current'; // Default to 1:1
 
@@ -305,7 +305,12 @@ class ComicCreator {
                 "></div>
             `);
         });
-        return `<div style="position: relative; width: 100%; padding-bottom: 100%;">${previewHtml.join('')}</div>`;
+        
+        // Calculate correct aspect ratio based on selected canvas dimension
+        const currentDimensions = this.canvasDimensions[this.selectedCanvasDimension];
+        const aspectRatio = (currentDimensions.height / currentDimensions.width) * 100;
+        
+        return `<div style="position: relative; width: 100%; padding-bottom: ${aspectRatio}%;">${previewHtml.join('')}</div>`;
     }
 
     setupComicEditor() {
