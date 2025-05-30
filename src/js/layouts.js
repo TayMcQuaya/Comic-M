@@ -1,16 +1,16 @@
 // Convert array to object for easier lookup
 export const layouts = {
+    'empty': {
+        name: 'Empty Canvas (1:1)',
+        description: 'Blank square canvas with no panels',
+        panels: []
+    },
     'single': {
         name: 'Single Panel',
         description: 'One large panel for a single scene',
         panels: [
             { x: 0, y: 0, width: 100, height: 100 }
         ]
-    },
-    'empty': {
-        name: 'Empty Canvas',
-        description: 'Blank canvas with no panels',
-        panels: []
     },
     'two-vertical': {
         name: 'Two Vertical Panels',
@@ -698,11 +698,13 @@ export const layouts = {
         ]
     },
     'landscape-with-large-bottom-right-inset': {
-        name: "LANDSCAPE WITH LARGE BOTTOM RIGHT INSET",
-        description: "Wide panel with a large overlapping panel in the bottom-right",
+        name: "Landscape with Large Bottom-Right Inset",
+        description: "Wide landscape panel positioned higher with a larger inset at the bottom right",
         panels: [
-            { x: 0, y: 0, width: 100, height: 70 },    // Main wide panel at the top
-            { x: 40, y: 40, width: 50, height: 50 }    // Large overlapping panel in the bottom-right
+            // Main landscape panel moved up
+            { x: 1, y: 15, width: 98, height: 45 },
+            // Larger inset in bottom-right
+            { x: 55, y: 62, width: 40, height: 35 }
         ]
     },
     
@@ -798,13 +800,7 @@ export const layouts = {
             { x: 20, y: 20, width: 60, height: 60 }
         ]
     },
-    'offering-mid-shot': {
-        name: "Offering Mid Shot",
-        description: "Mid shot of a character offering something",
-        panels: [
-            { x: 25, y: 25, width: 50, height: 50 }
-        ]
-    },
+
     'reaction-small': {
         name: "Small Reaction Shot",
         description: "Smaller panel showing a character's reaction",
@@ -827,13 +823,7 @@ export const layouts = {
             { x: 0, y: 30, width: 100, height: 40 }
         ]
     },
-    'camaraderie-small': {
-        name: "Small Camaraderie Panel",
-        description: "Small panel focusing on characters' camaraderie",
-        panels: [
-            { x: 35, y: 35, width: 30, height: 30 }
-        ]
-    },
+
     'pendant-reveal-large': {
         name: "Pendant Reveal Large",
         description: "Large panel revealing a pendant from a character's satchel",
@@ -937,11 +927,64 @@ export const layouts = {
             // Larger inset in bottom-right
             { x: 55, y: 62, width: 40, height: 35 }
         ]
+    },
+    
+    // Staggered Square Layouts
+    'staggered-squares-cascade': {
+        name: 'Staggered Squares Cascade',
+        description: 'Four square panels in cascading staggered arrangement',
+        panels: [
+            { x: 3, y: 3, width: 40, height: 40 },
+            { x: 35, y: 15, width: 40, height: 40 },
+            { x: 20, y: 35, width: 40, height: 40 },
+            { x: 5, y: 55, width: 40, height: 35 }
+        ]
+    },
+    'staggered-squares-zigzag': {
+        name: 'Staggered Squares Zigzag',
+        description: 'Five square panels in zigzag staggered pattern',
+        panels: [
+            { x: 5, y: 2, width: 35, height: 35 },
+            { x: 60, y: 8, width: 35, height: 35 },
+            { x: 15, y: 30, width: 35, height: 35 },
+            { x: 50, y: 40, width: 35, height: 35 },
+            { x: 5, y: 63, width: 35, height: 35 }
+        ]
+    },
+    'staggered-squares-offset': {
+        name: 'Staggered Squares Offset',
+        description: 'Six square panels with alternating offset positions',
+        panels: [
+            { x: 2, y: 2, width: 30, height: 30 },
+            { x: 40, y: 5, width: 30, height: 30 },
+            { x: 70, y: 2, width: 28, height: 30 },
+            { x: 5, y: 38, width: 30, height: 30 },
+            { x: 45, y: 42, width: 30, height: 30 },
+            { x: 25, y: 68, width: 30, height: 30 }
+        ]
+    },
+    'staggered-squares-flow': {
+        name: 'Staggered Squares Flow',
+        description: 'Seven square panels flowing in staggered waves',
+        panels: [
+            { x: 2, y: 5, width: 30, height: 30 },
+            { x: 38, y: 2, width: 30, height: 30 },
+            { x: 68, y: 8, width: 30, height: 30 },
+            { x: 10, y: 35, width: 30, height: 30 },
+            { x: 50, y: 38, width: 30, height: 30 },
+            { x: 5, y: 65, width: 30, height: 30 },
+            { x: 65, y: 68, width: 30, height: 30 }
+        ]
     }
 };
 
 export const amazonKDPLayouts = {
     // Single Panel Layouts (Expanded)
+    'kdp-empty': {
+        name: 'Empty Canvas (7:10)',
+        description: 'Blank portrait canvas with no panels',
+        panels: []
+    },
     'kdp-single-full': {
         name: 'Full Page',
         description: 'One large panel filling the entire page',
@@ -1333,11 +1376,95 @@ export const amazonKDPLayouts = {
     // Special Layouts with Squares
     'kdp-diagonal-squares': {
         name: 'Diagonal Squares',
-        description: 'Square panels arranged along a diagonal',
+        description: 'Three large square panels arranged diagonally',
         panels: [
-            { x: 5, y: 5, width: 35, height: 35 },
-            { x: 32.5, y: 32.5, width: 35, height: 35 },
-            { x: 60, y: 60, width: 35, height: 35 }
+            { x: 6.2, y: 4.4, width: 51, height: 35.75 },
+            { x: 29.1, y: 36, width: 51, height: 35.75 },
+            { x: 52.1, y: 67.3, width: 51, height: 35.75 }
+        ]
+    },
+    'kdp-four-squares-grid': {
+        name: 'Four Squares Grid',
+        description: 'Four equal square panels in 2x2 grid',
+        panels: [
+            { x: 1.8, y: 1.8, width: 47, height: 35.75 },
+            { x: 51.2, y: 1.8, width: 47, height: 35.75 },
+            { x: 1.8, y: 39.3, width: 47, height: 35.75 },
+            { x: 51.2, y: 39.3, width: 47, height: 35.75 }
+        ]
+    },
+    'kdp-four-squares-stack': {
+        name: 'Four Squares Vertical Stack',
+        description: 'Four square panels stacked vertically',
+        panels: [
+            { x: 24.5, y: 1.8, width: 51, height: 22 },
+            { x: 24.5, y: 25.6, width: 51, height: 22 },
+            { x: 24.5, y: 49.4, width: 51, height: 22 },
+            { x: 24.5, y: 73.2, width: 51, height: 22 }
+        ]
+    },
+    'kdp-five-squares-focus': {
+        name: 'Five Squares with Focus',
+        description: 'Five square panels with central emphasis',
+        panels: [
+            { x: 1.8, y: 1.8, width: 47, height: 35.75 },
+            { x: 51.2, y: 1.8, width: 47, height: 35.75 },
+            { x: 24.5, y: 32, width: 51, height: 35.75 },
+            { x: 1.8, y: 62.5, width: 47, height: 35.75 },
+            { x: 51.2, y: 62.5, width: 47, height: 35.75 }
+        ]
+    },
+    'kdp-six-squares-grid': {
+        name: 'Six Squares Grid',
+        description: 'Six square panels in 2x3 grid',
+        panels: [
+            { x: 1.8, y: 1.8, width: 47, height: 28 },
+            { x: 51.2, y: 1.8, width: 47, height: 28 },
+            { x: 1.8, y: 31.6, width: 47, height: 28 },
+            { x: 51.2, y: 31.6, width: 47, height: 28 },
+            { x: 1.8, y: 61.4, width: 47, height: 28 },
+            { x: 51.2, y: 61.4, width: 47, height: 28 }
+        ]
+    },
+    'kdp-six-squares-center-focus': {
+        name: 'Six Squares with Central Focus',
+        description: 'Six square panels with large center panel',
+        panels: [
+            { x: 1.8, y: 1.8, width: 30, height: 25 },
+            { x: 34.5, y: 1.8, width: 30, height: 25 },
+            { x: 68, y: 1.8, width: 30, height: 25 },
+            { x: 15, y: 30, width: 70, height: 40 },
+            { x: 1.8, y: 73, width: 47, height: 25 },
+            { x: 51.2, y: 73, width: 47, height: 25 }
+        ]
+    },
+    'kdp-eight-squares-balanced': {
+        name: 'Eight Squares Balanced',
+        description: 'Eight square panels in balanced grid',
+        panels: [
+            { x: 1.8, y: 1.8, width: 30, height: 22 },
+            { x: 34.5, y: 1.8, width: 30, height: 22 },
+            { x: 68, y: 1.8, width: 30, height: 22 },
+            { x: 1.8, y: 26, width: 47, height: 22 },
+            { x: 51.2, y: 26, width: 47, height: 22 },
+            { x: 1.8, y: 50.5, width: 30, height: 22 },
+            { x: 34.5, y: 50.5, width: 30, height: 22 },
+            { x: 68, y: 50.5, width: 30, height: 22 }
+        ]
+    },
+    'kdp-nine-squares-grid': {
+        name: 'Nine Squares Grid',
+        description: 'Nine equal square panels in 3x3 grid',
+        panels: [
+            { x: 1.8, y: 1.8, width: 30, height: 28 },
+            { x: 34.5, y: 1.8, width: 30, height: 28 },
+            { x: 68, y: 1.8, width: 30, height: 28 },
+            { x: 1.8, y: 32, width: 30, height: 28 },
+            { x: 34.5, y: 32, width: 30, height: 28 },
+            { x: 68, y: 32, width: 30, height: 28 },
+            { x: 1.8, y: 62.2, width: 30, height: 28 },
+            { x: 34.5, y: 62.2, width: 30, height: 28 },
+            { x: 68, y: 62.2, width: 30, height: 28 }
         ]
     },
     'kdp-center-square-surround': {
@@ -1369,16 +1496,7 @@ export const amazonKDPLayouts = {
             { x: 1.8, y: 65.4, width: 96.4, height: 32.8 }
         ]
     },
-    'kdp-circle-narrative': {
-        name: 'Circle Narrative',
-        description: 'Panels arranged in circular reading pattern',
-        panels: [
-            { x: 26.5, y: 1.8, width: 47, height: 30 },
-            { x: 67.6, y: 20, width: 30.6, height: 47 },
-            { x: 26.5, y: 65.4, width: 47, height: 32.8 },
-            { x: 1.8, y: 20, width: 30.6, height: 47 }
-        ]
-    },
+  
     'kdp-splash-with-details': {
         name: 'Splash with Details',
         description: 'Large splash panel with detail panels',
@@ -1389,106 +1507,63 @@ export const amazonKDPLayouts = {
             { x: 73.6, y: 57.4, width: 24.6, height: 24.8 },
             { x: 1.8, y: 83.6, width: 96.4, height: 14.6 }
         ]
+    },
+    
+    // Staggered Square Layouts for 7:10
+    'kdp-staggered-squares-cascade': {
+        name: 'Staggered Squares Cascade (7:10)',
+        description: 'Four square panels in cascading staggered arrangement for portrait',
+        panels: [
+            { x: 2, y: 2, width: 45, height: 32 },
+            { x: 35, y: 20, width: 45, height: 32 },
+            { x: 15, y: 40, width: 45, height: 32 },
+            { x: 5, y: 65, width: 45, height: 33 }
+        ]
+    },
+    'kdp-staggered-squares-zigzag': {
+        name: 'Staggered Squares Zigzag (7:10)',
+        description: 'Five square panels in zigzag staggered pattern for portrait',
+        panels: [
+            { x: 5, y: 2, width: 40, height: 28 },
+            { x: 55, y: 12, width: 40, height: 28 },
+            { x: 15, y: 30, width: 40, height: 28 },
+            { x: 45, y: 45, width: 40, height: 28 },
+            { x: 5, y: 70, width: 40, height: 28 }
+        ]
+    },
+    'kdp-staggered-squares-offset': {
+        name: 'Staggered Squares Offset (7:10)',
+        description: 'Six square panels with alternating offset positions for portrait',
+        panels: [
+            { x: 2, y: 2, width: 35, height: 25 },
+            { x: 42, y: 8, width: 35, height: 25 },
+            { x: 70, y: 2, width: 28, height: 25 },
+            { x: 8, y: 35, width: 35, height: 25 },
+            { x: 50, y: 42, width: 35, height: 25 },
+            { x: 25, y: 70, width: 35, height: 28 }
+        ]
+    },
+    'kdp-staggered-squares-flow': {
+        name: 'Staggered Squares Flow (7:10)',
+        description: 'Seven square panels flowing in staggered waves for portrait',
+        panels: [
+            { x: 2, y: 2, width: 30, height: 21 },
+            { x: 38, y: 0, width: 30, height: 21 },
+            { x: 70, y: 5, width: 28, height: 21 },
+            { x: 10, y: 28, width: 30, height: 21 },
+            { x: 50, y: 32, width: 30, height: 21 },
+            { x: 5, y: 55, width: 30, height: 21 },
+            { x: 65, y: 60, width: 30, height: 21 }
+        ]
     }
 };
 
 export const landscapeLayouts = {
     // Single Panel Layouts (New - 10 layouts for landscape)
-    'landscape-single-full': {
-        name: 'Full Page Landscape',
-        description: 'One large panel filling the entire landscape page',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 96.4 }
-        ]
-    },
-    'landscape-single-centered': {
-        name: 'Centered Landscape',
-        description: 'One centered panel with generous margins',
-        panels: [
-            { x: 15, y: 20, width: 70, height: 60 }
-        ]
-    },
-    'landscape-single-wide': {
-        name: 'Wide Panel',
-        description: 'Wide horizontal panel perfect for landscapes',
-        panels: [
-            { x: 10, y: 25, width: 80, height: 50 }
-        ]
-    },
-    'landscape-single-square': {
-        name: 'Square Panel',
-        description: 'Perfect square panel centered on landscape page',
-        panels: [
-            { x: 25, y: 15, width: 50, height: 70 }
-        ]
-    },
-    'landscape-single-left': {
-        name: 'Left Panel',
-        description: 'Panel positioned toward left side',
-        panels: [
-            { x: 5, y: 20, width: 60, height: 60 }
-        ]
-    },
-    'landscape-single-right': {
-        name: 'Right Panel',
-        description: 'Panel positioned toward right side',
-        panels: [
-            { x: 35, y: 20, width: 60, height: 60 }
-        ]
-    },
-    'landscape-single-top': {
-        name: 'Top Panel',
-        description: 'Panel positioned in upper portion',
-        panels: [
-            { x: 20, y: 5, width: 60, height: 60 }
-        ]
-    },
-    'landscape-single-bottom': {
-        name: 'Bottom Panel',
-        description: 'Panel positioned in lower portion',
-        panels: [
-            { x: 20, y: 35, width: 60, height: 60 }
-        ]
-    },
-    'landscape-single-portrait': {
-        name: 'Portrait in Landscape',
-        description: 'Tall vertical panel on landscape page',
-        panels: [
-            { x: 30, y: 10, width: 40, height: 80 }
-        ]
-    },
-    'landscape-single-widescreen': {
-        name: 'Widescreen Panel',
-        description: 'Cinematic widescreen panel',
-        panels: [
-            { x: 5, y: 30, width: 90, height: 40 }
-        ]
-    },
-
-    // Two Panel Layouts (New additions)
-    'landscape-two-left-right': {
-        name: 'Two Panels (Left-Right Split)',
-        description: 'Two equal vertical panels side by side',
-        panels: [
-            { x: 1.8, y: 1.8, width: 47.7, height: 96.4 },
-            { x: 50.5, y: 1.8, width: 47.7, height: 96.4 }
-        ]
-    },
-    'landscape-two-top-bottom': {
-        name: 'Two Panels (Top-Bottom)',
-        description: 'Two horizontal panels stacked vertically',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 47.7 },
-            { x: 1.8, y: 50.5, width: 96.4, height: 47.7 }
-        ]
-    },
-    'landscape-two-uneven-left': {
-        name: 'Two Panels (Large Left)',
-        description: 'Large left panel with smaller right panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 64, height: 96.4 },
-            { x: 67.6, y: 1.8, width: 30.6, height: 96.4 }
-        ]
+    'landscape-empty': {
+        name: 'Empty Canvas (10:8)',
+        description: 'Blank landscape canvas with no panels',
+        panels: []
     },
     'landscape-two-uneven-right': {
         name: 'Two Panels (Large Right)',
@@ -1498,199 +1573,6 @@ export const landscapeLayouts = {
             { x: 34.2, y: 1.8, width: 64, height: 96.4 }
         ]
     },
-    'landscape-two-wide-narrow': {
-        name: 'Two Panels (Wide & Narrow)',
-        description: 'Wide top panel with narrow bottom panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 72 },
-            { x: 1.8, y: 75.6, width: 96.4, height: 22.6 }
-        ]
-    },
-    'landscape-two-narrow-wide': {
-        name: 'Two Panels (Narrow & Wide)',
-        description: 'Narrow top panel with wide bottom panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 22.6 },
-            { x: 1.8, y: 26.2, width: 96.4, height: 72 }
-        ]
-    },
-
-    // Three Panel Layouts (New additions)
-    'landscape-three-equal-vertical': {
-        name: 'Three Equal Vertical',
-        description: 'Three equal vertical panels',
-        panels: [
-            { x: 1.8, y: 1.8, width: 31.5, height: 96.4 },
-            { x: 34.2, y: 1.8, width: 31.5, height: 96.4 },
-            { x: 66.7, y: 1.8, width: 31.5, height: 96.4 }
-        ]
-    },
-    'landscape-three-equal-horizontal': {
-        name: 'Three Equal Horizontal',
-        description: 'Three equal horizontal panels stacked',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 31.5 },
-            { x: 1.8, y: 34.2, width: 96.4, height: 31.5 },
-            { x: 1.8, y: 66.7, width: 96.4, height: 31.5 }
-        ]
-    },
-    'landscape-three-large-left': {
-        name: 'Three Panels (Large Left)',
-        description: 'Large left panel with two smaller right panels',
-        panels: [
-            { x: 1.8, y: 1.8, width: 64, height: 96.4 },
-            { x: 67.6, y: 1.8, width: 30.6, height: 47.7 },
-            { x: 67.6, y: 50.5, width: 30.6, height: 47.7 }
-        ]
-    },
-    'landscape-three-large-right': {
-        name: 'Three Panels (Large Right)',
-        description: 'Two smaller left panels with large right panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 30.6, height: 47.7 },
-            { x: 1.8, y: 50.5, width: 30.6, height: 47.7 },
-            { x: 34.2, y: 1.8, width: 64, height: 96.4 }
-        ]
-    },
-    'landscape-three-top-large': {
-        name: 'Three Panels (Large Top)',
-        description: 'Large top panel with two smaller bottom panels',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 60 },
-            { x: 1.8, y: 63.6, width: 47.7, height: 34.6 },
-            { x: 50.5, y: 63.6, width: 47.7, height: 34.6 }
-        ]
-    },
-    'landscape-three-bottom-large': {
-        name: 'Three Panels (Large Bottom)',
-        description: 'Two smaller top panels with large bottom panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 47.7, height: 34.6 },
-            { x: 50.5, y: 1.8, width: 47.7, height: 34.6 },
-            { x: 1.8, y: 38.2, width: 96.4, height: 60 }
-        ]
-    },
-    'landscape-three-l-shape': {
-        name: 'Three Panels (L-Shape)',
-        description: 'L-shaped arrangement with focus panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 64, height: 60 },
-            { x: 67.6, y: 1.8, width: 30.6, height: 60 },
-            { x: 1.8, y: 63.6, width: 96.4, height: 34.6 }
-        ]
-    },
-    'landscape-three-reverse-l': {
-        name: 'Three Panels (Reverse L)',
-        description: 'Reverse L-shaped layout',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 34.6 },
-            { x: 1.8, y: 38.2, width: 30.6, height: 60 },
-            { x: 34.2, y: 38.2, width: 64, height: 60 }
-        ]
-    },
-
-    // Four Panel Layouts (New additions)
-    'landscape-four-equal-grid': {
-        name: 'Four Equal Grid',
-        description: '2x2 equal grid layout',
-        panels: [
-            { x: 1.8, y: 1.8, width: 47.7, height: 47.7 },
-            { x: 50.5, y: 1.8, width: 47.7, height: 47.7 },
-            { x: 1.8, y: 50.5, width: 47.7, height: 47.7 },
-            { x: 50.5, y: 50.5, width: 47.7, height: 47.7 }
-        ]
-    },
-    'landscape-four-horizontal-strip': {
-        name: 'Four Horizontal Strip',
-        description: 'Four equal horizontal panels stacked',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 23.2 },
-            { x: 1.8, y: 26.8, width: 96.4, height: 23.2 },
-            { x: 1.8, y: 51.8, width: 96.4, height: 23.2 },
-            { x: 1.8, y: 76.8, width: 96.4, height: 21.4 }
-        ]
-    },
-    'landscape-four-vertical-strip': {
-        name: 'Four Vertical Strip',
-        description: 'Four equal vertical panels side by side',
-        panels: [
-            { x: 1.8, y: 1.8, width: 23.6, height: 96.4 },
-            { x: 26.3, y: 1.8, width: 23.6, height: 96.4 },
-            { x: 50.8, y: 1.8, width: 23.6, height: 96.4 },
-            { x: 75.3, y: 1.8, width: 22.9, height: 96.4 }
-        ]
-    },
-    'landscape-four-focus-left': {
-        name: 'Four Panels (Focus Left)',
-        description: 'Large left panel with three smaller panels',
-        panels: [
-            { x: 1.8, y: 1.8, width: 47.7, height: 96.4 },
-            { x: 50.5, y: 1.8, width: 47.7, height: 31.5 },
-            { x: 50.5, y: 34.2, width: 47.7, height: 31.5 },
-            { x: 50.5, y: 66.7, width: 47.7, height: 31.5 }
-        ]
-    },
-    'landscape-four-focus-right': {
-        name: 'Four Panels (Focus Right)',
-        description: 'Three smaller panels with large right panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 47.7, height: 31.5 },
-            { x: 1.8, y: 34.2, width: 47.7, height: 31.5 },
-            { x: 1.8, y: 66.7, width: 47.7, height: 31.5 },
-            { x: 50.5, y: 1.8, width: 47.7, height: 96.4 }
-        ]
-    },
-    'landscape-four-focus-top': {
-        name: 'Four Panels (Focus Top)',
-        description: 'Large top panel with three smaller bottom panels',
-        panels: [
-            { x: 1.8, y: 1.8, width: 96.4, height: 47.7 },
-            { x: 1.8, y: 50.5, width: 31.5, height: 47.7 },
-            { x: 34.2, y: 50.5, width: 31.5, height: 47.7 },
-            { x: 66.7, y: 50.5, width: 31.5, height: 47.7 }
-        ]
-    },
-    'landscape-four-focus-bottom': {
-        name: 'Four Panels (Focus Bottom)',
-        description: 'Three smaller top panels with large bottom panel',
-        panels: [
-            { x: 1.8, y: 1.8, width: 31.5, height: 47.7 },
-            { x: 34.2, y: 1.8, width: 31.5, height: 47.7 },
-            { x: 66.7, y: 1.8, width: 31.5, height: 47.7 },
-            { x: 1.8, y: 50.5, width: 96.4, height: 47.7 }
-        ]
-    },
-    'landscape-four-corner-focus': {
-        name: 'Four Panels (Corner Focus)',
-        description: 'Four corners with center emphasis',
-        panels: [
-            { x: 1.8, y: 1.8, width: 40, height: 40 },
-            { x: 58.2, y: 1.8, width: 40, height: 40 },
-            { x: 1.8, y: 58.2, width: 40, height: 40 },
-            { x: 58.2, y: 58.2, width: 40, height: 40 }
-        ]
-    },
-    'landscape-four-t-shape': {
-        name: 'Four Panels (T-Shape)',
-        description: 'T-shaped layout for dynamic storytelling',
-        panels: [
-            { x: 1.8, y: 1.8, width: 31.5, height: 47.7 },
-            { x: 34.2, y: 1.8, width: 31.5, height: 47.7 },
-            { x: 66.7, y: 1.8, width: 31.5, height: 47.7 },
-            { x: 25, y: 50.5, width: 50, height: 47.7 }
-        ]
-    },
-    'landscape-four-cross': {
-        name: 'Four Panels (Cross Layout)',
-        description: 'Cross-shaped arrangement',
-        panels: [
-            { x: 25, y: 1.8, width: 50, height: 30 },
-            { x: 1.8, y: 34, width: 30, height: 30 },
-            { x: 68.2, y: 34, width: 30, height: 30 },
-            { x: 25, y: 66.2, width: 50, height: 32 }
-        ]
-    },
-
     // Existing layouts follow...
     'landscape-two-horizontal': {
         name: 'Two Horizontal',
@@ -1953,6 +1835,54 @@ export const landscapeLayouts = {
             { x: 1.8, y: 74.8, width: 31.5, height: 23.3 },
             { x: 34.2, y: 74.8, width: 31.5, height: 23.3 },
             { x: 66.7, y: 74.8, width: 31.5, height: 23.3 }
+        ]
+    },
+    
+    // Staggered Square Layouts for 10:8 Landscape
+    'landscape-staggered-squares-cascade': {
+        name: 'Staggered Squares Cascade (10:8)',
+        description: 'Four square panels in cascading staggered arrangement for landscape',
+        panels: [
+            { x: 2, y: 5, width: 40, height: 50 },
+            { x: 35, y: 15, width: 40, height: 50 },
+            { x: 20, y: 35, width: 40, height: 50 },
+            { x: 55, y: 45, width: 40, height: 50 }
+        ]
+    },
+    'landscape-staggered-squares-zigzag': {
+        name: 'Staggered Squares Zigzag (10:8)',
+        description: 'Five square panels in zigzag staggered pattern for landscape',
+        panels: [
+            { x: 5, y: 2, width: 35, height: 44 },
+            { x: 60, y: 8, width: 35, height: 44 },
+            { x: 15, y: 30, width: 35, height: 44 },
+            { x: 50, y: 40, width: 35, height: 44 },
+            { x: 5, y: 55, width: 35, height: 43 }
+        ]
+    },
+    'landscape-staggered-squares-offset': {
+        name: 'Staggered Squares Offset (10:8)',
+        description: 'Six square panels with alternating offset positions for landscape',
+        panels: [
+            { x: 2, y: 2, width: 30, height: 38 },
+            { x: 38, y: 8, width: 30, height: 38 },
+            { x: 70, y: 2, width: 28, height: 38 },
+            { x: 10, y: 35, width: 30, height: 38 },
+            { x: 50, y: 42, width: 30, height: 38 },
+            { x: 25, y: 60, width: 30, height: 38 }
+        ]
+    },
+    'landscape-staggered-squares-flow': {
+        name: 'Staggered Squares Flow (10:8)',
+        description: 'Seven square panels flowing in staggered waves for landscape',
+        panels: [
+            { x: 2, y: 5, width: 28, height: 35 },
+            { x: 35, y: 2, width: 28, height: 35 },
+            { x: 68, y: 8, width: 28, height: 35 },
+            { x: 10, y: 35, width: 28, height: 35 },
+            { x: 45, y: 38, width: 28, height: 35 },
+            { x: 75, y: 42, width: 23, height: 35 },
+            { x: 25, y: 63, width: 28, height: 35 }
         ]
     }
 };
