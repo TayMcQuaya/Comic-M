@@ -940,6 +940,28 @@ export const layouts = {
     }
 };
 
+export const amazonKDPLayouts = {
+    'amazonSingle': {
+        name: 'Single Panel (Amazon KDP)',
+        description: 'One large panel, adapted for Amazon KDP dimensions',
+        panels: [
+            { x: 0, y: 0, width: 100, height: 100 }
+        ]
+    }
+    // More Amazon KDP specific layouts can be added here later
+};
+
+export const landscapeLayouts = {
+    'landscapeSingle': {
+        name: 'Single Panel (Landscape)',
+        description: 'One large panel, adapted for landscape dimensions',
+        panels: [
+            { x: 0, y: 0, width: 100, height: 100 }
+        ]
+    }
+    // More landscape specific layouts can be added here later
+};
+
 // Helper function to create custom grid layouts
 export function createGridLayout(rows, cols) {
     const panels = [];

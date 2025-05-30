@@ -1,4 +1,4 @@
-import { layouts } from './layouts.js';
+import { layouts, amazonKDPLayouts, landscapeLayouts } from './layouts.js'; // Added amazonKDPLayouts and landscapeLayouts
 import { globalRgbToHex, getTextWithLineBreaks } from './modules/Utils.js'; // Import Utils
 import { FolderSystem } from './modules/FolderSystem.js'; // Import FolderSystem
 import { DragAndDropManager } from './modules/DragAndDropManager.js'; // Import DragAndDropManager
@@ -24,6 +24,8 @@ class ComicCreator {
         }];
         this.currentPageIndex = 0;
         this.layouts = layouts; // Store layouts in the instance
+        this.amazonKDPLayouts = amazonKDPLayouts; // Added for Amazon KDP
+        this.landscapeLayouts = landscapeLayouts; // Added for landscape
         this.currentSidebarMode = 'panels'; // Add this line: 'panels', 'backgrounds', 'stickers'
         
         this.canvasDimensions = {
@@ -215,8 +217,21 @@ class ComicCreator {
         // Clear existing content
         layoutGrid.innerHTML = '';
         
+        let activeLayoutCollection;
+        switch (this.selectedCanvasDimension) {
+            case 'amazonKDP':
+                activeLayoutCollection = this.amazonKDPLayouts;
+                break;
+            case 'landscape10x8':
+                activeLayoutCollection = this.landscapeLayouts;
+                break;
+            default: // 'current' or any other case
+                activeLayoutCollection = this.layouts;
+                break;
+        }
+        
         // Render layout options
-        Object.entries(this.layouts).forEach(([layoutId, layout]) => {
+        Object.entries(activeLayoutCollection).forEach(([layoutId, layout]) => {
             const layoutOption = document.createElement('div');
             layoutOption.className = 'layout-option';
             layoutOption.dataset.layout = layoutId;
@@ -308,7 +323,7 @@ class ComicCreator {
                             // If a text box is selected, do nothing here.
                             // Let the browser handle the default Delete key behavior
                             // for the contenteditable element (deleting text, not the box).
-                            ; // Do nothing
+                            // Do nothing
                         }
                         // ONLY if NO text box is selected, THEN check if a panel image should be deleted
                         else if (this.panelManager.currentPanel && this.panelManager.currentPanel.querySelector('img')) {
@@ -594,6 +609,7 @@ class ComicCreator {
                 console.log("[Main] Next Step button clicked (Upload to Layout).");
                 document.getElementById('upload-page').classList.remove('active');
                 document.getElementById('layout-page').classList.add('active');
+                this.setupLayoutSelection(); // Refresh layouts for current dimension
             });
         } else { console.error("[Main] #next-step-btn not found"); }
 
@@ -624,6 +640,7 @@ class ComicCreator {
                 }
                 document.getElementById('editor-page').classList.remove('active');
                 document.getElementById('layout-page').classList.add('active');
+                this.setupLayoutSelection(); // Refresh layouts for current dimension
             });
         } else { console.error("[Main] #back-to-layout-btn not found"); }
 
@@ -954,6 +971,11 @@ class ComicCreator {
             this.panelManager.updateCanvasSize(newDim.width, newDim.height);
         }
 
+        // If the layout page is active, refresh the layout selection
+        if (document.getElementById('layout-page').classList.contains('active')) {
+            this.setupLayoutSelection();
+        }
+
         // After updating dimensions, if a comic is already on screen, re-render it.
         // This assumes createComic() can be called to redraw with current settings.
         // We need to ensure it uses the new canvas size.
@@ -1134,21 +1156,32 @@ class ComicCreator {
             return layoutName;
         }
         
-        // If it's a string, look it up in the layouts object
-        if (typeof layoutName === 'string' && this.layouts[layoutName]) {
-            return this.layouts[layoutName];
+        let config = null;
+        // If it's a string, look it up in the appropriate layout collections
+        if (typeof layoutName === 'string') {
+            config = this.layouts[layoutName] || 
+                     this.amazonKDPLayouts[layoutName] || 
+                     this.landscapeLayouts[layoutName];
+        }
+        
+        if (config) {
+            return config;
         }
         
         console.error(`Layout not found: ${layoutName}`);
         
-        // Return the first available layout as fallback
-        const firstLayout = Object.values(this.layouts)[0];
-        if (firstLayout) {
-            console.warn(`Using fallback layout: ${Object.keys(this.layouts)[0]}`);
-            return firstLayout;
+        // Fallback to the 'single' layout from the default collection if the requested one isn't found
+        const fallbackLayoutKey = 'single'; // Explicitly fallback to 'single'
+        if (this.layouts[fallbackLayoutKey]) {
+            console.warn(`Using fallback layout: '${fallbackLayoutKey}' from default collection.`);
+            this.uiManager.showNotification(`Layout "${layoutName}" not found. Using default 'Single Panel'.`, "warning");
+            return this.layouts[fallbackLayoutKey];
+        } else {
+            // Absolute fallback if even 'single' is missing (should not happen)
+            console.error("Critical: Default fallback layout 'single' also not found!");
+            this.uiManager.showNotification(`Layout "${layoutName}" not found. Critical error: default fallback missing.`, "error");
+            return { name: "Error - No Layout", description: "Critical error", panels: [] }; // Return a minimal empty layout
         }
-        
-        return null;
     }
 
     initializeUI() {
@@ -1252,6 +1285,7 @@ class ComicCreator {
         // Show layout selection page
         document.getElementById('editor-page').classList.remove('active');
         document.getElementById('layout-page').classList.add('active');
+        this.setupLayoutSelection(); // Refresh layouts for current dimension
         
         // Reset filter to "All"
         document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
@@ -1292,7 +1326,8 @@ class ComicCreator {
         this.selectedLayout = layoutId;
         
         // Create panels for new layout
-        this.createComic(this.layouts[layoutId]);
+        // Pass the layoutId (string) directly, createComic will resolve it using getLayoutConfig
+        this.createComic(layoutId); 
         
         // Update page indicator and navigation buttons
         this.updatePageIndicator();
@@ -1383,46 +1418,45 @@ class ComicCreator {
         // Get layout configuration
         let layoutConfig;
         if (typeof page.layout === 'string') {
-            layoutConfig = this.layouts[page.layout];
+            // Use the improved getLayoutConfig to find the layout in any collection
+            layoutConfig = this.getLayoutConfig(page.layout);
             
-            // If layout not found, try to reload custom layouts from localStorage
+            // If layout not found by getLayoutConfig, it will handle logging and fallback.
+            // The original custom layout loading logic might still be useful if getLayoutConfig somehow fails for custom ones.
             if (!layoutConfig && page.layout.startsWith('custom-')) {
-                console.warn(`Custom layout not found: ${page.layout}. Attempting to load from localStorage.`);
-                this.loadCustomLayouts();
-                layoutConfig = this.layouts[page.layout];
+                console.warn(`Custom layout not found by getLayoutConfig: ${page.layout}. Attempting to load from localStorage as a fallback.`);
+                this.loadCustomLayouts(); // Ensure custom layouts from localStorage are loaded
+                layoutConfig = this.getLayoutConfig(page.layout); // Try again after loading
             }
         } else if (typeof page.layout === 'object') {
+            // If page.layout is an object, assume it's a full config (e.g., 'empty' can be an object)
             layoutConfig = page.layout;
+            // Attempt to normalize to an ID if possible, for consistency in page.layout storage
             try {
-                const layoutId = Object.entries(this.layouts).find(
-                    ([id, layout]) => JSON.stringify(layout) === JSON.stringify(page.layout)
-                )?.[0];
+                const layoutId = Object.entries(this.layouts)
+                    .concat(Object.entries(this.amazonKDPLayouts))
+                    .concat(Object.entries(this.landscapeLayouts))
+                    .find(([id, layoutObj]) => JSON.stringify(layoutObj) === JSON.stringify(page.layout))?.[0];
                 if (layoutId) {
-                    page.layout = layoutId;
+                    page.layout = layoutId; // Update page.layout to be the ID string
                     console.log(`Updated page layout to use ID: ${layoutId}`);
                 }
             } catch (e) {
-                console.error("Error trying to find layout ID:", e);
+                console.error("Error trying to find layout ID for object-based layout:", e);
             }
         }
         
         if (!layoutConfig) {
-            console.error(`Failed to find layout configuration for page ${pageIndex}. Using fallback layout.`);
-            // Use the first available layout as fallback
-            const firstLayout = Object.values(this.layouts)[0];
-            if (firstLayout) {
-                layoutConfig = firstLayout;
-                const layoutId = Object.keys(this.layouts)[0];
-                page.layout = layoutId; // Update the page's layout reference
-                console.warn(`Using fallback layout: ${layoutId}`);
-                this.uiManager.showNotification(
-                    `Could not find layout "${page.layout}" for page ${pageIndex + 1}. Using "${layoutId}" instead.`, 
-                    "warning"
-                );
-            } else {
-                console.error('No layouts available as fallback!');
-                return false;
-            }
+            // This block should ideally not be reached if getLayoutConfig's fallback works.
+            // If it is reached, it means getLayoutConfig returned null, which implies even its fallback failed.
+            console.error(`CRITICAL: Failed to find or fallback for layout configuration for page ${pageIndex}. Layout was:`, page.layout);
+            this.uiManager.showNotification(
+                `Layout for page ${pageIndex + 1} ("${page.layout || 'Unknown'}") is missing or corrupt.`, 
+                "error"
+            );
+            // As a last resort, create a truly empty canvas structure
+            layoutConfig = { name: "Critical Error - Empty Fallback", panels: [] }; 
+            page.layout = 'empty'; // Force page.layout to 'empty' string for this severe case
         }
 
         // Create comic structure first (calls PanelManager.createPanels)

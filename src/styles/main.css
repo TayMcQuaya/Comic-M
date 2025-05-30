@@ -373,28 +373,27 @@ body {
 
 .layout-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1.5rem;
     padding: 1rem;
-    max-width: 1400px;
-    width: 90%;
-    margin: 0 auto;
-    padding-bottom: 2rem;
+    margin-top: 1rem;
+    justify-items: center; /* Center items within their grid cells */
 }
 
 .layout-option {
-    background: var(--card-bg);
-    border: 3px solid var(--border-color);
-    border-radius: 12px;
-    padding: 1.5rem;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
     cursor: pointer;
     transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    box-shadow: 4px 4px 0 var(--shadow-color);
-    transform: translate(-4px, -4px);
+    box-shadow: 0 2px 5px var(--shadow-color);
+    display: flex; /* Added for flex content */
+    flex-direction: column; /* Stack content vertically */
+    justify-content: space-between; /* Push description to bottom */
+    width: 100%; /* Ensure it tries to fill its cell initially */
+    max-width: 250px; /* Prevent it from becoming too wide */
 }
 
 .layout-option:hover {
