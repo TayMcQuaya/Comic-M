@@ -4898,7 +4898,7 @@ body.exporting #comic-canvas {
     /* Preserve original styling */
     
     /* EXACT preservation of line spacing - force exact match to preview */
-    line-height: 1.2 !important; /* Changed from normal to 1.2 to match editor */ 
+    /* line-height: 1.2 !important; */ /* REMOVED - Will be set by JS from textState or inherit if not explicitly set by JS */ 
     white-space: pre-wrap !important;
     vertical-align: top !important; /* Changed from baseline to top */
     word-break: normal !important;

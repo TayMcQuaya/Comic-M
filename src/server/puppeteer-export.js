@@ -215,7 +215,6 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
         body.exporting .text-bubble .text-content {
           margin: 0 !important;
           padding: 0 !important;
-          line-height: 1.2 !important;
           vertical-align: top !important;
         }
         .canvas-sticker-image {

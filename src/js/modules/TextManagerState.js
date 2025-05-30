@@ -590,11 +590,30 @@ export class TextManagerState {
             textContentElement.style.whiteSpace = 'pre-wrap';
             textContentElement.style.textRendering = 'geometricPrecision';
             
-            // Line Height for EXPORT - CRITICAL: Use scaled value if original was px, or apply as is. -> Apply directly now
-            if (textState.style && textState.style.lineHeight) {
-                const lh = textState.style.lineHeight;
-                // textContentElement.style.setProperty('line-height', lh, 'important'); // Allow CSS to handle this
-                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from textState): value was ${lh}, CSS will now handle with !important`);
+            // Line Height for EXPORT - CRITICAL
+            if (textState.style && textState.style.lineHeight && textState.style.lineHeight !== 'normal' && textState.style.lineHeight !== '') {
+                let lhToApply = textState.style.lineHeight;
+                const currentFontSize = textState.style.fontSize;
+
+                // If lineHeight is unitless and fontSize is in px, calculate pixel value for line-height
+                if (currentFontSize && currentFontSize.endsWith('px') && 
+                    !isNaN(parseFloat(lhToApply)) && 
+                    String(lhToApply).match(/^[0-9\\.]+$/)) { // Regex to match numbers (unitless)
+                    
+                    const fontSizePx = parseFloat(currentFontSize);
+                    const unitlessLineHeight = parseFloat(lhToApply);
+                    const calculatedLhPx = fontSizePx * unitlessLineHeight + 'px';
+                    
+                    console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height: Unitless ${lhToApply} with font ${currentFontSize}, converted to ${calculatedLhPx}`);
+                    lhToApply = calculatedLhPx;
+                }
+
+                textContentElement.style.setProperty('line-height', lhToApply, 'important');
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from textState): original was ${textState.style.lineHeight}, applied as '${lhToApply}' with !important`);
+            } else {
+                // Fallback if no specific line-height is set in textState for export.
+                textContentElement.style.setProperty('line-height', '1.2', 'important');
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height: textState.style.lineHeight was not specific, applied '1.2' !important as fallback.`);
             }
             
             // Font Size for EXPORT - CRITICAL: Apply scaled font size -> Apply directly now
