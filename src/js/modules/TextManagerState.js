@@ -593,8 +593,8 @@ export class TextManagerState {
             // Line Height for EXPORT - CRITICAL: Use scaled value if original was px, or apply as is. -> Apply directly now
             if (textState.style && textState.style.lineHeight) {
                 const lh = textState.style.lineHeight;
-                textContentElement.style.setProperty('line-height', lh, 'important');
-                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from textState): applied directly=${lh} !important`);
+                // textContentElement.style.setProperty('line-height', lh, 'important'); // Allow CSS to handle this
+                console.log(`[TextManagerState.restoreTextBubble ID: ${textState.id}] EXPORT Line height (from textState): value was ${lh}, CSS will now handle with !important`);
             }
             
             // Font Size for EXPORT - CRITICAL: Apply scaled font size -> Apply directly now

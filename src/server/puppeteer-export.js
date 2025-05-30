@@ -212,6 +212,12 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
           opacity: 1 !important;
           visibility: visible !important;
         }
+        body.exporting .text-bubble .text-content {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.2 !important;
+          vertical-align: top !important;
+        }
         .canvas-sticker-image {
           transform-origin: center center !important;
           transition: none !important;
