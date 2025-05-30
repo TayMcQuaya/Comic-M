@@ -295,3 +295,27 @@ makeTextResizable(element, handle) {
 ```
 
 This combination of JavaScript logic for dynamic style application and carefully managed CSS rules for both editor and export contexts ensures that text properties are handled robustly. 
+
+## 5. Scalability for New Canvas Dimensions
+
+The system is structured to reasonably support new predefined canvas dimensions while maintaining text properties accurately due to several key design choices:
+
+1.  **Percentage-Based Sizing and Positioning**:
+    *   Text bubble positions (`left`, `top`) and dimensions (`width`, `height`) are primarily saved and restored as percentages relative to their parent container (a comic panel or the main canvas). This allows them to scale proportionally when the canvas dimensions change.
+
+2.  **Adaptive Font Size and Line Height**:
+    *   **Font Size**: Absolute font sizes (e.g., "20px") are saved and applied. While these don't automatically scale with canvas size, the rendering respects the chosen size.
+    *   **Line Height**:
+        *   If a unitless line height (e.g., 1.5) is set by the user, it's saved as such. During export, `TextManagerState.js` calculates the actual pixel line height by multiplying this unitless value with the current font size (in pixels). This ensures line spacing scales appropriately with the font size.
+        *   If a line height with units (e.g., "25px") is set, it's applied directly.
+
+3.  **Dimension-Agnostic Export CSS**:
+    *   The CSS rules in `src/styles/main.css` (specifically under the `.exporting` class) and the styles injected by `src/server/puppeteer-export.js` focus on rendering fidelity (e.g., `vertical-align: top;`, `transform: none;`) rather than imposing fixed sizes. They are designed to work with the dimensions and styles provided by the JavaScript logic.
+
+### Potential Considerations When Adding New Dimensions:
+
+*   **Default Text Settings**: For significantly different canvas dimensions (very large, very small, or unusual aspect ratios), you might consider if default font sizes or text bubble sizes remain optimal from a user experience perspective. Adjusting defaults or providing user guidance might be beneficial.
+*   **Aspect Ratio Impact**: Since text bubbles use percentage-based dimensions, their shape will change if the aspect ratio of the parent (panel or canvas) changes drastically. This is generally expected.
+*   **Panel Layouts**: How your panel layouts adapt to new canvas dimensions will influence the space available for text bubbles within them.
+
+**In Summary**: The core mechanisms for text rendering (position, size, rotation, font styles, line height) are built with scalability in mind. The primary effort for adding new dimensions would involve UI updates for selecting them, ensuring panel layouts are responsive, and UX testing for optimal default text presentation on those new dimensions. The fundamental text property handling should remain consistent. 
