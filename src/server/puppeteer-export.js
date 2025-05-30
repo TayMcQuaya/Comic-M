@@ -694,54 +694,63 @@ export default function configurePuppeteerExport(router, comicCreatorUrl, output
                 await mergePdfs(individualPdfPaths, finalPdfPath);
                 console.log(`[Vite Server Job ${jobId}] Final PDF merged and saved to ${finalPdfPath}`);
 
-                // Add PDF compression step
-                exportJobs[jobId].status = 'compressing';
-                exportJobs[jobId].lastUpdated = Date.now();
-                console.log(`[Vite Server Job ${jobId}] Starting PDF compression...`);
-                
-                const compressedPdfPath = path.join(jobOutputDir, `comic_export_compressed_${exportTimestamp}.pdf`);
-                // Define compression options here, e.g., from projectState.settings or a default
-                const compressionOptions = { 
-                    compression_level: projectState.settings?.pdfExport?.compressionLevel || 'recommended' 
-                }; 
-                console.log(`[Vite Server Job ${jobId}] Using compression options:`, compressionOptions);
+                // Check if compression is requested
+                const shouldCompress = projectState.shouldCompress !== undefined ? projectState.shouldCompress : true; // Default to true if not specified
 
-                const compressionResult = await pdfCompressionService.compressPDF(
-                    finalPdfPath, 
-                    compressedPdfPath,
-                    compressionOptions // Pass the options object
-                );
-                
-                // Store detailed compression info and update final path based on result
-                exportJobs[jobId].compressionInfo = {
-                    success: compressionResult.success,
-                    originalSize: compressionResult.originalSize,
-                    compressedSize: compressionResult.compressedSize,
-                    compressionRatio: compressionResult.compressionRatio,
-                    error: compressionResult.error,
-                    fallback_used: !!compressionResult.fallback_used,
-                    fallback_failed: !!compressionResult.fallback_failed,
-                    fallback_impossible: !!compressionResult.fallback_impossible
-                };
+                if (shouldCompress) {
+                    console.log(`[Vite Server Job ${jobId}] Compression requested. Starting PDF compression...`);
+                    exportJobs[jobId].status = 'compressing';
+                    exportJobs[jobId].lastUpdated = Date.now();
+                    
+                    const compressedPdfPath = path.join(jobOutputDir, `comic_export_compressed_${exportTimestamp}.pdf`);
+                    const compressionOptions = { 
+                        compression_level: projectState.settings?.pdfExport?.compressionLevel || 'recommended' 
+                    }; 
+                    console.log(`[Vite Server Job ${jobId}] Using compression options:`, compressionOptions);
 
-                if (compressionResult.success) {
-                    exportJobs[jobId].finalPdfPath = compressedPdfPath;
-                    console.log(`[Vite Server Job ${jobId}] PDF compression successful. Compressed file: ${compressedPdfPath}`);
-                } else if (compressionResult.fallback_used) {
-                    exportJobs[jobId].finalPdfPath = compressedPdfPath; // This is now the path to the copied original file
-                    console.warn(`[Vite Server Job ${jobId}] PDF compression failed, but fallback to original file was successful. Path: ${compressedPdfPath}. Reason: ${compressionResult.error}`);
+                    const compressionResult = await pdfCompressionService.compressPDF(
+                        finalPdfPath, 
+                        compressedPdfPath,
+                        compressionOptions
+                    );
+                    
+                    exportJobs[jobId].compressionInfo = {
+                        success: compressionResult.success,
+                        originalSize: compressionResult.originalSize,
+                        compressedSize: compressionResult.compressedSize,
+                        compressionRatio: compressionResult.compressionRatio,
+                        error: compressionResult.error,
+                        fallback_used: !!compressionResult.fallback_used,
+                        fallback_failed: !!compressionResult.fallback_failed,
+                        fallback_impossible: !!compressionResult.fallback_impossible,
+                        skipped: false
+                    };
+
+                    if (compressionResult.success) {
+                        exportJobs[jobId].finalPdfPath = compressedPdfPath;
+                        console.log(`[Vite Server Job ${jobId}] PDF compression successful. Compressed file: ${compressedPdfPath}`);
+                    } else if (compressionResult.fallback_used) {
+                        exportJobs[jobId].finalPdfPath = compressedPdfPath;
+                        console.warn(`[Vite Server Job ${jobId}] PDF compression failed, but fallback to original file was successful. Path: ${compressedPdfPath}. Reason: ${compressionResult.error}`);
+                    } else {
+                        exportJobs[jobId].finalPdfPath = finalPdfPath;
+                        const criticalErrorMsg = `PDF compression failed critically: ${compressionResult.error}. Fallback impossible: ${!!compressionResult.fallback_impossible}, Fallback failed: ${!!compressionResult.fallback_failed}.`;
+                        console.error(`[Vite Server Job ${jobId}] ${criticalErrorMsg}`);
+                        exportJobs[jobId].status = 'error';
+                        exportJobs[jobId].error = criticalErrorMsg;
+                    }
                 } else {
-                    // Fallback failed or was impossible, or another critical error occurred.
-                    // The job should be marked as an error, and we should not use compressedPdfPath.
-                    exportJobs[jobId].finalPdfPath = finalPdfPath; // Keep the uncompressed path as a last resort for download if it exists
-                    const criticalErrorMsg = `PDF compression failed critically: ${compressionResult.error}. Fallback impossible: ${!!compressionResult.fallback_impossible}, Fallback failed: ${!!compressionResult.fallback_failed}.`;
-                    console.error(`[Vite Server Job ${jobId}] ${criticalErrorMsg}`);
-                    // Update job status to error if compression and fallback both failed critically
-                    // Don't throw here to allow job status to be updated, but ensure error state is clear
-                    exportJobs[jobId].status = 'error';
-                    exportJobs[jobId].error = criticalErrorMsg;
-                    // No need to throw here, the error status will be picked up by the client
-                    // However, we will skip setting status to 'complete' later.
+                    console.log(`[Vite Server Job ${jobId}] Compression skipped by user.`);
+                    exportJobs[jobId].finalPdfPath = finalPdfPath; // Use the uncompressed path
+                    exportJobs[jobId].compressionInfo = {
+                        success: true, // Considered success as no compression was attempted
+                        skipped: true,
+                        originalSize: await fs.stat(finalPdfPath).then(stat => stat.size).catch(() => 0),
+                        compressedSize: await fs.stat(finalPdfPath).then(stat => stat.size).catch(() => 0),
+                        compressionRatio: "0.00",
+                        error: null
+                    };
+                    // No change to status, will proceed to complete directly
                 }
                 
                 // Only set to complete if not already in an error state from critical compression failure

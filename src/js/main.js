@@ -729,35 +729,48 @@ class ComicCreator {
                     this.uiManager.showNotification('Export cancelled: No filename provided.', 'info');
                     return;
                 }
-                // const comicName = filenameResult.filename; // No longer needed, filename is the string
-                const comicName = filename; // Use the filename directly
-                console.log(`[Main] Filename confirmed: ${comicName}. Initiating PDF export job...`);
                 
-            this.uiManager.showExportProgress('Starting PDF export...', 0);
-            try {
-                const projectState = await this.getCurrentProjectState();
-                if (!projectState) {
-                    this.uiManager.hideExportProgress();
-                    this.uiManager.showNotification('Could not retrieve project state for export.', 'error');
-                        return;
+                const comicName = filename; // Use the filename directly
+                console.log(`[Main] Filename confirmed: ${comicName}. Prompting for compression choice...`);
+
+                // New step: Ask about compression
+                const compressionChoice = await this.uiManager.showCompressionChoiceModal();
+
+                if (compressionChoice === "Cancel" || compressionChoice === null) {
+                    console.log('[Main] Compression choice cancelled.');
+                    this.uiManager.showNotification('Export cancelled by user.', 'info');
+                    return;
                 }
+
+                const shouldCompress = compressionChoice === "Yes";
+                console.log(`[Main] Compression choice: ${compressionChoice}, shouldCompress: ${shouldCompress}. Initiating PDF export job...`);
+                
+                this.uiManager.showExportProgress('Starting PDF export...', 0);
+                try {
+                    const projectState = await this.getCurrentProjectState();
+                    if (!projectState) {
+                        this.uiManager.hideExportProgress();
+                        this.uiManager.showNotification('Could not retrieve project state for export.', 'error');
+                        return;
+                    }
                     projectState.comicName = comicName; // Add filename for backend
+                    projectState.shouldCompress = shouldCompress; // Add compression choice
 
                     const initiateResponse = await fetch('/api/export-pdf', {
-                    method: 'POST',
+                        method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(projectState),
-                });
+                        body: JSON.stringify(projectState),
+                    });
 
                     if (initiateResponse.status !== 202) {
                         let errorMsg = `Error starting PDF export: ${initiateResponse.status}`;
                         try { const errDetails = await initiateResponse.json(); errorMsg += ` - ${errDetails.message || 'Server error'}`; } catch (e) { /* ignore */ }
-                    this.uiManager.hideExportProgress();
-                    this.uiManager.showNotification(errorMsg, 'error');
+                        this.uiManager.hideExportProgress();
+                        this.uiManager.showNotification(errorMsg, 'error');
                         return;
-                }
+                    }
 
-                const jobDetails = await initiateResponse.json();
+                    const jobDetails = await initiateResponse.json();
                     this.pollExportProgress(jobDetails.jobId, jobDetails.totalPages); // Start polling
                 } catch (error) {
                     console.error('[Main] Error during PDF export initiation:', error);
@@ -1326,11 +1339,11 @@ class ComicCreator {
             console.error('Invalid page index:', pageIndex);
             return;
         }
-
+        
         if (saveCurrentState) {
             this.saveCurrentPageState();
         }
-
+        
         this.currentPageIndex = pageIndex;
         await this.loadPageState(this.currentPageIndex); // Added await
         this.updateNavigationButtons();

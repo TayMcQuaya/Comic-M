@@ -468,4 +468,73 @@ export class UIManager {
             // this.exportProgressElement = null;
         }
     }
+
+    /**
+     * Shows a modal asking the user if they want to compress the PDF.
+     * @returns {Promise<string|null>} - Resolves with "Yes", "No", or "Cancel".
+     */
+    showCompressionChoiceModal() {
+        return new Promise((resolve) => {
+            const title = "Compress PDF?";
+            const message = "Do you want your PDF to get compressed? This will make your file size smaller.";
+            const buttonLabels = ["Yes", "No", "Cancel"];
+
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay';
+
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+
+            modal.innerHTML = `
+                <h3>${title}</h3>
+                <p style="text-align: center; margin-bottom: 1.5rem; color: #555;">${message}</p>
+                <div class="modal-buttons"></div>
+            `;
+
+            const buttonsContainer = modal.querySelector('.modal-buttons');
+            buttonLabels.forEach((label) => {
+                const button = document.createElement('button');
+                button.textContent = label;
+                if (label === "Yes") {
+                    button.className = 'primary-btn';
+                } else {
+                    button.className = 'secondary-btn';
+                }
+
+                button.addEventListener('click', () => {
+                    modal.classList.remove('active');
+                    modalOverlay.classList.remove('active');
+                    setTimeout(() => {
+                        document.body.removeChild(modal);
+                        document.body.removeChild(modalOverlay);
+                        resolve(label);
+                    }, 300); // Match CSS transition time
+                });
+                buttonsContainer.appendChild(button);
+            });
+
+            document.body.appendChild(modalOverlay);
+            document.body.appendChild(modal);
+
+            setTimeout(() => {
+                modalOverlay.style.display = 'block';
+                modal.style.display = 'block';
+                setTimeout(() => {
+                    modal.classList.add('active');
+                    modalOverlay.classList.add('active');
+                }, 10);
+            }, 0);
+
+            // Handle clicking on overlay for "Cancel"
+            modalOverlay.addEventListener('click', () => {
+                modal.classList.remove('active');
+                modalOverlay.classList.remove('active');
+                setTimeout(() => {
+                    if (modal.parentNode) document.body.removeChild(modal);
+                    if (modalOverlay.parentNode) document.body.removeChild(modalOverlay);
+                    resolve("Cancel"); // Resolve with "Cancel" when overlay is clicked
+                }, 300);
+            });
+        });
+    }
 } 
