@@ -859,5 +859,7 @@ export class DragAndDropManager {
             // Snap to grid or perform other cleanup if necessary
             this.comicCreator.saveCurrentPageState();
         };
+
+        handle.addEventListener('mousedown', onMouseDown);
     }
 } 

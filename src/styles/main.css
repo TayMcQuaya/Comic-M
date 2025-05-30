@@ -1986,7 +1986,7 @@ label {
     text-rendering: optimizeLegibility;
 
     /* Increased bottom padding to prevent text from overlapping border */
-    padding: 2.5px 2px 2.5px 2px;
+    padding: 0.5px 2px 4.5px 2px; /* Adjusted padding: Top reduced by 2px, Bottom increased by 2px */
     line-height: 1.2; /* Consistent line height */
     max-height: 100%;
     box-sizing: border-box;
@@ -1994,7 +1994,7 @@ label {
     word-break: break-word;
     
     /* Ensure text sits slightly higher in the bubble */
-    transform: translateY(-2px);
+    /* transform: translateY(-2px); */ /* REMOVED to rely on padding */
     
     /* Hide scrollbars while maintaining functionality */
     -ms-overflow-style: none;
@@ -3575,7 +3575,7 @@ select.font-family option {
 .rotation-slider {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .rotation-slider input {
@@ -4378,7 +4378,7 @@ body.exporting #comic-canvas {
 
 .exporting .text-bubble {
     /* Ensure text bubbles render correctly in exported PDF */
-    border: 2px solid rgba(0, 0, 0, 0.7) !important; /* Increase from 1px to 2px for better visibility */
+    border: 2px solid #000000 !important; /* Changed from rgba(0,0,0,0.7) to solid black */
     /* Set minimum opacity to ensure visibility */
     opacity: 1 !important;
     /* Eliminate any extra spacing that could cause unwanted whitespace */
@@ -4898,9 +4898,9 @@ body.exporting #comic-canvas {
     /* Preserve original styling */
     
     /* EXACT preservation of line spacing - force exact match to preview */
-    line-height: normal !important; /* Use computed value from preview */ 
+    line-height: 1.2 !important; /* Changed from normal to 1.2 to match editor */ 
     white-space: pre-wrap !important;
-    vertical-align: baseline !important;
+    vertical-align: top !important; /* Changed from baseline to top */
     word-break: normal !important;
     word-spacing: normal !important;
     
