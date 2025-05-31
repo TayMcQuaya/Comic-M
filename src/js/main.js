@@ -1578,7 +1578,12 @@ class ComicCreator {
 
         // Don't delete if there's only one page
         if (this.pages.length <= 1) {
-            alert('Cannot delete the last page. Add a new page first.');
+            // Use the custom confirmation modal
+            this.uiManager.showConfirmationModal(
+                'Delete Page Error', // Title of the modal
+                'Cannot delete the last page. Add a new page first.', // Message
+                ['OK'] // Button label
+            );
             return;
         }
 
