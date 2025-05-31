@@ -859,6 +859,24 @@ class ComicCreator {
         //    }
         // });
         console.log("[Main] setupEventListeners finished.");
+
+        // Add Undo/Redo listeners
+        document.addEventListener('keydown', (e) => {
+            // Undo: Ctrl+Z or Cmd+Z
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault(); // Prevent browser's default undo action
+                if (this.historyManager) {
+                    this.historyManager.undo();
+                }
+            }
+            // Optional: Redo: Ctrl+Y or Cmd+Shift+Z (if you implement redo later)
+            // if ((e.ctrlKey || e.metaKey) && e.key === 'y') { 
+            //     e.preventDefault();
+            //     if (this.historyManager) {
+            //         this.historyManager.redo();
+            //     }
+            // }
+        });
     }
 
     // Helper for polling export progress (extracted from download listener)
