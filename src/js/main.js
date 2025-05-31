@@ -869,14 +869,19 @@ class ComicCreator {
                     this.historyManager.undo();
                 }
             }
-            // Optional: Redo: Ctrl+Y or Cmd+Shift+Z (if you implement redo later)
-            // if ((e.ctrlKey || e.metaKey) && e.key === 'y') { 
-            //     e.preventDefault();
-            //     if (this.historyManager) {
-            //         this.historyManager.redo();
-            //     }
-            // }
         });
+
+        // Add undo button click listener
+        const undoBtn = document.getElementById('undo-btn');
+        if (undoBtn) {
+            undoBtn.addEventListener('click', () => {
+                if (this.historyManager) {
+                    this.historyManager.undo();
+                }
+            });
+        } else {
+            console.error("[Main] #undo-btn not found");
+        }
     }
 
     // Helper for polling export progress (extracted from download listener)

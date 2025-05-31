@@ -561,6 +561,7 @@ body {
 .editor-tools {
     display: flex;
     gap: 1rem;
+    margin-right: 2rem; /* Add space between tools and navigation */
 }
 
 .editor-container {
@@ -1252,8 +1253,9 @@ body.dragging-active .drag-instruction-overlay {
 }
 
 .page-number-input {
-    width: 40px;
-    text-align: right;   
+    width: 50px; 
+    text-align: center;
+    margin: 0 3px;
 }
 
 .page-controls {
@@ -4481,7 +4483,7 @@ body.exporting #comic-canvas {
 }
 
 .page-number-input {
-    width: 40px;
+    width: 50px;
     text-align: center;
     margin: 0 3px;
 }
@@ -5046,7 +5048,7 @@ body.exporting #comic-canvas {
 }
 
 .page-number-input {
-    width: 40px;
+    width: 50px;
     text-align: center;
     padding: 0.3rem;
     border: 1px solid var(--border-color);
@@ -5064,7 +5066,7 @@ body.exporting #comic-canvas {
 }
 
 .page-number-input {
-    width: 40px;
+    width: 50px;
     text-align: center;
     margin: 0 3px;
 }
