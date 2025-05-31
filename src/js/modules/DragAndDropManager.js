@@ -474,6 +474,14 @@ export class DragAndDropManager {
             const isBubbleBorder = e.target === element && !e.target.closest('.text-content, .resize-handle, .format-text-btn, .delete-text-btn');
             if (!isHandle && !isBubbleBorder) return;
 
+            // HISTORY RECORD START
+            if (this.comicCreator.historyManager && element.id) { // Ensure element has an ID
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_transform', { 
+                    textId: element.id,
+                });
+            }
+            // HISTORY RECORD END
+
             e.preventDefault(); // Prevent text selection during drag
             e.stopPropagation(); // Stop click from propagating to parent elements
 
@@ -814,6 +822,14 @@ export class DragAndDropManager {
             startWidth = element.offsetWidth;
             startHeight = element.offsetHeight;
             
+            // HISTORY RECORD START
+            if (this.comicCreator.historyManager && element.id) { // Ensure element has an ID
+                this.comicCreator.historyManager.recordSnapshotBeforeAction(false, 'text_transform', { 
+                    textId: element.id,
+                });
+            }
+            // HISTORY RECORD END
+
             e.preventDefault(); // Prevent text selection or other interactions
             e.stopPropagation();
 

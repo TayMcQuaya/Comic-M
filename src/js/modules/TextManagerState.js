@@ -414,12 +414,17 @@ export class TextManagerState {
                     continue;
                 }
                 
-                const state = pageState.panelStates[index];
+                const stateForOnePanel = pageState.panelStates[index]; // This is the object like { imageId: ..., textElements: [...] }
                 
-                if (state && state.textElements) { 
-                    console.log(`TextManagerState.loadTextStates: Panel ${index} has ${state.textElements.length} text elements to restore`);
+                // Check if stateForOnePanel and its textElements property are valid
+                if (stateForOnePanel && stateForOnePanel.textElements && Array.isArray(stateForOnePanel.textElements)) { 
+                    console.log(`TextManagerState.loadTextStates: Panel ${index} (ID: ${panel.id || 'no-id'}) has ${stateForOnePanel.textElements.length} text elements to restore`);
                     
-                    state.textElements.forEach((textState, elementIndex) => {
+                    stateForOnePanel.textElements.forEach((textState, elementIndex) => { // Iterate over the textElements array
+                        if (!textState) {
+                            console.warn(`TextManagerState.loadTextStates: Null or undefined textState found in panel ${index} at element index ${elementIndex}. Skipping.`);
+                            return; 
+                        }
                         console.log(`TextManagerState.loadTextStates: Restoring text element ${elementIndex} (ID: ${textState.id || 'no-id'}) for panel ${index}`);
                         
                         // Log essential properties to debug potential issues
@@ -428,14 +433,21 @@ export class TextManagerState {
                         // Ensure the text state has all required properties
                         if (!textState.style) {
                             console.warn(`TextManagerState.loadTextStates: Missing style object for text element ${elementIndex} in panel ${index}`);
-                            textState.style = {};
+                            textState.style = {}; // Maintain original behavior of initializing if missing
                         }
                         
                         const restoredElement = this.restoreTextBubble(textState, panel); // Use helper
-                        console.log(`TextManagerState.loadTextStates: Text element ${elementIndex} restored successfully: ${!!restoredElement}`);
+                        console.log(`TextManagerState.loadTextStates: Text element ${elementIndex} for panel ${index} restored successfully: ${!!restoredElement}`);
                     });
                 } else {
-                    console.warn(`TextManagerState.loadTextStates: Panel state or textElements missing at index ${index}.`);
+                    // Handle cases where stateForOnePanel or its textElements array is not as expected
+                    if (!stateForOnePanel) {
+                        console.warn(`TextManagerState.loadTextStates: No panel state object found for panel at index ${index} (ID: ${panel.id || 'no-id'}).`);
+                    } else if (!stateForOnePanel.textElements) {
+                        console.warn(`TextManagerState.loadTextStates: Panel state object for panel at index ${index} (ID: ${panel.id || 'no-id'}) is missing 'textElements' property.`);
+                    } else if (!Array.isArray(stateForOnePanel.textElements)) {
+                        console.warn(`TextManagerState.loadTextStates: 'textElements' property for panel at index ${index} (ID: ${panel.id || 'no-id'}) is not an array. Type found: ${typeof stateForOnePanel.textElements}.`);
+                    }
                 }
             } 
         }

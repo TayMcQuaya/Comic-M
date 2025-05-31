@@ -481,6 +481,10 @@ export class AutoSaveManager {
             console.log("[AutoSave] Auto-save loaded successfully.");
             this.comicCreator.autoSaveRestoredSuccessfully = true; // Set flag on successful load
 
+            // Initialize history with the loaded state
+            this.comicCreator.historyManager.initializeWithLoadedState();
+            console.log("[AutoSave] History initialized with loaded state.");
+
             // After successful restore and navigation to editor, trigger initial save and start timer
             console.log("[AutoSave.loadAutoSave] Triggering initial save and starting periodic auto-save.");
             await this.performInitialSaveOnEditorEntry(); // Perform an immediate save of the restored state

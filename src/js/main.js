@@ -18,7 +18,7 @@ class ComicCreator {
     constructor() {
         // this.uploadedImages = []; // Moved to ImageLibrary
         this.pages = [{
-            layout: null,
+            layout: 'empty', // Set a default layout ID, e.g., 'empty' or 'single'
             panelStates: [], // Will store image positions and transforms for each panel
             canvasBackgroundStyle: 'classic-white' // Ensure default exists
         }];
@@ -2048,6 +2048,10 @@ class ComicCreator {
             console.log('Project loaded successfully');
             this.uiManager.showNotification("Project loaded successfully!", "success");
 
+            // Initialize history with the loaded project state
+            this.historyManager.initializeWithLoadedState();
+            console.log("[ComicCreator.loadProject] History initialized with loaded state.");
+
             // --- Auto-save calls after project load to editor ---
             if (this.autoSaveManager) {
                 console.log("[ComicCreator.loadProject] Calling performInitialSaveOnEditorEntry and startPeriodicAutoSave.");
@@ -2352,8 +2356,8 @@ class ComicCreator {
 
         // Reset pages
         this.pages = [{
-            layout: null,
-            panelStates: [],
+            layout: 'empty', // Set a default layout ID, e.g., 'empty' or 'single'
+            panelStates: [], // Will store image positions and transforms for each panel
             canvasBackgroundStyle: 'classic-white' // Ensure default exists
         }];
         
