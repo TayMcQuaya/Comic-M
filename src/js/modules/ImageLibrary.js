@@ -722,9 +722,8 @@ export class ImageLibrary {
                            console.error("Error adding image ID to folder structure:", e);
                         }
 
-
-                        // Incrementally update the UI
-                        this.#addThumbnailToGrid(imageData);
+                        // Call updateThumbnails() instead of incrementally adding.
+                        this.updateThumbnails();
 
                         // Enable next button if it's the first image
                         if (this.uploadedImages.length === 1) {
