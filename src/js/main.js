@@ -1104,14 +1104,15 @@ class ComicCreator {
         
         // Set canvas dimensions and center it
         canvas.style.position = 'relative'; // Keep this if not set in CSS
-        canvas.style.margin = '0 auto'; // Keep this for centering if not in CSS
+        //If canvas is not centered, uncomment this line and change style.paddingTOp form 120px to 2rem
+        //canvas.style.margin = '0 auto'; // Keep this for centering if not in CSS
         canvas.style.display = 'block'; // Keep this if not set in CSS
 
         // Create a container for the canvas with padding
         const canvasContainer = canvas.parentElement;
         if (canvasContainer && canvasContainer.classList.contains('comic-canvas-container')) {
             canvasContainer.style.padding = '2rem';
-            canvasContainer.style.paddingTop = '120px';
+            canvasContainer.style.paddingTop = '120px'; //changed from 2 rem to 120px
             canvasContainer.style.display = 'flex';
             canvasContainer.style.justifyContent = 'center';
             canvasContainer.style.alignItems = 'flex-start';

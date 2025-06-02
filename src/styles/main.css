@@ -618,7 +618,7 @@ body {
     position: relative;
     background: var(--card-bg);
     box-shadow: 8px 8px 0 var(--shadow-color);
-    margin: -60px auto 0; /* Changed from transform to negative margin */
+    margin: -100px auto 0; 
     width: var(--canvas-width);
     height: var(--canvas-height);
     border: 3px solid var(--border-color);
@@ -1253,11 +1253,9 @@ body.dragging-active .drag-instruction-overlay {
     }
     /* Remove margin-top for first-child when it's the first on a new line after wrapping */
     .editor-tools:first-child, .page-actions:first-child {
-        margin-top: 0;
+        margin-top: 10px;
     }
-    .editor-tools:not(:first-child), .page-actions:not(:first-child) {
-       /* Ensures padding-top is the primary spacer when wrapped */
-    }
+    
 
     .editor-tools, .page-navigation, .page-actions {
         display: flex;
@@ -1267,7 +1265,7 @@ body.dragging-active .drag-instruction-overlay {
         flex-shrink: 1;
         flex-basis: auto;
         min-width: 0;
-        gap: 0.4rem;
+
         justify-content: center;
     }
     .editor-header .tool-btn, .editor-header .primary-btn, .editor-header .danger-btn {
@@ -1349,9 +1347,7 @@ body.dragging-active .drag-instruction-overlay {
     .editor-tools:first-child, .page-actions:first-child {
         margin-top: 0;
     }
-     .editor-tools:not(:first-child), .page-actions:not(:first-child) {
-       /* Ensures padding-top is the primary spacer when wrapped */
-    }
+    
 
     .editor-tools, .page-navigation, .page-actions {
         display: flex;
@@ -3784,9 +3780,7 @@ select.font-family option {
     gap: 12px; /* Adjust gap for vertical stacking */
 }
 
-.style-control {
-    /* Minor adjustments if needed, but single column grid handles stacking */
-}
+
 
 /* Ensure slider controls take full width */
 .style-control .font-size-control,
@@ -4371,10 +4365,10 @@ select.font-family option {
 }
 
 /* Style the content area within the sidebar */
-.sidebar-content {
+/* .sidebar-content {
     /* Add styles if needed to manage content switching, for now it's simple */
     /* Example: display: block; or display: none; based on active tab */
-}
+/* } */
 
 /* Ensure the H3 and grid are styled correctly within the sidebar content */
 .sidebar-content h3 {
