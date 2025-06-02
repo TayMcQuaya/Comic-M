@@ -1233,16 +1233,357 @@ body.dragging-active .drag-instruction-overlay {
     }
 }
 
-@media (max-width: 1200px) {
-    .editor-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr auto;
+/* For larger tablets in landscape (e.g., iPad Pro 12.9", larger Galaxy Tabs) */
+@media (min-width: 1025px) and (max-width: 1366px) and (orientation: landscape) {
+    .editor-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center; /* Default alignment for items on the same line */
+        justify-content: space-around;
+        padding: 0.6rem 1rem;
+        gap: 0.5rem;
     }
-    
+    .editor-tools, .page-actions {
+        align-self: flex-end; /* Push these groups to the bottom if they wrap */
+        padding-top: 0.4rem; /* Add padding to push them down when wrapped */
+    }
+     .page-navigation {
+        align-self: center; /* Keep page navigation vertically centered */
+        padding-top: 0; /* No extra top padding for navigation */
+    }
+    /* Remove margin-top for first-child when it's the first on a new line after wrapping */
+    .editor-tools:first-child, .page-actions:first-child {
+        margin-top: 0;
+    }
+    .editor-tools:not(:first-child), .page-actions:not(:first-child) {
+       /* Ensures padding-top is the primary spacer when wrapped */
+    }
+
+    .editor-tools, .page-navigation, .page-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        flex-grow: 0;
+        flex-shrink: 1;
+        flex-basis: auto;
+        min-width: 0;
+        gap: 0.4rem;
+        justify-content: center;
+    }
+    .editor-header .tool-btn, .editor-header .primary-btn, .editor-header .danger-btn {
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    .editor-container {
+        grid-template-columns: 220px 1fr 220px; /* Compact three-column layout */
+        gap: 0.5rem;
+    }
+
     .editor-sidebar,
     .properties-panel {
-        max-height: 300px;
+        max-height: calc(100vh - 120px); /* Adjust height for landscape */
         overflow-y: auto;
+    }
+
+    .page-header {
+        width: 95%;
+        padding: 1rem;
+    }
+
+    .page-header h2 {
+        font-size: 2rem;
+    }
+
+    .layout-filters {
+        width: 95%;
+    }
+
+    .layout-grid {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+
+    .upload-section {
+        padding: 1.5rem;
+    }
+
+    #upload-page h1 {
+        font-size: 2.5rem;
+    }
+
+    .panel-controls {
+        height: calc(100vh - 120px);
+    }
+
+    .sidebar-tabs {
+        padding-left: 0; /* Ensure no fixed left padding */
+        justify-content: flex-start; /* Align tabs to the left */
+    }
+    .tab-btn {
+        padding: 0.5rem 0.4rem; /* Adjust padding for better fit */
+        font-size: 0.7rem;
+        flex: 0 1 auto; /* Allow shrinking, don't force growth */
+    }
+}
+
+/* For common/smaller tablets in landscape (e.g., standard iPads, iPad Pro 11") */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+    .editor-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center; /* Default alignment for items on the same line */
+        justify-content: space-around;
+        padding: 0.5rem 0.5rem;
+        gap: 0.4rem;
+    }
+    .editor-tools, .page-actions {
+        align-self: flex-end; /* Push these groups to the bottom if they wrap */
+        padding-top: 0.4rem; /* Add padding to push them down when wrapped */
+    }
+    .page-navigation {
+        align-self: center; /* Keep page navigation vertically centered */
+        padding-top: 0; /* No extra top padding for navigation */
+    }
+    /* Remove margin-top for first-child when it's the first on a new line after wrapping */
+    .editor-tools:first-child, .page-actions:first-child {
+        margin-top: 0;
+    }
+     .editor-tools:not(:first-child), .page-actions:not(:first-child) {
+       /* Ensures padding-top is the primary spacer when wrapped */
+    }
+
+    .editor-tools, .page-navigation, .page-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        flex-grow: 0;
+        flex-shrink: 1;
+        flex-basis: auto;
+        min-width: 0;
+        gap: 0.3rem;
+        justify-content: center;
+    }
+    .editor-tools {
+        margin-right: 0.3rem;
+    }
+    .editor-header .tool-btn, .editor-header .primary-btn, .editor-header .danger-btn {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.8rem;
+        min-width: 32px;
+        max-width: 100px;
+        white-space: nowrap;
+    }
+    .editor-header .tool-btn i, .editor-header .primary-btn i, .editor-header .danger-btn i {
+        font-size: 0.9em;
+    }
+    .page-navigation {
+        gap: 0.3rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        min-width: 0;
+    }
+    .page-navigation-controls, .page-controls, .page-actions {
+        gap: 0.2rem;
+        flex-wrap: wrap;
+    }
+    .page-number-input {
+        font-size: 0.8rem;
+        padding: 0.15rem;
+        width: 38px;
+        min-width: 0;
+    }
+    .page-indicator {
+        font-size: 0.8rem;
+        min-width: 60px;
+    }
+    /* If still too wide, stack navigation below tools */
+    @media (max-width: 900px) {
+        .editor-header {
+            flex-direction: column;
+            align-items: center; /* Center items when stacked */
+        }
+        .editor-tools, .page-navigation, .page-actions { /* Apply to page-actions too */
+            width: auto; /* Allow them to take natural width */
+            max-width: 100%; /* Prevent overflow */
+            justify-content: center; /* Ensure content within is centered */
+            margin-bottom: 0.3rem; /* Add some space between stacked groups */
+        }
+        .page-navigation {
+            margin-top: 0.2rem;
+        }
+    }
+
+    .editor-header .tool-btn {
+        padding: 0.4rem 0.8rem; /* Smaller padding for header buttons */
+        font-size: 0.8rem; /* Smaller font for header buttons */
+    }
+    
+    .editor-header .tool-btn i {
+        font-size: 0.9em; /* Adjust icon size within buttons if needed */
+    }
+
+    .page-navigation {
+        gap: 0.5rem; /* Reduce gap in page navigation */
+        flex-wrap: wrap; /* Allow navigation items to wrap if still too wide */
+        justify-content: flex-end; /* Align to the end if they wrap */
+    }
+    
+    .page-navigation-controls { /* Wrapper for prev/next/goto */
+        gap: 0.3rem;
+    }
+
+    .page-controls { /* prev/next, page number input */
+        gap: 0.3rem; /* Further reduce gap */
+    }
+    
+    .page-actions { /* delete, reorder, add page */
+        gap: 0.3rem; /* Further reduce gap */
+    }
+    
+    .page-number-input {
+        font-size: 0.8rem; /* Smaller font for page input */
+        padding: 0.2rem;
+        width: 40px;
+    }
+    
+    .page-indicator {
+        font-size: 0.8rem; /* Smaller font for page indicator */
+    }
+
+    .editor-container {
+        grid-template-columns: 1fr; /* Stack elements */
+        grid-template-rows: auto auto 1fr auto auto; /* Define rows for header, sidebars, canvas, controls */
+        height: auto; /* Allow height to adjust to content */
+        min-height: 100vh;
+    }
+
+    .editor-header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .editor-sidebar {
+        order: 1;
+        max-height: 250px;
+        width: 100%;
+        position: static;
+    }
+
+    .comic-canvas-container {
+        order: 2;
+        min-height: 400px;
+        height: auto;
+        padding: 1rem;
+        display: flex; /* Ensure it's a flex container for alignment */
+        align-items: center; /* Center scaled canvas vertically */
+        justify-content: center; /* Center scaled canvas horizontally */
+    }
+
+    #comic-canvas {
+        margin: 0; /* Remove margin,transform-origin and scale will handle centering relative to container */
+        transform: scale(0.85); /* Scale down the canvas */
+        transform-origin: center center; /* Scale from the center */
+    }
+
+    .panel-controls {
+        order: 3;
+        max-height: 280px;
+        width: 100%;
+        position: static;
+        transform: scale(1);
+    }
+    
+    .properties-panel { 
+        order: 4;
+        max-height: 250px;
+        width: 100%;
+        position: static;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .page-header h2 {
+        font-size: 1.8rem;
+    }
+
+    .layout-grid {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+
+    .upload-section {
+        padding: 1rem;
+    }
+
+    .upload-section h2 {
+        font-size: 1.8rem;
+    }
+
+    .thumbnails-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .welcome-header h1 {
+        font-size: 2.5rem;
+    }
+    .welcome-header p {
+        font-size: 1rem;
+    }
+    .button-group {
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    .button-group .primary-btn {
+        width: 80%;
+        max-width: 300px;
+        margin-top: 0.5rem;
+    }
+
+    .canvas-size-selection .button-row {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .canvas-size-selection .primary-btn {
+        width: 100%;
+    }
+
+    .sidebar-tabs {
+        display: flex;
+        margin-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+        flex-wrap: wrap;
+    }
+
+    .tab-btn {
+        flex: 1;
+        padding: 0.5rem 0.1rem; /* Slightly reduce padding to help them fit */
+        background: var(--card-bg);
+        border: none;
+        border-bottom: 2px solid transparent; /* Slightly thinner active border */
+        color: var(--text-muted);
+        cursor: pointer;
+        font-size: 0.7rem; /* Slightly smaller font for tabs */
+        font-weight: bold;
+        text-align: center;
+        transition: all 0.2s ease;
+        text-transform: uppercase;
+    }
+
+    .tab-btn:hover {
+        color: var(--text-color);
+        background: var(--hover-color);
+    }
+
+    .tab-btn.active {
+        color: var(--text-bright);
+        background: var(--input-bg);
+        border-bottom-color: var(--primary-color);
     }
 }
 
@@ -3999,11 +4340,13 @@ select.font-family option {
     display: flex;
     margin-bottom: 1rem;
     border-bottom: 2px solid var(--border-color);
+    padding-left: 5px; /* Add small left padding to shift tabs slightly right */
+    flex-wrap: wrap;
 }
 
 .tab-btn {
     flex: 1;
-    padding: 0.5rem 0.2rem; /* Further reduced padding */
+    padding: 0.5rem 0.15rem; /* Slightly reduced horizontal padding */
     background: var(--card-bg);
     border: none;
     border-bottom: 2px solid transparent; /* Slightly thinner active border */
@@ -4746,7 +5089,7 @@ body.exporting #comic-canvas {
 
 /* Additional fonts and customizations can be added below */
 
-/* End of stylesheet */
+
 
 /* SVG Tail Settings */
 .tail-settings-container {
@@ -5026,7 +5369,7 @@ body.exporting #comic-canvas {
     width: 100%;
 }
 
-/* ... existing code ... */
+
 
 /* Page navigation improvements */
 .page-navigation-controls {
