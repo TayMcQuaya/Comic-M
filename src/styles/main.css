@@ -5420,3 +5420,79 @@ body.exporting #comic-canvas {
     text-shadow: none !important; /* Remove editor-only text shadows */
     -webkit-text-stroke: unset !important; /* Remove editor-only stroke */
 }
+
+/* Mobile Restriction Styles */
+#mobile-restriction-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw; /* Use viewport width */
+    height: 100vh; /* Use viewport height */
+    background-color: var(--background-color); /* Use main background for consistency */
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 9999;
+    padding: 2rem; /* Increased padding */
+    box-sizing: border-box;
+    overflow: hidden; /* Prevent scrolling on the overlay itself */
+}
+
+#mobile-restriction-overlay .message-content {
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 2.5rem 3rem; /* Increased padding */
+    border-radius: 10px; /* Consistent with other cards */
+    border: 2px solid var(--border-color); /* Consistent border */
+    box-shadow: 0 5px 20px var(--shadow-color); /* Consistent shadow */
+    max-width: 550px; /* Slightly wider */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem; /* Added gap for content spacing */
+}
+
+#mobile-restriction-overlay .message-content::before { /* Optional: Add an icon */
+    content: "\f108"; /* Font Awesome mobile icon */
+    font-family: "Font Awesome 5 Free";
+    font-weight: 900;
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+#mobile-restriction-overlay h2 {
+    font-family: 'Bangers', cursive; /* Use a more comic-like font */
+    font-size: 2.5rem; /* Larger title */
+    color: var(--primary-color); /* Use primary color */
+    margin-bottom: 0.5rem; /* Adjusted margin */
+    text-shadow: 2px 2px 0px var(--shadow-color); /* Consistent text shadow */
+}
+
+#mobile-restriction-overlay p {
+    font-family: 'Comic Neue', cursive; /* More appealing comic font */
+    font-size: 1.1rem; /* Slightly larger text */
+    font-weight: bold; /* Make text bold */
+    line-height: 1.7;
+    color: var(--text-bright); /* Use consistent bright yellow */
+    margin-bottom: 0.5rem;
+}
+
+#mobile-restriction-overlay p:last-of-type {
+    margin-bottom: 0;
+}
+
+/* Media Query to hide app and show restriction message on mobile */
+@media (max-width: 767px) {
+    #app {
+        display: none !important; /* Hide the main application */
+    }
+
+    #mobile-restriction-overlay {
+        display: flex !important; /* Show the restriction message */
+    }
+}
+
+/* Ensure the new styles are appended at the end, or in a logical place if preferred */
