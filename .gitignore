@@ -91,3 +91,4 @@ statemanager.txt
 comic_exports_output/
 /pdf-service/exports/
 /src/server/
+.vercel
