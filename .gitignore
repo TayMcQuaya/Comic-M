@@ -19,4 +19,6 @@ project_structure.txt
 temp/
 venv/
 .env
+.env.local
+.env.production
 comic_exports_output/

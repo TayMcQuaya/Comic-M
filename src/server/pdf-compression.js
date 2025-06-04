@@ -1,12 +1,10 @@
 // PDF Compression Service using iLovePDF API
-// Corrected import style based on official npm documentation for @ilovepdf/ilovepdf-nodejs
-const ILovePDFApi = require('@ilovepdf/ilovepdf-nodejs');
-const ILovePDFFile = require('@ilovepdf/ilovepdf-nodejs/ILovePDFFile');
-const fs = require('fs');
-const path = require('path');
+// Using dynamic imports to work with CommonJS package
+import fs from 'fs';
+import path from 'path';
+import { config } from 'dotenv';
 
 // Load environment variables
-const { config } = require('dotenv');
 config();
 
 class PDFCompressionService {
@@ -31,6 +29,11 @@ class PDFCompressionService {
     async compressPDF(inputFilePath, outputFilePath, options = {}) {
         try {
             console.log('Starting PDF compression task with options:', options);
+            
+            // Dynamic import for CommonJS packages
+            const ILovePDFApi = (await import('@ilovepdf/ilovepdf-nodejs')).default;
+            const ILovePDFFile = (await import('@ilovepdf/ilovepdf-nodejs/ILovePDFFile.js')).default;
+            
             const instance = new ILovePDFApi(this.publicKey, this.secretKey);
             const task = instance.newTask('compress');
             
@@ -164,4 +167,4 @@ class PDFCompressionService {
 
 // Export a singleton instance
 const pdfCompressionService = new PDFCompressionService();
-module.exports = pdfCompressionService;
+export default pdfCompressionService;

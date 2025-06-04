@@ -11,6 +11,7 @@ import { UIManager } from './modules/UIManager.js'; // Import UIManager
 import { LayoutBuilderManager } from './modules/LayoutBuilderManager.js'; // Import LayoutBuilderManager
 import { HistoryManager } from './modules/HistoryManager.js'; // Import HistoryManager
 import { AutoSaveManager } from './modules/AutoSaveManager.js'; // Import AutoSaveManager
+import config from './config.js';
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
 
@@ -778,7 +779,10 @@ class ComicCreator {
                     projectState.comicName = comicName; // Add filename for backend
                     projectState.shouldCompress = shouldCompress; // Add compression choice
 
-                    const initiateResponse = await fetch('/api/export-pdf', {
+                    console.log('[Main] About to make PDF export request to:', config.endpoints.exportPdf);
+                    console.log('[Main] Config object:', config);
+                    
+                    const initiateResponse = await fetch(config.endpoints.exportPdf, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(projectState),
@@ -892,7 +896,7 @@ class ComicCreator {
                         return;
                     }
                     try {
-                const progressResponse = await fetch(`/api/export-progress/${jobId}`);
+                const progressResponse = await fetch(config.endpoints.exportProgress(jobId));
                         if (!progressResponse.ok) {
                             clearInterval(progressInterval);
                             this.uiManager.showNotification(`Error checking export progress: ${progressResponse.statusText}`, 'error');
@@ -912,7 +916,7 @@ class ComicCreator {
                         } else if (progressData.status === 'complete') {
                             clearInterval(progressInterval);
                     this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete');
-                    window.location.href = `/api/download-pdf/${jobId}`;
+                    window.location.href = config.endpoints.downloadPdf(jobId);
                             setTimeout(() => {
                                 this.uiManager.hideExportProgress();
                                 this.uiManager.showNotification('PDF download initiated!', 'success');
@@ -928,7 +932,7 @@ class ComicCreator {
                 this.uiManager.showNotification('Error polling for export progress.', 'error');
                         this.uiManager.hideExportProgress();
                     }
-        }, 2000);
+        }, config.export.progressPollInterval);
     }
     
     // Helper to process a single layout file (extracted from custom layout listener)
