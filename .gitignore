@@ -22,3 +22,4 @@ venv/
 .env.local
 .env.production
 comic_exports_output/
+/pdf-service/exports/
