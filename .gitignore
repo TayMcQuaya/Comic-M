@@ -90,3 +90,4 @@ statemanager.txt
 .env.production
 comic_exports_output/
 /pdf-service/exports/
+/src/server/
