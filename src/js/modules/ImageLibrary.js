@@ -689,7 +689,11 @@ export class ImageLibrary {
     #initializeWorker() {
         if (!this.#imageProcessingWorker) {
             try {
-                this.#imageProcessingWorker = new Worker('/src/js/workers/imageProcessor.worker.js', { type: 'module' }); 
+                // Use Vite's worker import syntax for proper bundling
+                this.#imageProcessingWorker = new Worker(
+                    new URL('../workers/imageProcessor.worker.js', import.meta.url),
+                    { type: 'module' }
+                );
                 console.log("Image processing worker initialized.");
 
                 this.#imageProcessingWorker.onmessage = (event) => {
