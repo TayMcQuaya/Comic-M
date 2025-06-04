@@ -3,32 +3,35 @@
  * This handles the difference between local development and production deployment
  */
 
-// Force explicit development URL to avoid any caching issues
+// Development URL for local testing
 const DEV_API_BASE_URL = 'http://localhost:3001/api';
-const PROD_API_BASE_URL = 'https://your-pdf-service.ondigitalocean.app/api';
 
-// Get the API base URL from environment variables or use defaults
+// Get the API base URL from environment variables
 const getApiBaseUrl = () => {
     const isDev = import.meta.env.DEV;
     const envUrl = import.meta.env.VITE_API_BASE_URL;
     
     console.log('[Config] Environment check:', {
         isDev,
-        envUrl,
-        metaEnv: import.meta.env
+        hasEnvUrl: !!envUrl,
+        mode: import.meta.env.MODE
     });
     
-    // In development, use the separate PDF service on port 3001
+    // In development, use the local development server
     if (isDev) {
         const devUrl = envUrl || DEV_API_BASE_URL;
         console.log('[Config] Using development URL:', devUrl);
         return devUrl;
     }
     
-    // In production, use the DigitalOcean service URL
-    const prodUrl = envUrl || PROD_API_BASE_URL;
-    console.log('[Config] Using production URL:', prodUrl);
-    return prodUrl;
+    // In production, REQUIRE the environment variable
+    if (!envUrl) {
+        console.error('[Config] VITE_API_BASE_URL environment variable is required for production');
+        throw new Error('VITE_API_BASE_URL environment variable must be set for production deployment');
+    }
+    
+    console.log('[Config] Using production URL from environment variable');
+    return envUrl;
 };
 
 // Configuration object
