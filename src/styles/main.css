@@ -5489,3 +5489,122 @@ body.exporting #comic-canvas {
 }
 
 /* Ensure the new styles are appended at the end, or in a logical place if preferred */
+
+/* Viewport Management Styles */
+.viewport-container {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+}
+
+.viewport-container:active {
+    cursor: grabbing;
+}
+
+.canvas-transform-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    transform-origin: center center;
+    transition: transform 0.15s ease-out;
+}
+
+.canvas-transform-container.no-transition {
+    transition: none;
+}
+
+/* Viewport Controls */
+.viewport-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.3rem;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.zoom-display-container {
+    min-width: 50px;
+    text-align: center;
+}
+
+.zoom-display {
+    display: inline-block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    min-width: 45px;
+    text-align: center;
+}
+
+.zoom-display:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Viewport-specific adjustments for comic canvas container */
+.viewport-container .comic-canvas-container {
+    overflow: visible;
+    min-height: unset;
+}
+
+/* During export, ensure viewport is reset */
+.exporting .viewport-container {
+    transform: none !important;
+}
+
+.exporting .canvas-transform-container {
+    transform: none !important;
+}
+
+/* Pan cursor indicators */
+.viewport-container.panning {
+    cursor: grabbing !important;
+}
+
+.viewport-container .comic-panel:hover {
+    cursor: pointer;
+}
+
+.viewport-container.panning .comic-panel {
+    cursor: grabbing !important;
+    pointer-events: none;
+}
+
+.viewport-container.panning .text-bubble {
+    cursor: grabbing !important;
+    pointer-events: none;
+}
+
+.viewport-container.panning .canvas-sticker-image {
+    cursor: grabbing !important;
+    pointer-events: none;
+}
+
+/* Touch device improvements */
+@media (hover: none) and (pointer: coarse) {
+    .viewport-container {
+        cursor: auto;
+    }
+    
+    .zoom-display {
+        padding: 0.4rem 0.7rem;
+        font-size: 0.9rem;
+    }
+    
+    .viewport-controls .tool-btn {
+        padding: 0.5rem;
+        min-width: 44px;
+        min-height: 44px;
+    }
+}

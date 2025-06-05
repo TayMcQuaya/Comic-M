@@ -11,6 +11,7 @@ import { UIManager } from './modules/UIManager.js'; // Import UIManager
 import { LayoutBuilderManager } from './modules/LayoutBuilderManager.js'; // Import LayoutBuilderManager
 import { HistoryManager } from './modules/HistoryManager.js'; // Import HistoryManager
 import { AutoSaveManager } from './modules/AutoSaveManager.js'; // Import AutoSaveManager
+import { ViewportManager } from './modules/ViewportManager.js'; // Import ViewportManager
 import config from './config.js';
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
@@ -63,6 +64,7 @@ class ComicCreator {
         this.uiManager = new UIManager(this); // Instantiate UIManager
         this.historyManager = new HistoryManager(this); // Instantiate HistoryManager
         this.autoSaveManager = new AutoSaveManager(this); // Instantiate AutoSaveManager
+        this.viewportManager = new ViewportManager(this); // Instantiate ViewportManager
         
         this.init();
     }
@@ -479,11 +481,14 @@ class ComicCreator {
                 // Call the method on the PanelManager instance
                 this.panelManager.selectPanel(panel);
             } else {
-                // Clicked on the canvas background or empty area
-                this.deselectAll();
-            }
-        });
-    }
+                            // Clicked on the canvas background or empty area
+            this.deselectAll();
+        }
+    });
+    
+    // Initialize ViewportManager after setting up the canvas
+    this.viewportManager.init();
+}
 
     
     // Helper method to update a specific transform function in a transform string
@@ -757,6 +762,10 @@ class ComicCreator {
                 console.log(`[Main] Compression choice: ${compressionChoice}, shouldCompress: ${shouldCompress}. Initiating PDF export job...`);
                 
                 this.uiManager.showExportProgress('Starting PDF export...', 0);
+                
+                // Prepare viewport for export (reset zoom/pan)
+                this.viewportManager.prepareForExport();
+                
                 try {
                     const projectState = await this.getCurrentProjectState();
                     if (!projectState) {
@@ -790,6 +799,8 @@ class ComicCreator {
                     console.error('[Main] Error during PDF export initiation:', error);
                     this.uiManager.hideExportProgress();
                     this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
+                    // Restore viewport state on error
+                    this.viewportManager.restoreAfterExport();
                 }
             });
         } else { console.error("[Main] #download-btn not found"); }
@@ -908,17 +919,23 @@ class ComicCreator {
                             setTimeout(() => {
                                 this.uiManager.hideExportProgress();
                                 this.uiManager.showNotification('PDF download initiated!', 'success');
+                                // Restore viewport state after export
+                                this.viewportManager.restoreAfterExport();
                     }, 3000);
                         } else if (progressData.status === 'error') {
                             clearInterval(progressInterval);
                             const errorMessage = progressData.error || 'Unknown error during PDF generation.';
                             this.uiManager.updateExportProgress(`Error: ${errorMessage}`, percentage, totalPages, true);
+                            // Restore viewport state on error
+                            this.viewportManager.restoreAfterExport();
                         }
                     } catch (pollError) {
                 console.error('[Main] Error polling for PDF export progress:', pollError);
                         clearInterval(progressInterval);
                 this.uiManager.showNotification('Error polling for export progress.', 'error');
                         this.uiManager.hideExportProgress();
+                        // Restore viewport state on polling error
+                        this.viewportManager.restoreAfterExport();
                     }
         }, config.export.progressPollInterval);
     }
@@ -2699,6 +2716,10 @@ class ComicCreator {
         if (window.IS_PUPPETEER_EXPORT) {
             document.body.classList.add('exporting');
             console.log('[ComicCreator Headless] Added "exporting" class to body.');
+            // Reset viewport for export consistency
+            if (this.viewportManager) {
+                this.viewportManager.resetView();
+            }
         }
 
         // await this.autoSaveManager.clearAutoSave(); // AutoSaveManager calls this *before* _loadProjectFromState
