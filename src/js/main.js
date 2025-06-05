@@ -688,21 +688,9 @@ class ComicCreator {
         if (addTextBtn) {
             addTextBtn.addEventListener('click', () => {
                 console.log("[Main] Add Text button clicked. Mode:", this.currentSidebarMode);
-            switch (this.currentSidebarMode) {
-                case 'panels':
-                    if (this.panelManager.currentPanel) { 
-                            this.textManager.addTextToPanel(this.panelManager.currentPanel);
-                    } else {
-                        this.uiManager.showSelectPanelModal(); 
-                    }
-                    break;
-                    case 'backgrounds': // Fallthrough
-                case 'stickers':
-                        this.textManager.addTextToCanvas();
-                    break;
-                default:
-                        console.warn('[Main] Add Text button clicked in unknown mode:', this.currentSidebarMode);
-                }
+                
+                // Always use sticker text (addTextToCanvas) regardless of current layer mode
+                this.textManager.addTextToCanvas();
             });
         } else { console.error("[Main] #add-text-btn not found"); }
         
