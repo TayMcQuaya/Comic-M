@@ -484,14 +484,146 @@ export class ViewportManager {
      */
     showZoomInput() {
         const current = Math.round(this.zoom * 100);
-        const input = prompt('Enter zoom percentage (10% - 500%):', current);
         
-        if (input !== null) {
-            const percentage = parseInt(input);
+        // Create a custom modal for zoom input
+        this.createZoomInputModal(current);
+    }
+    
+    /**
+     * Create a custom zoom input modal using the app's design system
+     */
+    createZoomInputModal(currentZoom) {
+        // Create modal elements
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'modal-overlay';
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal zoom-input-modal';
+        
+        // Set content with input field
+        modal.innerHTML = `
+            <h3>Set Zoom Level</h3>
+            <div class="modal-content">
+                <label for="zoom-input" style="display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500;">
+                    Zoom Percentage (10% - 500%):
+                </label>
+                <input 
+                    type="number" 
+                    id="zoom-input" 
+                    min="10" 
+                    max="500" 
+                    value="${currentZoom}"
+                    style="width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; margin-bottom: 1rem;"
+                >
+                <div class="zoom-presets" style="margin-bottom: 1rem;">
+                    <div style="font-size: 0.9rem; color: #666; margin-bottom: 0.5rem;">Quick presets:</div>
+                    <div class="preset-buttons" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="preset-btn" data-zoom="25" style="padding: 0.3rem 0.6rem; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">25%</button>
+                        <button class="preset-btn" data-zoom="50" style="padding: 0.3rem 0.6rem; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">50%</button>
+                        <button class="preset-btn" data-zoom="75" style="padding: 0.3rem 0.6rem; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">75%</button>
+                        <button class="preset-btn" data-zoom="100" style="padding: 0.3rem 0.6rem; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">100%</button>
+                        <button class="preset-btn" data-zoom="150" style="padding: 0.3rem 0.6rem; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">150%</button>
+                        <button class="preset-btn" data-zoom="200" style="padding: 0.3rem 0.6rem; border: 1px solid #ccc; background: #f8f9fa; border-radius: 3px; cursor: pointer; font-size: 0.8rem;">200%</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="primary-btn zoom-apply-btn">Apply</button>
+                <button class="secondary-btn zoom-cancel-btn">Cancel</button>
+            </div>
+        `;
+        
+        // Get elements
+        const zoomInput = modal.querySelector('#zoom-input');
+        const applyBtn = modal.querySelector('.zoom-apply-btn');
+        const cancelBtn = modal.querySelector('.zoom-cancel-btn');
+        const presetBtns = modal.querySelectorAll('.preset-btn');
+        
+        // Handle preset buttons
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const zoomValue = btn.dataset.zoom;
+                zoomInput.value = zoomValue;
+                // Update visual selection
+                presetBtns.forEach(b => b.style.background = '#f8f9fa');
+                btn.style.background = '#e3f2fd';
+            });
+        });
+        
+        // Handle input validation
+        zoomInput.addEventListener('input', () => {
+            const value = parseInt(zoomInput.value);
+            const isValid = !isNaN(value) && value >= 10 && value <= 500;
+            zoomInput.style.borderColor = isValid ? '#ddd' : '#ff6b6b';
+            applyBtn.disabled = !isValid;
+            applyBtn.style.opacity = isValid ? '1' : '0.5';
+            
+            // Update preset selection
+            presetBtns.forEach(btn => {
+                btn.style.background = btn.dataset.zoom === value.toString() ? '#e3f2fd' : '#f8f9fa';
+            });
+        });
+        
+        // Handle apply button
+        const applyZoom = () => {
+            const percentage = parseInt(zoomInput.value);
             if (!isNaN(percentage) && percentage >= 10 && percentage <= 500) {
                 this.setZoom(percentage / 100);
+                closeModal();
             }
-        }
+        };
+        
+        // Handle close modal
+        const closeModal = () => {
+            modal.classList.remove('active');
+            modalOverlay.classList.remove('active');
+            
+            setTimeout(() => {
+                if (modal.parentNode) document.body.removeChild(modal);
+                if (modalOverlay.parentNode) document.body.removeChild(modalOverlay);
+            }, 300);
+        };
+        
+        // Event listeners
+        applyBtn.addEventListener('click', applyZoom);
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // Handle Enter key in input
+        zoomInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                applyZoom();
+            } else if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+        
+        // Handle clicking on overlay to close
+        modalOverlay.addEventListener('click', closeModal);
+        
+        // Prevent modal content clicks from closing the modal
+        modal.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        // Add to DOM
+        document.body.appendChild(modalOverlay);
+        document.body.appendChild(modal);
+        
+        // Show modal with transition
+        setTimeout(() => {
+            modalOverlay.style.display = 'block';
+            modal.style.display = 'block';
+            
+            setTimeout(() => {
+                modal.classList.add('active');
+                modalOverlay.classList.add('active');
+                
+                // Focus the input and select current value
+                zoomInput.focus();
+                zoomInput.select();
+            }, 10);
+        }, 0);
     }
     
     /**
