@@ -1194,7 +1194,8 @@ img[draggable="false"] {
     transition: opacity 0.2s ease;
 }
 
-.editor-sidebar .thumbnail-container.selected::after {
+.editor-sidebar .thumbnail-container.selected::after,
+.editor-sidebar .thumbnail-container.in-use::after {
     opacity: 1;
 }
 
@@ -1415,7 +1416,8 @@ input:focus, select:focus, textarea:focus {
     transition: opacity 0.2s ease;
 }
 
-.thumbnail-container.selected::after {
+.thumbnail-container.selected::after,
+.thumbnail-container.in-use::after {
     opacity: 1;
 }
 
