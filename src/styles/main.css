@@ -39,24 +39,24 @@
 
 /* GREEN THEME */
 [data-theme="green"] {
-    --primary-color: #4CAF50;      /* Material Green */
-    --secondary-color: #66BB6A;    /* Light Green */
-    --accent-color: #81C784;       /* Lighter Green accent */
-    --background-color: #1B2E1B;   /* Dark green background */
-    --card-bg: #2E4A2E;           /* Dark green cards */
-    --sidebar-bg: #263926;        /* Dark green sidebar */
+    --primary-color: #1B5E20;      /* Darker forest green */
+    --secondary-color: #2E7D32;    /* Deep forest green */
+    --accent-color: #4CAF50;       /* Medium forest green accent */
+    --background-color: #0A1F0C;   /* Very dark forest background */
+    --card-bg: #1B2F1E;           /* Dark forest cards */
+    --sidebar-bg: #1E3A21;        /* Deep forest sidebar */
     
     /* Text colors */
     --text-color: #FFFFFF;        /* Pure white for readability */
-    --text-muted: #B8CDB8;       /* Light green-tinted gray */
-    --text-bright: #00E676;      /* Bright intense green for emphasis */
+    --text-muted: #A5D6A7;       /* Light green-tinted gray */
+    --text-bright: #00E676;      /* Bright vibrant green for emphasis */
     --button-text-color: #39FF14; /* Super intense neon green for buttons */
     
     /* UI element colors */
-    --border-color: #4A6B4A;      /* Medium green for borders */
-    --input-bg: #3A5A3A;         /* Green-tinted input background */
-    --hover-color: #4A6B4A;      /* Green hover state */
-    --active-color: #4CAF50;     /* Active state uses primary green */
+    --border-color: #2E7D32;      /* Dark forest green for borders */
+    --input-bg: #1B2F1E;         /* Dark forest input background */
+    --hover-color: #388E3C;      /* Forest green hover state */
+    --active-color: #1B5E20;     /* Active state uses darker primary */
     
     /* Feedback colors */
     --success-color: #66BB6A;     /* Bright green */
@@ -64,31 +64,31 @@
     --danger-color: #E57373;      /* Red danger */
     
     /* Effects */
-    --shadow-color: rgba(0, 0, 0, 0.6);
-    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    --panel-border-color: #4CAF50;
+    --shadow-color: rgba(27, 94, 32, 0.7);
+    --panel-shadow: 0 4px 12px rgba(27, 94, 32, 0.5);
+    --panel-border-color: #1B5E20;
 }
 
 /* BLUE THEME */
 [data-theme="blue"] {
-    --primary-color: #2196F3;      /* Material Blue */
-    --secondary-color: #42A5F5;    /* Light Blue */
-    --accent-color: #64B5F6;       /* Lighter Blue accent */
-    --background-color: #1B2B3D;   /* Dark blue background */
-    --card-bg: #2E4057;           /* Dark blue cards */
-    --sidebar-bg: #263649;        /* Dark blue sidebar */
+    --primary-color: #0D47A1;      /* Deep ocean blue */
+    --secondary-color: #1565C0;    /* Darker ocean blue */
+    --accent-color: #2196F3;       /* Medium ocean blue accent */
+    --background-color: #0A1929;   /* Very dark ocean background */
+    --card-bg: #1B2F42;           /* Dark ocean cards */
+    --sidebar-bg: #1E3A52;        /* Deep ocean sidebar */
     
     /* Text colors */
     --text-color: #FFFFFF;        /* Pure white for readability */
-    --text-muted: #B8C9DB;       /* Light blue-tinted gray */
-    --text-bright: #00BFFF;      /* Bright intense blue for emphasis */
+    --text-muted: #90CAF9;       /* Light ocean-tinted gray */
+    --text-bright: #00BFFF;      /* Bright vibrant blue for emphasis */
     --button-text-color: #00FFFF; /* Super intense electric cyan for buttons */
     
     /* UI element colors */
-    --border-color: #4A6B8A;      /* Medium blue for borders */
-    --input-bg: #3A516A;         /* Blue-tinted input background */
-    --hover-color: #4A6B8A;      /* Blue hover state */
-    --active-color: #2196F3;     /* Active state uses primary blue */
+    --border-color: #1565C0;      /* Dark ocean blue for borders */
+    --input-bg: #1B2F42;         /* Dark ocean input background */
+    --hover-color: #1976D2;      /* Ocean blue hover state */
+    --active-color: #0D47A1;     /* Active state uses darker primary */
     
     /* Feedback colors */
     --success-color: #4CAF50;     /* Green success */
@@ -96,9 +96,9 @@
     --danger-color: #E57373;      /* Red danger */
     
     /* Effects */
-    --shadow-color: rgba(0, 0, 0, 0.6);
-    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-    --panel-border-color: #2196F3;
+    --shadow-color: rgba(13, 71, 161, 0.7);
+    --panel-shadow: 0 4px 12px rgba(13, 71, 161, 0.5);
+    --panel-border-color: #0D47A1;
 }
 
 /* MONOCHROME THEME */
@@ -131,6 +131,102 @@
     --shadow-color: rgba(0, 0, 0, 0.8);
     --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
     --panel-border-color: #757575;
+}
+
+/* COSMIC PURPLE THEME */
+[data-theme="cosmic"] {
+    --primary-color: #7B1FA2;      /* Deep cosmic purple */
+    --secondary-color: #BA68C8;    /* Medium purple */
+    --accent-color: #E1BEE7;       /* Light purple accent */
+    --background-color: #0A0A15;   /* Deep space background */
+    --card-bg: #1A1A2E;           /* Dark purple cards */
+    --sidebar-bg: #16213E;        /* Deep blue-purple sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #B39DDB;       /* Light purple-gray */
+    --text-bright: #DA00FF;      /* Bright intense magenta for emphasis */
+    --button-text-color: #FF80FF; /* Extra bright magenta for buttons */
+    
+    /* UI element colors */
+    --border-color: #4A148C;      /* Dark purple borders */
+    --input-bg: #2A2A3E;         /* Dark purple input background */
+    --hover-color: #3F51B5;      /* Cosmic blue hover */
+    --active-color: #7B1FA2;     /* Active state uses primary */
+    
+    /* Feedback colors */
+    --success-color: #81C784;    /* Green success */
+    --warning-color: #FFB74D;    /* Orange warning */
+    --danger-color: #E57373;     /* Red danger */
+    
+    /* Effects */
+    --shadow-color: rgba(123, 31, 162, 0.6);
+    --panel-shadow: 0 4px 12px rgba(123, 31, 162, 0.4);
+    --panel-border-color: #7B1FA2;
+}
+
+/* SUNSET ORANGE THEME */
+[data-theme="sunset"] {
+    --primary-color: #E65100;      /* Deep sunset orange */
+    --secondary-color: #FF9800;    /* Bright orange */
+    --accent-color: #FFE0B2;       /* Light orange accent */
+    --background-color: #1A0F0A;   /* Dark brown-black background */
+    --card-bg: #2E1A1A;           /* Dark warm cards */
+    --sidebar-bg: #3E2723;        /* Deep brown sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #FFCC80;       /* Light orange-gold */
+    --text-bright: #FF6F00;      /* Bright intense orange for emphasis */
+    --button-text-color: #FFD740; /* Extra bright golden orange for buttons */
+    
+    /* UI element colors */
+    --border-color: #D84315;      /* Dark orange borders */
+    --input-bg: #3E2723;         /* Dark brown input background */
+    --hover-color: #FF5722;      /* Bright orange-red hover */
+    --active-color: #E65100;     /* Active state uses primary */
+    
+    /* Feedback colors */
+    --success-color: #81C784;    /* Green success */
+    --warning-color: #FFB74D;    /* Orange warning */
+    --danger-color: #EF5350;     /* Red danger */
+    
+    /* Effects */
+    --shadow-color: rgba(230, 81, 0, 0.6);
+    --panel-shadow: 0 4px 12px rgba(230, 81, 0, 0.4);
+    --panel-border-color: #E65100;
+}
+
+/* CRIMSON SHADOW THEME */
+[data-theme="crimson"] {
+    --primary-color: #C62828;      /* Deep crimson red */
+    --secondary-color: #EF5350;    /* Bright red */
+    --accent-color: #FFCDD2;       /* Light red accent */
+    --background-color: #0D0606;   /* Very dark red-black background */
+    --card-bg: #1C1010;           /* Dark crimson cards */
+    --sidebar-bg: #2C1818;        /* Deep red-brown sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #FFAB91;       /* Light red-orange */
+    --text-bright: #FF1744;      /* Bright intense red for emphasis */
+    --button-text-color: #FF6B6B; /* Extra bright coral red for buttons */
+    
+    /* UI element colors */
+    --border-color: #B71C1C;      /* Dark red borders */
+    --input-bg: #2C1818;         /* Dark red input background */
+    --hover-color: #D32F2F;      /* Bright red hover */
+    --active-color: #C62828;     /* Active state uses primary */
+    
+    /* Feedback colors */
+    --success-color: #66BB6A;    /* Green success */
+    --warning-color: #FFA726;    /* Orange warning */
+    --danger-color: #F44336;     /* Red danger */
+    
+    /* Effects */
+    --shadow-color: rgba(198, 40, 40, 0.6);
+    --panel-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+    --panel-border-color: #C62828;
 }
 
 * {
@@ -262,6 +358,7 @@ body {
 
 .upload-area:hover {
     border-color: var(--accent-color);
+    background-color: var(--primary-color) !important;
     transform: scale(1.02);
 }
 
@@ -269,11 +366,21 @@ body {
     font-size: 4rem;
     color: var(--primary-color);
     margin-bottom: 1rem;
+    transition: color 0.3s ease;
+}
+
+.upload-area:hover i {
+    color: #FFFFFF !important;
 }
 
 .upload-area p {
     font-size: 1.2rem;
     color: var(--secondary-color);
+    transition: color 0.3s ease;
+}
+
+.upload-area:hover p {
+    color: #FFFFFF !important;
 }
 
 /* Image Library */
@@ -1732,7 +1839,7 @@ body.dragging-active .drag-instruction-overlay {
 
 .editor-sidebar .upload-area:hover {
     border-color: var(--accent-color);
-    background: var(--hover-color);
+    background: var(--primary-color) !important;
     transform: translateY(-1px);
 }
 
@@ -1747,6 +1854,11 @@ body.dragging-active .drag-instruction-overlay {
     color: var(--primary-color);
     margin-bottom: 0.5rem;
     display: block;
+    transition: color 0.3s ease;
+}
+
+.editor-sidebar .upload-area:hover i {
+    color: #FFFFFF !important;
 }
 
 .editor-sidebar .upload-area p {
@@ -1754,6 +1866,11 @@ body.dragging-active .drag-instruction-overlay {
     color: var(--secondary-color);
     margin: 0;
     line-height: 1.2;
+    transition: color 0.3s ease;
+}
+
+.editor-sidebar .upload-area:hover p {
+    color: #FFFFFF !important;
 }
 
 .delete-panel-image-btn {
@@ -2012,6 +2129,18 @@ body.dragging-active .drag-instruction-overlay {
 
 [data-theme="monochrome"] .danger-btn {
     background: #424242;  /* Keep distinct dark gray for monochrome */
+}
+
+[data-theme="cosmic"] .danger-btn {
+    background: var(--primary-color);  /* Match primary button color */
+}
+
+[data-theme="sunset"] .danger-btn {
+    background: var(--primary-color);  /* Match primary button color */
+}
+
+[data-theme="crimson"] .danger-btn {
+    background: var(--primary-color);  /* Match primary button color */
 }
 
 /* Panel Property Sections */
@@ -4464,9 +4593,11 @@ select.font-family option {
 }
 
 .tab-btn.active {
-    color: var(--text-bright);
-    background: var(--input-bg);
-    border-bottom-color: var(--primary-color);
+    color: #FFFFFF !important;
+    background: var(--primary-color) !important;
+    border-bottom-color: var(--accent-color);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    transform: translateY(-1px);
 }
 
 /* Theme Selector Styles */
@@ -4477,6 +4608,22 @@ select.font-family option {
     border: 1px solid var(--border-color);
     border-radius: 8px;
     text-align: center;
+}
+
+/* Theme selector styling for upload page */
+#upload-page .theme-selector-container {
+    margin: 2rem auto 1rem;
+    max-width: 400px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+/* Theme selector styling for layout page */
+#layout-page .theme-selector-container {
+    margin: 1.5rem auto;
+    max-width: 400px;
+    box-shadow: 0 2px 8px var(--shadow-color);
+    position: relative;
+    z-index: 10;
 }
 
 .theme-selector-label {
@@ -4507,7 +4654,9 @@ select.font-family option {
     font-weight: 500;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    text-align: center;
+    position: relative;
 }
 
 .theme-dropdown-btn:hover {
@@ -4526,6 +4675,8 @@ select.font-family option {
 .theme-dropdown-icon {
     transition: transform 0.3s ease;
     font-size: 0.8rem;
+    position: absolute;
+    right: 1rem;
 }
 
 .theme-dropdown-btn.active .theme-dropdown-icon {
@@ -4576,8 +4727,8 @@ select.font-family option {
 
 .theme-option:hover {
     background-color: var(--hover-color);
-    color: var(--text-bright);
-    transform: translateX(5px);
+    color: #FFFFFF !important; /* Force white text for readability on all themes */
+    transform: translateY(-1px);
 }
 
 .theme-option.selected {
@@ -4614,6 +4765,18 @@ select.font-family option {
 
 .theme-preview-dot.monochrome {
     background: linear-gradient(45deg, #FFFFFF 0%, #E0E0E0 50%, #BDBDBD 100%);
+}
+
+.theme-preview-dot.cosmic {
+    background: linear-gradient(45deg, #7B1FA2 0%, #BA68C8 50%, #E1BEE7 100%);
+}
+
+.theme-preview-dot.sunset {
+    background: linear-gradient(45deg, #E65100 0%, #FF9800 50%, #FFE0B2 100%);
+}
+
+.theme-preview-dot.crimson {
+    background: linear-gradient(45deg, #C62828 0%, #EF5350 50%, #FFCDD2 100%);
 }
 
 /* Style the content area within the sidebar */
@@ -5254,7 +5417,7 @@ body.exporting #comic-canvas {
 
 .create-folder-btn:hover {
     border-color: var(--primary-color);
-    background: var(--hover-color);
+    background: var(--primary-color) !important;
     transform: translateY(-2px);
 }
 
@@ -5262,6 +5425,11 @@ body.exporting #comic-canvas {
     font-size: 2rem;
     color: var(--text-bright);
     margin-bottom: 0.5rem;
+    transition: color 0.3s ease;
+}
+
+.create-folder-btn:hover i {
+    color: #FFFFFF !important;
 }
 
 .create-folder-btn span {
@@ -5269,6 +5437,11 @@ body.exporting #comic-canvas {
     font-weight: 600;
     color: var(--text-bright);
     text-align: center;
+    transition: color 0.3s ease;
+}
+
+.create-folder-btn:hover span {
+    color: #FFFFFF !important;
 }
 
 /* Folder Name for Regular Folders */

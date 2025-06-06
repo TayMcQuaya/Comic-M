@@ -19,18 +19,30 @@ export class ThemeManager {
     constructor(comicCreator) {
         this.comicCreator = comicCreator;
         this.currentTheme = 'default';
-        this.themes = {
+                this.themes = {
             default: {
                 name: 'Default',
                 id: 'default'
             },
             green: {
-                name: 'Green Theme',
+                name: 'Forest Theme',
                 id: 'green'
             },
             blue: {
-                name: 'Blue Theme', 
+                name: 'Ocean Theme',
                 id: 'blue'
+            },
+            cosmic: {
+                name: 'Cosmic Purple',
+                id: 'cosmic'
+            },
+            sunset: {
+                name: 'Sunset Orange',
+                id: 'sunset'
+            },
+            crimson: {
+                name: 'Crimson Shadow',
+                id: 'crimson'
             },
             monochrome: {
                 name: 'Monochrome',
@@ -70,26 +82,106 @@ export class ThemeManager {
     }
 
     /**
-     * Creates the theme selector UI and inserts it into the sidebar
+     * Creates the theme selector UI and inserts it into the appropriate locations
      */
     createThemeSelector() {
+        // Create for editor sidebar
+        this.createEditorThemeSelector();
+        
+        // Create for upload page
+        this.createUploadPageThemeSelector();
+        
+        // Create for layout page
+        this.createLayoutPageThemeSelector();
+    }
+
+    /**
+     * Creates theme selector for the editor sidebar
+     */
+    createEditorThemeSelector() {
         const sidebarContent = document.querySelector('.sidebar-content');
         if (!sidebarContent) {
-            console.error('[ThemeManager] Could not find sidebar content');
-            return;
+            return; // Not on editor page
         }
 
-        // Create theme selector container
+        const themeContainer = this.createThemeContainer('editor');
+        
+        // Insert the theme selector after the sidebar tabs but before the content
+        const firstContentDiv = sidebarContent.querySelector('div[data-tab-content]');
+        if (firstContentDiv) {
+            sidebarContent.insertBefore(themeContainer, firstContentDiv);
+        } else {
+            sidebarContent.appendChild(themeContainer);
+        }
+
+        console.log('[ThemeManager] Editor theme selector created');
+    }
+
+    /**
+     * Creates theme selector for the upload page
+     */
+    createUploadPageThemeSelector() {
+        const uploadSection = document.querySelector('#upload-page .upload-section');
+        if (!uploadSection) {
+            return; // Not on upload page
+        }
+
+        const themeContainer = this.createThemeContainer('upload');
+        
+        // Insert before the button group at the bottom
+        const buttonGroup = uploadSection.querySelector('.button-group');
+        if (buttonGroup) {
+            uploadSection.insertBefore(themeContainer, buttonGroup);
+        } else {
+            uploadSection.appendChild(themeContainer);
+        }
+
+        console.log('[ThemeManager] Upload page theme selector created');
+    }
+
+    /**
+     * Creates theme selector for the layout page
+     */
+    createLayoutPageThemeSelector() {
+        const layoutPage = document.querySelector('#layout-page');
+        if (!layoutPage) {
+            return; // Not on layout page
+        }
+
+        const themeContainer = this.createThemeContainer('layout');
+        
+        // Insert after the page header but before the filters
+        const pageHeader = layoutPage.querySelector('.page-header');
+        const layoutFilters = layoutPage.querySelector('.layout-filters');
+        
+        if (pageHeader && layoutFilters) {
+            layoutPage.insertBefore(themeContainer, layoutFilters);
+        } else if (layoutFilters) {
+            layoutPage.insertBefore(themeContainer, layoutFilters);
+        } else {
+            layoutPage.appendChild(themeContainer);
+        }
+
+        console.log('[ThemeManager] Layout page theme selector created');
+    }
+
+    /**
+     * Creates a theme selector container with unique IDs for different pages
+     * @param {string} pageType - The type of page (editor, upload, layout)
+     */
+    createThemeContainer(pageType) {
         const themeContainer = document.createElement('div');
         themeContainer.className = 'theme-selector-container';
+        const uniqueId = pageType === 'editor' ? '' : `-${pageType}`;
+        
         themeContainer.innerHTML = `
             <label class="theme-selector-label">UI Theme</label>
             <div class="theme-selector">
-                <button class="theme-dropdown-btn" id="theme-dropdown-btn">
-                    <span id="current-theme-text">${this.themes[this.currentTheme].name}</span>
+                <button class="theme-dropdown-btn" id="theme-dropdown-btn${uniqueId}">
+                    <span id="current-theme-text${uniqueId}">${this.themes[this.currentTheme].name}</span>
                     <i class="fas fa-chevron-down theme-dropdown-icon"></i>
                 </button>
-                <div class="theme-dropdown-menu" id="theme-dropdown-menu">
+                <div class="theme-dropdown-menu" id="theme-dropdown-menu${uniqueId}">
                     ${Object.entries(this.themes).map(([key, theme]) => `
                         <div class="theme-option ${key === this.currentTheme ? 'selected' : ''}" data-theme="${key}">
                             <div class="theme-preview-dot ${key}"></div>
@@ -100,85 +192,84 @@ export class ThemeManager {
             </div>
         `;
 
-        // Insert the theme selector after the sidebar tabs but before the content
-        const firstContentDiv = sidebarContent.querySelector('div[data-tab-content]');
-        if (firstContentDiv) {
-            sidebarContent.insertBefore(themeContainer, firstContentDiv);
-        } else {
-            sidebarContent.appendChild(themeContainer);
-        }
-
-        console.log('[ThemeManager] Theme selector UI created');
+        return themeContainer;
     }
 
     /**
-     * Sets up event listeners for the theme selector
+     * Sets up event listeners for all theme selectors
      */
     setupEventListeners() {
-        const dropdownBtn = document.getElementById('theme-dropdown-btn');
-        const dropdownMenu = document.getElementById('theme-dropdown-menu');
+        const pageTypes = ['', '-upload', '-layout']; // editor has no suffix
+        
+        pageTypes.forEach(suffix => {
+            const dropdownBtn = document.getElementById(`theme-dropdown-btn${suffix}`);
+            const dropdownMenu = document.getElementById(`theme-dropdown-menu${suffix}`);
 
-        if (!dropdownBtn || !dropdownMenu) {
-            console.error('[ThemeManager] Could not find theme dropdown elements');
-            return;
-        }
+            if (dropdownBtn && dropdownMenu) {
+                // Toggle dropdown on button click
+                dropdownBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.toggleDropdown(suffix);
+                });
 
-        // Toggle dropdown on button click
-        dropdownBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.toggleDropdown();
-        });
-
-        // Handle theme selection
-        dropdownMenu.addEventListener('click', (e) => {
-            const themeOption = e.target.closest('.theme-option');
-            if (themeOption) {
-                const themeId = themeOption.dataset.theme;
-                this.selectTheme(themeId);
-                this.closeDropdown();
+                // Handle theme selection
+                dropdownMenu.addEventListener('click', (e) => {
+                    const themeOption = e.target.closest('.theme-option');
+                    if (themeOption) {
+                        const themeId = themeOption.dataset.theme;
+                        this.selectTheme(themeId);
+                        this.closeAllDropdowns();
+                    }
+                });
             }
         });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('.theme-selector')) {
-                this.closeDropdown();
+                this.closeAllDropdowns();
             }
         });
 
         // Close dropdown on escape key
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                this.closeDropdown();
+                this.closeAllDropdowns();
             }
         });
 
-        console.log('[ThemeManager] Event listeners set up');
+        console.log('[ThemeManager] Event listeners set up for all pages');
     }
 
     /**
-     * Toggles the dropdown menu
+     * Toggles the dropdown menu for a specific page
+     * @param {string} suffix - The page suffix (empty for editor, '-upload', '-layout')
      */
-    toggleDropdown() {
-        const dropdownBtn = document.getElementById('theme-dropdown-btn');
-        const dropdownMenu = document.getElementById('theme-dropdown-menu');
+    toggleDropdown(suffix = '') {
+        const dropdownBtn = document.getElementById(`theme-dropdown-btn${suffix}`);
+        const dropdownMenu = document.getElementById(`theme-dropdown-menu${suffix}`);
         
         if (dropdownBtn && dropdownMenu) {
             const isActive = dropdownMenu.classList.contains('active');
-            if (isActive) {
-                this.closeDropdown();
-            } else {
-                this.openDropdown();
+            
+            // Close all other dropdowns first
+            this.closeAllDropdowns();
+            
+            if (!isActive) {
+                // Open this specific dropdown
+                dropdownBtn.classList.add('active');
+                dropdownMenu.classList.add('active');
             }
         }
     }
 
     /**
-     * Opens the dropdown menu
+     * Opens a specific dropdown menu
+     * @param {string} suffix - The page suffix
      */
-    openDropdown() {
-        const dropdownBtn = document.getElementById('theme-dropdown-btn');
-        const dropdownMenu = document.getElementById('theme-dropdown-menu');
+    openDropdown(suffix = '') {
+        const dropdownBtn = document.getElementById(`theme-dropdown-btn${suffix}`);
+        const dropdownMenu = document.getElementById(`theme-dropdown-menu${suffix}`);
         
         if (dropdownBtn && dropdownMenu) {
             dropdownBtn.classList.add('active');
@@ -187,16 +278,20 @@ export class ThemeManager {
     }
 
     /**
-     * Closes the dropdown menu
+     * Closes all dropdown menus
      */
-    closeDropdown() {
-        const dropdownBtn = document.getElementById('theme-dropdown-btn');
-        const dropdownMenu = document.getElementById('theme-dropdown-menu');
+    closeAllDropdowns() {
+        const pageTypes = ['', '-upload', '-layout'];
         
-        if (dropdownBtn && dropdownMenu) {
-            dropdownBtn.classList.remove('active');
-            dropdownMenu.classList.remove('active');
-        }
+        pageTypes.forEach(suffix => {
+            const dropdownBtn = document.getElementById(`theme-dropdown-btn${suffix}`);
+            const dropdownMenu = document.getElementById(`theme-dropdown-menu${suffix}`);
+            
+            if (dropdownBtn && dropdownMenu) {
+                dropdownBtn.classList.remove('active');
+                dropdownMenu.classList.remove('active');
+            }
+        });
     }
 
     /**
@@ -245,16 +340,21 @@ export class ThemeManager {
     }
 
     /**
-     * Updates the theme selector UI to reflect the current selection
+     * Updates all theme selector UIs to reflect the current selection
      */
     updateThemeSelector() {
-        const currentThemeText = document.getElementById('current-theme-text');
+        const pageTypes = ['', '-upload', '-layout'];
+        
+        // Update current theme text for all selectors
+        pageTypes.forEach(suffix => {
+            const currentThemeText = document.getElementById(`current-theme-text${suffix}`);
+            if (currentThemeText) {
+                currentThemeText.textContent = this.themes[this.currentTheme].name;
+            }
+        });
+
+        // Update all theme options
         const themeOptions = document.querySelectorAll('.theme-option');
-
-        if (currentThemeText) {
-            currentThemeText.textContent = this.themes[this.currentTheme].name;
-        }
-
         themeOptions.forEach(option => {
             const themeId = option.dataset.theme;
             if (themeId === this.currentTheme) {
@@ -264,7 +364,7 @@ export class ThemeManager {
             }
         });
 
-        console.log('[ThemeManager] Theme selector updated for:', this.currentTheme);
+        console.log('[ThemeManager] All theme selectors updated for:', this.currentTheme);
     }
 
     /**
