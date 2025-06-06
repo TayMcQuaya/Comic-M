@@ -91,3 +91,39 @@ For issues, feature requests, or questions, please open an issue on the GitHub r
 
 IF YOU ENCOUNTER ANY PROBLEM WITH THE REFACTORED TEXT MANAGER VERSION AND WANT REVERT, 
 JUST DELETE THEM AND MOVE TEXTMANAGEROLD.JS to MODULES FOLER and RENAME IT TO "TextManager.js"
+
+UPDATED VERSION
+HOW TO RUN LOCALLY:
+2 terminals ( frontend and backend)
+
+frontend:
+root directory
+npm start
+
+backend:
+cd comic-pro-pdf-service-deploy
+npm start
+
+
+HOW TO UPDATE CODE:
+frontend:
+root directory
+git add .
+git commit -m "your message"
+git push origin production
+npm run build
+
+vercel --prod
+
+backend:
+cd comic-pro-pdf-service-deploy
+git add .
+git commit -m "your message"
+git push origin main
+
+
+ssh root@IP_DROPLET
+type in password
+cd Comic-M-Backend
+git pull
+pm2 restart all
