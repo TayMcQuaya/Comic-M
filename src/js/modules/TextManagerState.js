@@ -188,7 +188,12 @@ export class TextManagerState {
                         textTransform: textElement.style.textTransform || textComputedStyle.textTransform,
                         textShadow: textElement.style.textShadow || textComputedStyle.textShadow,
                         hasOutline: textElement.getAttribute('data-has-outline') === 'true',
-                        outlineColor: textElement.getAttribute('data-outline-color') || '#000000'
+                        outlineColor: textElement.getAttribute('data-outline-color') || '#000000',
+                        hasShadow: textElement.getAttribute('data-has-shadow') === 'true',
+                        shadowColor: textElement.getAttribute('data-shadow-color') || '#666666',
+                        shadowX: textElement.getAttribute('data-shadow-x') || '2',
+                        shadowY: textElement.getAttribute('data-shadow-y') || '2',
+                        shadowBlur: textElement.getAttribute('data-shadow-blur') || '2'
                     }
                 });
             });
@@ -333,6 +338,11 @@ export class TextManagerState {
                             textShadow: textElement.style.textShadow,
                             hasOutline: textElement.getAttribute('data-has-outline') === 'true',
                             outlineColor: textElement.getAttribute('data-outline-color') || '#000000',
+                            hasShadow: textElement.getAttribute('data-has-shadow') === 'true',
+                            shadowColor: textElement.getAttribute('data-shadow-color') || '#666666',
+                            shadowX: textElement.getAttribute('data-shadow-x') || '2',
+                            shadowY: textElement.getAttribute('data-shadow-y') || '2',
+                            shadowBlur: textElement.getAttribute('data-shadow-blur') || '2',
                             zIndex: textBubble.style.zIndex || '100' // Save z-index, default to 100
                         }
                     });
@@ -706,16 +716,31 @@ export class TextManagerState {
             if (textState.style.paddingHorizontal) textBubble.dataset.paddingHorizontal = textState.style.paddingHorizontal;
             if (textState.style.bubblePadding) textBubble.dataset.bubblePadding = textState.style.bubblePadding;
             
-            // Outline (data attributes are fine, actual style applied by textManagerStyling)
+            // Outline and Shadow (data attributes are fine, actual style applied by textManagerStyling)
             if (textState.style.hasOutline) {
                 textContentElement.setAttribute('data-has-outline', 'true');
                 if (textState.style.outlineColor) {
                     textContentElement.setAttribute('data-outline-color', textState.style.outlineColor);
                 }
-                // Outline thickness scaling would happen in applyTextOutline if it's a pixel value there.
-                // For now, just set attribute. TextManagerStyling.applyTextOutline handles the visual.
                 if (this.comicCreator && this.comicCreator.textManagerStyling && this.comicCreator.textManagerStyling.applyTextOutline) {
                      this.comicCreator.textManagerStyling.applyTextOutline(textContentElement, textState.style.outlineColor || '#000000');
+                }
+            }
+            
+            if (textState.style.hasShadow) {
+                textContentElement.setAttribute('data-has-shadow', 'true');
+                textContentElement.setAttribute('data-shadow-color', textState.style.shadowColor || '#666666');
+                textContentElement.setAttribute('data-shadow-x', textState.style.shadowX || '2');
+                textContentElement.setAttribute('data-shadow-y', textState.style.shadowY || '2');
+                textContentElement.setAttribute('data-shadow-blur', textState.style.shadowBlur || '2');
+                if (this.comicCreator && this.comicCreator.textManagerStyling && this.comicCreator.textManagerStyling.applyTextShadow) {
+                     this.comicCreator.textManagerStyling.applyTextShadow(
+                         textContentElement, 
+                         textState.style.shadowColor || '#666666',
+                         textState.style.shadowX || '2',
+                         textState.style.shadowY || '2', 
+                         textState.style.shadowBlur || '2'
+                     );
                 }
             }
         }

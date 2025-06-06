@@ -343,6 +343,11 @@ export class TextManagerStyling {
     }
     
     showTextFormatPopup(textBox, event) {
+        const textElement = textBox.querySelector('.text-content');
+        
+        // Migration logic: detect existing outline applied with old method
+        this.migrateExistingTextEffects(textElement);
+        
         let popup = document.getElementById('text-format-popup');
         if (popup) popup.remove();
         
@@ -366,9 +371,7 @@ export class TextManagerStyling {
         popup.style.top = `${top}px`;
         popup.style.left = `${left}px`;
         
-        const textElement = textBox.querySelector('.text-content');
-        
-         popup.innerHTML = `
+        popup.innerHTML = `
             <div class="popup-header">
                 <h3>Text Formatting</h3>
                 <button class="close-popup"><i class="fas fa-times"></i></button>
@@ -681,13 +684,13 @@ export class TextManagerStyling {
                                 </div>
                             </div>
                             <div class="shadow-control">
-                                <input type="checkbox" id="text-shadow" ${textElement.style.textShadow ? 'checked' : ''}>
+                                <input type="checkbox" id="text-shadow" ${textElement.getAttribute('data-has-shadow') === 'true' ? 'checked' : ''}>
                                 <label for="text-shadow">Text Shadow</label> <!-- Added label -->
                                 <div class="color-picker-container">
-                                    <input type="color" id="shadow-color" value="${globalRgbToHex(this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowColor(textElement) : 'rgb(102,102,102)')}" ${!textElement.style.textShadow ? 'disabled' : ''}>
-                                    <div class="hex-display shadow-color-hex" ${!textElement.style.textShadow ? 'disabled' : ''}>${globalRgbToHex(this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowColor(textElement) : 'rgb(102,102,102)').toUpperCase()}</div>
+                                    <input type="color" id="shadow-color" value="${globalRgbToHex(this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowColor(textElement) : 'rgb(102,102,102)')}" ${textElement.getAttribute('data-has-shadow') !== 'true' ? 'disabled' : ''}>
+                                    <div class="hex-display shadow-color-hex" ${textElement.getAttribute('data-has-shadow') !== 'true' ? 'disabled' : ''}>${globalRgbToHex(this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowColor(textElement) : 'rgb(102,102,102)').toUpperCase()}</div>
                                 </div>
-                                <div class="shadow-sliders" ${!textElement.style.textShadow ? 'style="display: none;"' : ''}>
+                                <div class="shadow-sliders" ${textElement.getAttribute('data-has-shadow') !== 'true' ? 'style="display: none;"' : ''}>
                                     <div class="slider-group">
                                         <label for="shadow-offset-x">X Offset</label>
                                         <input type="range" id="shadow-offset-x" class="shadow-offset-x" min="-10" max="10" value="${this.comicCreator.textManagerUtils ? this.comicCreator.textManagerUtils.getShadowOffset(textElement).x : 2}" step="1">
@@ -1524,60 +1527,93 @@ export class TextManagerStyling {
     }
 
     applyTextOutline(textElement, color, thickness = 1) {
-        const text = getTextWithLineBreaks(textElement); 
-        const computedStyle = window.getComputedStyle(textElement);
-        
-        const shadowValue = `
-           -2px -2px 0 ${color},  
-            2px -2px 0 ${color},
-           -2px  2px 0 ${color},
-            2px  2px 0 ${color},
-           -2px  0   0 ${color},
-            2px  0   0 ${color},
-            0   -2px 0 ${color},
-            0    2px 0 ${color}
-        `.trim().replace(/\s+/g, ' ');
-        
-        textElement.style.textShadow = shadowValue;
-        
-        textElement.setAttribute('data-outline-color', color);
+        // Use the modern, reliable -webkit-text-stroke property for clean outlines.
         textElement.setAttribute('data-has-outline', 'true');
+        textElement.setAttribute('data-outline-color', color);
+        textElement.setAttribute('data-outline-thickness', thickness);
+
+        textElement.style.webkitTextStrokeWidth = `${thickness}px`;
+        textElement.style.webkitTextStrokeColor = color;
         
-        const textColor = textElement.style.color || computedStyle.color || '#000000';
-        textElement.style.setProperty('--text-color', textColor);
-        
-        const stylesToCopy = [
-            'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 
-            'wordSpacing', 'lineHeight', 'textTransform', 'textAlign', 
-            'textDecoration', 'whiteSpace'
-        ];
-        stylesToCopy.forEach(prop => {
-            const value = computedStyle[prop];
-            if (value) textElement.style[prop] = value;
-        });
-        
-        textElement.style.webkitFontSmoothing = 'antialiased';
-        textElement.style.mozOsxFontSmoothing = 'grayscale';
-        textElement.style.textRendering = 'optimizeLegibility';
+        // When an outline is applied, the text color must be transparent 
+        // to see the fill color provided by the paint-order SVG trick.
+        // However, for simplicity and compatibility, we will ensure high contrast.
+        // The text's actual fill color will be the text-shadow.
+        textElement.style.color = '#FFFFFF'; // Set a contrasting fill color.
+
+        // We no longer need to call combineTextEffects for the outline.
+        // We only call it to ensure the shadow is preserved if it exists.
+        this.combineTextEffects(textElement);
+        this.forceRepaint(textElement);
     }
     
     removeTextOutline(textElement) {
-        textElement.style.textShadow = 'none';
-        
         textElement.removeAttribute('data-has-outline');
         textElement.removeAttribute('data-outline-color');
-        textElement.style.removeProperty('--text-color');
+        textElement.removeAttribute('data-outline-thickness');
+
+        // Remove the stroke properties
+        textElement.style.webkitTextStrokeWidth = '';
+        textElement.style.webkitTextStrokeColor = '';
+
+        // Restore the default text color
+        textElement.style.color = '#000000';
+        
+        // Update combined effects to remove any lingering shadow if needed
+        this.combineTextEffects(textElement);
+        this.forceRepaint(textElement);
     }
     
     applyTextShadow(textElement, color, offsetX, offsetY, blur) {
         const x = offsetX !== undefined ? offsetX : 2;
         const y = offsetY !== undefined ? offsetY : 2;
         const b = blur !== undefined ? blur : 2;
-        textElement.style.textShadow = `${x}px ${y}px ${b}px ${color}`;
+        
+        // Store shadow data
+        textElement.setAttribute('data-shadow-color', color);
+        textElement.setAttribute('data-shadow-x', x);
+        textElement.setAttribute('data-shadow-y', y);
+        textElement.setAttribute('data-shadow-blur', b);
+        textElement.setAttribute('data-has-shadow', 'true');
+        
+        // Combine with existing outline if present
+        this.combineTextEffects(textElement);
     }
     
     removeTextShadow(textElement) {
-        textElement.style.textShadow = 'none';
+        textElement.removeAttribute('data-has-shadow');
+        textElement.removeAttribute('data-shadow-color');
+        textElement.removeAttribute('data-shadow-x');
+        textElement.removeAttribute('data-shadow-y');
+        textElement.removeAttribute('data-shadow-blur');
+        
+        // Update combined effects
+        this.combineTextEffects(textElement);
+    }
+    
+    /**
+     * Combines text outline and shadow effects into a single text-shadow property
+     */
+    combineTextEffects(textElement) {
+        const hasShadow = textElement.getAttribute('data-has-shadow') === 'true';
+        
+        let shadowParts = [];
+        
+        // The outline is now handled by -webkit-text-stroke, so we only need to add the drop shadow.
+        if (hasShadow) {
+            const shadowColor = textElement.getAttribute('data-shadow-color') || '#666666';
+            const shadowX = textElement.getAttribute('data-shadow-x') || '2';
+            const shadowY = textElement.getAttribute('data-shadow-y') || '2';
+            const shadowBlur = textElement.getAttribute('data-shadow-blur') || '2';
+            shadowParts.push(`${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor}`);
+        }
+        
+        // Apply combined shadow or remove if none
+        const finalShadow = shadowParts.length > 0 ? shadowParts.join(', ') : 'none';
+        textElement.style.textShadow = finalShadow;
+        
+        // We still call forceRepaint here to handle changes to the shadow effect.
+        this.forceRepaint(textElement);
     }
     
     updateBubbleTail(textBox, position) {
@@ -1909,6 +1945,101 @@ export class TextManagerStyling {
         }
         
         textBox.classList.add(`positioned-${position}`);
+    }
+
+    /**
+     * Migrates existing text effects from old system to new data attribute system
+     */
+    migrateExistingTextEffects(textElement) {
+        const currentShadow = textElement.style.textShadow;
+        if (!currentShadow || currentShadow === 'none') return;
+        
+        // Check if we already have data attributes (new system)
+        const hasOutlineAttr = textElement.getAttribute('data-has-outline') === 'true';
+        const hasShadowAttr = textElement.getAttribute('data-has-shadow') === 'true';
+        
+        if (hasOutlineAttr || hasShadowAttr) {
+            // Already using new system, no migration needed
+            return;
+        }
+        
+
+        
+        // Parse existing text-shadow to detect outline vs shadow
+        const shadowParts = currentShadow.split(',').map(s => s.trim());
+        
+        let hasOutlinePattern = false;
+        let hasShadowPattern = false;
+        let outlineColor = '#000000';
+        let shadowColor = '#666666';
+        let shadowX = 2, shadowY = 2, shadowBlur = 2;
+        
+        // Look for outline pattern (multiple 0px blur shadows)
+        const outlinePatterns = shadowParts.filter(part => {
+            return part.includes('0px') && 
+                   (part.includes('-2px') || part.includes('2px')) &&
+                   !part.match(/\d+px\s+\d+px\s+[1-9]\d*px/); // No significant blur
+        });
+        
+        if (outlinePatterns.length >= 4) {
+            hasOutlinePattern = true;
+            // Extract color from first outline pattern
+            const colorMatch = outlinePatterns[0].match(/(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+)/);
+            if (colorMatch) {
+                outlineColor = colorMatch[0];
+            }
+        }
+        
+        // Look for shadow pattern (has blur and positive offsets)
+        const shadowPattern = shadowParts.find(part => {
+            return part.match(/\d+px\s+\d+px\s+[1-9]\d*px/); // Has significant blur
+        });
+        
+        if (shadowPattern) {
+            hasShadowPattern = true;
+            const shadowMatch = shadowPattern.match(/(\d+)px\s+(\d+)px\s+(\d+)px\s+(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+)/);
+            if (shadowMatch) {
+                shadowX = shadowMatch[1];
+                shadowY = shadowMatch[2];
+                shadowBlur = shadowMatch[3];
+                shadowColor = shadowMatch[4];
+            }
+        }
+        
+        // Set data attributes for detected effects
+        if (hasOutlinePattern) {
+            textElement.setAttribute('data-has-outline', 'true');
+            textElement.setAttribute('data-outline-color', outlineColor);
+        }
+        
+        if (hasShadowPattern) {
+            textElement.setAttribute('data-has-shadow', 'true');
+            textElement.setAttribute('data-shadow-color', shadowColor);
+            textElement.setAttribute('data-shadow-x', shadowX);
+            textElement.setAttribute('data-shadow-y', shadowY);
+            textElement.setAttribute('data-shadow-blur', shadowBlur);
+        }
+        
+        // If we detected any effects, reapply using new system
+        if (hasOutlinePattern || hasShadowPattern) {
+            this.combineTextEffects(textElement);
+        }
+    }
+
+    /**
+     * Forces browser to repaint an element to ensure CSS changes are immediately visible
+     */
+    forceRepaint(element) {
+        // This is a classic "hack" to force a browser reflow and repaint.
+        // Hiding and then immediately showing an element forces the browser to
+        // recalculate its layout and redraw it. This is useful for ensuring
+        // that style changes (like text-shadow) are rendered immediately.
+        const originalDisplay = element.style.display;
+        element.style.display = 'none';
+        // By reading a layout property like offsetHeight, we flush the browser's
+        // style change queue and force it to compute the layout.
+        void element.offsetHeight; // The 'void' is used to indicate we only want the side-effect (the reflow).
+        element.style.display = originalDisplay;
     }
 }
 

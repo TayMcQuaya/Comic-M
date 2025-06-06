@@ -3635,7 +3635,17 @@ label {
     border: 1px solid var(--border-color);
     border-radius: 3px;
     background: white;
+    color: #333; /* Added dark text color for readability */
     min-width: 60px;
+    font-family: monospace; /* Better for hex codes */
+    text-align: center;
+}
+
+.hex-display[disabled] {
+    background: #f0f0f0;
+    color: #888;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* Effects Section */
@@ -4938,10 +4948,18 @@ select.font-family option {
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background-color: #fff;
+    color: #333; /* Added dark text color for readability */
     font-family: monospace;
     font-size: 14px;
     text-align: center;
     min-width: 70px;
+}
+
+.hex-display[disabled] {
+    background: #f0f0f0;
+    color: #888;
+    cursor: not-allowed;
+    opacity: 0.7;
 }
 
 /* Color picker styling with hex input */

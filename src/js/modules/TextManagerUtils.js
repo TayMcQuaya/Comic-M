@@ -48,10 +48,18 @@ export class TextManagerUtils {
      * @returns {string} The shadow color in hex format.
      */
     getShadowColor(textElement) {
+        // Try to get from data attribute first (new implementation)
+        const dataColor = textElement.getAttribute('data-shadow-color');
+        if (dataColor) return dataColor;
+        
+        // Fallback to parsing text-shadow for backwards compatibility
         const shadow = textElement.style.textShadow || '';
-        // Updated regex to better handle various color formats including hex
-        const colorMatch = shadow.match(/(#[a-fA-F0-9]{3,6}|rgba?\\([^)]+\\)|hsla?\\([^)]+\\)|[a-zA-Z]+)/);
-        return colorMatch ? globalRgbToHex(colorMatch[0]) : '#666666'; // Use imported util
+        // Look for drop shadow (not the 0px offset outline shadows)
+        const dropShadowMatch = shadow.match(/(\d+px\s+\d+px\s+\d+px\s+(#[a-fA-F0-9]{3,6}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-zA-Z]+))/);
+        if (dropShadowMatch) {
+            return globalRgbToHex(dropShadowMatch[2]);
+        }
+        return '#666666'; // Default shadow color
     }
 
     /**
@@ -60,15 +68,30 @@ export class TextManagerUtils {
      * @returns {object} An object with x, y, and blur properties.
      */
     getShadowOffset(textElement) {
+        // Try to get from data attributes first (new implementation)
+        const dataX = textElement.getAttribute('data-shadow-x');
+        const dataY = textElement.getAttribute('data-shadow-y');
+        const dataBlur = textElement.getAttribute('data-shadow-blur');
+        
+        if (dataX !== null && dataY !== null && dataBlur !== null) {
+            return {
+                x: parseInt(dataX) || 2,
+                y: parseInt(dataY) || 2,
+                blur: parseInt(dataBlur) || 2
+            };
+        }
+        
+        // Fallback to parsing text-shadow for backwards compatibility
         const shadow = textElement.style.textShadow || '';
         const defaultOffset = { x: 2, y: 2, blur: 2 };
-        // Regex to capture numbers (potentially negative) followed by 'px'
-        const parts = shadow.match(/(-?\\d+(\\.\\d+)?)px\\s+(-?\\d+(\\.\\d+)?)px\\s+(-?\\d+(\\.\\d+)?)px/);
-        if (parts && parts.length >= 6) {
+        
+        // Look for drop shadow pattern (not 0px offset outline shadows)
+        const parts = shadow.match(/(\d+)px\s+(\d+)px\s+(\d+)px/);
+        if (parts && parts.length >= 4) {
             return {
                 x: parseInt(parts[1]) || defaultOffset.x,
-                y: parseInt(parts[3]) || defaultOffset.y,
-                blur: parseInt(parts[5]) || defaultOffset.blur
+                y: parseInt(parts[2]) || defaultOffset.y,
+                blur: parseInt(parts[3]) || defaultOffset.blur
             };
         }
         return defaultOffset; // Return defaults if no match or incomplete
