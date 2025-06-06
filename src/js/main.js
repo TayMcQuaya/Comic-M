@@ -2101,22 +2101,8 @@ class ComicCreator {
         //     saveProjectBtn.addEventListener('click', () => this.saveProject());
         // }
         
-        // Load Project button
-        const loadProjectBtn = document.getElementById('load-project-btn');
-        if (loadProjectBtn) {
-            loadProjectBtn.addEventListener('click', () => {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = '.json';
-                input.onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                        await this.loadProject(file);
-                    }
-                };
-                input.click();
-            });
-        }
+        // Load Project button is already handled in setupEventListeners() method
+        // to avoid duplicate event listeners that cause the file dialog to open twice
     }
 
     // New method to handle custom filename prompt
