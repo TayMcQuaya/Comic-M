@@ -612,6 +612,10 @@ class ComicCreator {
         Object.assign(currentPage, pageStateSnapshot);
 
         console.log(`Saved page ${this.currentPageIndex} state snapshot`);
+        
+        // Update back to editor button when page content changes
+        this.updateBackToEditorButton();
+        
         return pageStateSnapshot;
     }
 
@@ -722,10 +726,9 @@ class ComicCreator {
                     if (file) {
                         try {
                             await this.loadProject(file);
-                            // Go to editor after loading
-                            document.getElementById('upload-page').classList.remove('active');
-                            document.getElementById('editor-page').classList.add('active');
-                            this.showBackToEditorButton(); // Show button when editor is visited
+                                        // Go to editor after loading
+            document.getElementById('upload-page').classList.remove('active');
+            document.getElementById('editor-page').classList.add('active');
                         } catch (error) {
                             console.error("Error loading project:", error);
                             this.uiManager.showNotification("Error loading project. Check console.", "error");
@@ -1059,7 +1062,6 @@ class ComicCreator {
         // Navigate to editor page
         document.querySelector('#layout-page').classList.remove('active');
         document.querySelector('#editor-page').classList.add('active');
-        this.showBackToEditorButton(); // Show button when editor is visited
         console.log("[ComicCreator.createComic] Navigated to editor page.");
 
         // --- Auto-save calls --- 
@@ -1179,6 +1181,9 @@ class ComicCreator {
             // Call the method on the BackgroundManager instance
             this.backgroundManager.applyBackgroundStyle('classic-white'); 
         }
+
+        // Update back to editor button after layout is created
+        this.updateBackToEditorButton();
 
         // Only save state if this is a new page creation and not loading an existing page
         // This is important to avoid overriding existing page states
@@ -1382,7 +1387,6 @@ class ComicCreator {
         // Show editor page
         document.getElementById('layout-page').classList.remove('active');
         document.getElementById('editor-page').classList.add('active');
-        this.showBackToEditorButton(); // Show button when editor is visited
         
         // Set sidebar mode to 'panels' when a new page is created
         this.currentSidebarMode = 'panels';
@@ -1401,6 +1405,9 @@ class ComicCreator {
                 panelsTab.classList.add('active');
             }
         }
+
+        // Update back to editor button after new page is created
+        this.updateBackToEditorButton();
         
         // Update the sidebar content to show panel controls
         this.uiManager.updateRightSidebarView();
@@ -1659,6 +1666,9 @@ class ComicCreator {
         // Update navigation UI
         this.updatePageIndicator();
         this.updateNavigationButtons();
+        
+        // Update back to editor button after page deletion
+        this.updateBackToEditorButton();
     }
 
 
@@ -2085,6 +2095,9 @@ class ComicCreator {
                 console.warn("[ComicCreator.loadProject] AutoSaveManager not available.");
             }
             // --- End Auto-save calls ---
+            
+            // Update back to editor button after project is fully loaded
+            this.updateBackToEditorButton();
 
         } catch (error) {
             console.error('Error loading project:', error);
@@ -2437,6 +2450,9 @@ class ComicCreator {
         // If navigating to layout, no timer should be started yet.
         // If for some reason resetProject was called and we remain on editor (not typical), then timer would need restart.
         // For now, assume resetProject leads away from editor or to a state where editor entry will handle timer.
+
+        // Update back to editor button after project reset
+        this.updateBackToEditorButton();
     }
 
     // --- Update Sticker Controls ---
@@ -2829,20 +2845,48 @@ class ComicCreator {
     }
 
     /**
-     * Shows or hides the back to editor button based on whether images are uploaded
+     * Shows or hides the back to editor button based on whether images are uploaded AND a layout exists
      */
     updateBackToEditorButton() {
         const backToEditorBtn = document.getElementById('back-to-editor-btn');
         if (backToEditorBtn) {
             const hasImages = this.imageLibrary.getImages().length > 0;
-            if (hasImages) {
+            const hasLayout = this.hasValidLayout();
+            
+            if (hasImages && hasLayout) {
                 backToEditorBtn.style.display = 'flex';
-                console.log('[ComicCreator] Back to editor button now visible - images are uploaded');
+                console.log('[ComicCreator] Back to editor button now visible - images uploaded and layout exists');
             } else {
                 backToEditorBtn.style.display = 'none';
-                console.log('[ComicCreator] Back to editor button hidden - no images uploaded');
+                if (!hasImages) {
+                    console.log('[ComicCreator] Back to editor button hidden - no images uploaded');
+                } else if (!hasLayout) {
+                    console.log('[ComicCreator] Back to editor button hidden - no layout chosen yet');
+                }
             }
         }
+    }
+
+    /**
+     * Checks if the current page has a valid layout (not empty) or has any content
+     */
+    hasValidLayout() {
+        const currentPage = this.pages[this.currentPageIndex];
+        if (!currentPage) return false;
+        
+        // Check if layout is set and not 'empty'
+        const hasNonEmptyLayout = currentPage.layout && currentPage.layout !== 'empty';
+        
+        // Check if there are any panels with content
+        const hasPanelContent = currentPage.panelStates && currentPage.panelStates.length > 0;
+        
+        // Check if there are any text elements, stickers, or background content
+        const hasTextContent = currentPage.textStates && currentPage.textStates.length > 0;
+        const hasStickerContent = currentPage.stickerStates && currentPage.stickerStates.length > 0;
+        const hasBackgroundContent = currentPage.backgroundState && currentPage.backgroundState.imageId;
+        
+        // Return true if any content exists or if a non-empty layout is chosen
+        return hasNonEmptyLayout || hasPanelContent || hasTextContent || hasStickerContent || hasBackgroundContent;
     }
 
     /**
