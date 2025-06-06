@@ -33,20 +33,30 @@ export class ImageLibrary {
 
     addImages(newImages) {
         this.uploadedImages.push(...newImages);
-        // Potentially trigger updates or events here if needed in the future
+        // Update back to editor button when images are added
+        if (this.comicCreator && this.comicCreator.updateBackToEditorButton) {
+            this.comicCreator.updateBackToEditorButton();
+        }
     }
 
     removeImage(imageId) {
         this.uploadedImages = this.uploadedImages.filter(img => String(img.id) !== String(imageId));
         // Also remove from selection if it was selected
         this.removeSelectedAsset(imageId);
-        // Potentially trigger updates or events here
+        // Update back to editor button when images are removed
+        if (this.comicCreator && this.comicCreator.updateBackToEditorButton) {
+            this.comicCreator.updateBackToEditorButton();
+        }
     }
     
     clearImages() {
         this.uploadedImages = [];
         this.selectedAssets = [];
         this.lastSelectedAsset = null;
+        // Update back to editor button when images are cleared
+        if (this.comicCreator && this.comicCreator.updateBackToEditorButton) {
+            this.comicCreator.updateBackToEditorButton();
+        }
     }
 
     getSelectedAssets() {

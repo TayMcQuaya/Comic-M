@@ -37,7 +37,6 @@ class ComicCreator {
             landscape10x8: { width: 700, height: 560, name: "Landscape (10:8)" }
         };
         this.selectedCanvasDimension = 'current'; // Default to 1:1
-        this.hasVisitedEditor = false; // Track if editor has been visited
 
         // this.currentPanel = null; // Moved to PanelManager
         // this.currentTextBox = null; // Will be managed by TextManager
@@ -145,6 +144,9 @@ class ComicCreator {
             console.log("[ComicCreator.init] Skipping canvas dimension setting in init flow due to auto-save restore or Puppeteer.");
         }
 
+        // Initialize the back to editor button state based on current images
+        this.updateBackToEditorButton();
+        
         // this.setupInitialPage(); // Commented out as the function doesn't exist / to prevent error
         console.log("[Main] ComicCreator init finished.");
     }
@@ -2827,17 +2829,28 @@ class ComicCreator {
     }
 
     /**
-     * Shows the back to editor button when the editor is visited for the first time
+     * Shows or hides the back to editor button based on whether images are uploaded
      */
-    showBackToEditorButton() {
-        if (!this.hasVisitedEditor) {
-            this.hasVisitedEditor = true;
-            const backToEditorBtn = document.getElementById('back-to-editor-btn');
-            if (backToEditorBtn) {
+    updateBackToEditorButton() {
+        const backToEditorBtn = document.getElementById('back-to-editor-btn');
+        if (backToEditorBtn) {
+            const hasImages = this.imageLibrary.getImages().length > 0;
+            if (hasImages) {
                 backToEditorBtn.style.display = 'flex';
-                console.log('[ComicCreator] Back to editor button now visible - editor has been visited');
+                console.log('[ComicCreator] Back to editor button now visible - images are uploaded');
+            } else {
+                backToEditorBtn.style.display = 'none';
+                console.log('[ComicCreator] Back to editor button hidden - no images uploaded');
             }
         }
+    }
+
+    /**
+     * @deprecated Use updateBackToEditorButton() instead
+     * Legacy method for backwards compatibility
+     */
+    showBackToEditorButton() {
+        this.updateBackToEditorButton();
     }
 }
 
