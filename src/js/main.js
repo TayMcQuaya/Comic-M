@@ -37,6 +37,7 @@ class ComicCreator {
             landscape10x8: { width: 700, height: 560, name: "Landscape (10:8)" }
         };
         this.selectedCanvasDimension = 'current'; // Default to 1:1
+        this.hasVisitedEditor = false; // Track if editor has been visited
 
         // this.currentPanel = null; // Moved to PanelManager
         // this.currentTextBox = null; // Will be managed by TextManager
@@ -665,6 +666,7 @@ class ComicCreator {
                 if (this.pages[this.currentPageIndex] && (this.pages[this.currentPageIndex].layout || this.pages[this.currentPageIndex].panelStates.length > 0)) {
                     document.getElementById('upload-page').classList.remove('active');
                     document.getElementById('editor-page').classList.add('active');
+                    this.showBackToEditorButton(); // Show button when editor is visited
                 } else {
                     // If no project seems active, go to layout selection
                     document.getElementById('upload-page').classList.remove('active');
@@ -721,6 +723,7 @@ class ComicCreator {
                             // Go to editor after loading
                             document.getElementById('upload-page').classList.remove('active');
                             document.getElementById('editor-page').classList.add('active');
+                            this.showBackToEditorButton(); // Show button when editor is visited
                         } catch (error) {
                             console.error("Error loading project:", error);
                             this.uiManager.showNotification("Error loading project. Check console.", "error");
@@ -1054,6 +1057,7 @@ class ComicCreator {
         // Navigate to editor page
         document.querySelector('#layout-page').classList.remove('active');
         document.querySelector('#editor-page').classList.add('active');
+        this.showBackToEditorButton(); // Show button when editor is visited
         console.log("[ComicCreator.createComic] Navigated to editor page.");
 
         // --- Auto-save calls --- 
@@ -1376,6 +1380,7 @@ class ComicCreator {
         // Show editor page
         document.getElementById('layout-page').classList.remove('active');
         document.getElementById('editor-page').classList.add('active');
+        this.showBackToEditorButton(); // Show button when editor is visited
         
         // Set sidebar mode to 'panels' when a new page is created
         this.currentSidebarMode = 'panels';
@@ -2811,6 +2816,7 @@ class ComicCreator {
             document.querySelector('#upload-page')?.classList.remove('active');
             document.querySelector('#layout-page')?.classList.remove('active');
             document.querySelector('#editor-page')?.classList.add('active');
+            this.showBackToEditorButton(); // Show button when editor is visited
             
             console.log('[ComicCreator Headless] Core state loaded. Loading page content for index:', this.currentPageIndex);
             await this.loadPageState(this.currentPageIndex); // Load the initial page
@@ -2831,6 +2837,20 @@ class ComicCreator {
         } catch (error) {
             console.error('[ComicCreator Headless] Error loading project from state object:', error);
             return false; // Indicate failure
+        }
+    }
+
+    /**
+     * Shows the back to editor button when the editor is visited for the first time
+     */
+    showBackToEditorButton() {
+        if (!this.hasVisitedEditor) {
+            this.hasVisitedEditor = true;
+            const backToEditorBtn = document.getElementById('back-to-editor-btn');
+            if (backToEditorBtn) {
+                backToEditorBtn.style.display = 'flex';
+                console.log('[ComicCreator] Back to editor button now visible - editor has been visited');
+            }
         }
     }
 }

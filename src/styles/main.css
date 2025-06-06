@@ -343,6 +343,37 @@ body {
     margin-top: 3rem;
 }
 
+/* Enhanced styling for back to editor button */
+#back-to-editor-btn {
+    display: none; /* Initially hidden until editor has been visited */
+    /* Enhanced styling matching primary buttons but keeping secondary color */
+    background-color: #6c757d; /* Keep the same color as requested */
+    color: white;
+    font-size: 1.1rem; /* Larger font size */
+    font-weight: 600; /* Bold font weight */
+    padding: 12px 20px; /* More generous padding */
+    border: none;
+    border-radius: 6px; /* Slightly larger border radius */
+    cursor: pointer;
+    display: inline-flex; /* Use flexbox for better alignment */
+    align-items: center; /* Center content vertically */
+    justify-content: center; /* Center content horizontally */
+    gap: 8px; /* Space between icon and text */
+    transition: all 0.3s ease; /* Smooth transitions */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+#back-to-editor-btn:hover {
+    background-color: #5a6268; /* Darker shade on hover */
+    transform: translateY(-1px); /* Subtle lift effect */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+#back-to-editor-btn i {
+    font-size: 1rem; /* Icon size matching font size */
+    margin: 0; /* Remove default margins */
+}
+
 .button-group .primary-btn {
     margin-top: 0;
 }
