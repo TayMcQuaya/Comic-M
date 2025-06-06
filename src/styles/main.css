@@ -2,7 +2,7 @@
 
 /* Root variables for consistent styling */
 :root {
-    /* Main theme colors - Manga/Comic inspired */
+    /* Main theme colors - Manga/Comic inspired - DEFAULT THEME */
     --primary-color: #FF3B3B;      /* Vibrant red for emphasis */
     --secondary-color: #FF8A00;    /* Warm orange for accents */
     --accent-color: #FFD700;       /* Gold for highlights */
@@ -14,6 +14,7 @@
     --text-color: #FFFFFF;        /* Pure white for readability */
     --text-muted: #B8B8B8;       /* Light gray for secondary text */
     --text-bright: #FFD700;      /* Gold for emphasis */
+    --button-text-color: #FFD700; /* Keep default gold for buttons */
     
     /* UI element colors */
     --border-color: #404040;      /* Medium gray for borders */
@@ -34,6 +35,102 @@
     /* Canvas Dimensions */
     --canvas-width: 700px;
     --canvas-height: 700px;
+}
+
+/* GREEN THEME */
+[data-theme="green"] {
+    --primary-color: #4CAF50;      /* Material Green */
+    --secondary-color: #66BB6A;    /* Light Green */
+    --accent-color: #81C784;       /* Lighter Green accent */
+    --background-color: #1B2E1B;   /* Dark green background */
+    --card-bg: #2E4A2E;           /* Dark green cards */
+    --sidebar-bg: #263926;        /* Dark green sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #B8CDB8;       /* Light green-tinted gray */
+    --text-bright: #00E676;      /* Bright intense green for emphasis */
+    --button-text-color: #39FF14; /* Super intense neon green for buttons */
+    
+    /* UI element colors */
+    --border-color: #4A6B4A;      /* Medium green for borders */
+    --input-bg: #3A5A3A;         /* Green-tinted input background */
+    --hover-color: #4A6B4A;      /* Green hover state */
+    --active-color: #4CAF50;     /* Active state uses primary green */
+    
+    /* Feedback colors */
+    --success-color: #66BB6A;     /* Bright green */
+    --warning-color: #FFB74D;     /* Orange warning */
+    --danger-color: #E57373;      /* Red danger */
+    
+    /* Effects */
+    --shadow-color: rgba(0, 0, 0, 0.6);
+    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    --panel-border-color: #4CAF50;
+}
+
+/* BLUE THEME */
+[data-theme="blue"] {
+    --primary-color: #2196F3;      /* Material Blue */
+    --secondary-color: #42A5F5;    /* Light Blue */
+    --accent-color: #64B5F6;       /* Lighter Blue accent */
+    --background-color: #1B2B3D;   /* Dark blue background */
+    --card-bg: #2E4057;           /* Dark blue cards */
+    --sidebar-bg: #263649;        /* Dark blue sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #B8C9DB;       /* Light blue-tinted gray */
+    --text-bright: #00BFFF;      /* Bright intense blue for emphasis */
+    --button-text-color: #00FFFF; /* Super intense electric cyan for buttons */
+    
+    /* UI element colors */
+    --border-color: #4A6B8A;      /* Medium blue for borders */
+    --input-bg: #3A516A;         /* Blue-tinted input background */
+    --hover-color: #4A6B8A;      /* Blue hover state */
+    --active-color: #2196F3;     /* Active state uses primary blue */
+    
+    /* Feedback colors */
+    --success-color: #4CAF50;     /* Green success */
+    --warning-color: #FFB74D;     /* Orange warning */
+    --danger-color: #E57373;      /* Red danger */
+    
+    /* Effects */
+    --shadow-color: rgba(0, 0, 0, 0.6);
+    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    --panel-border-color: #2196F3;
+}
+
+/* MONOCHROME THEME */
+[data-theme="monochrome"] {
+    --primary-color: #757575;      /* Dark gray primary */
+    --secondary-color: #9E9E9E;    /* Medium gray */
+    --accent-color: #BDBDBD;       /* Light gray accent */
+    --background-color: #121212;   /* Very dark gray background */
+    --card-bg: #1E1E1E;           /* Dark gray cards */
+    --sidebar-bg: #181818;        /* Darker gray sidebar */
+    
+    /* Text colors */
+    --text-color: #FFFFFF;        /* Pure white for readability */
+    --text-muted: #9E9E9E;       /* Medium gray */
+    --text-bright: #F5F5F5;      /* Bright white-gray for emphasis */
+    --button-text-color: #EEEEEE; /* Complementary light gray for buttons */
+    
+    /* UI element colors */
+    --border-color: #424242;      /* Medium gray for borders */
+    --input-bg: #2A2A2A;         /* Dark gray input background */
+    --hover-color: #3A3A3A;      /* Gray hover state */
+    --active-color: #757575;     /* Active state uses dark gray */
+    
+    /* Feedback colors */
+    --success-color: #66BB6A;     /* Green success */
+    --warning-color: #FFB74D;     /* Orange warning */
+    --danger-color: #E57373;      /* Red danger */
+    
+    /* Effects */
+    --shadow-color: rgba(0, 0, 0, 0.8);
+    --panel-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+    --panel-border-color: #757575;
 }
 
 * {
@@ -265,7 +362,7 @@ body {
 .thumbnail-container .image-name {
     text-align: center;
     font-size: 11px;
-    color: #eee;
+    color: var(--text-bright);
     margin-top: 4px;
     word-break: break-all;
     overflow: hidden;
@@ -290,18 +387,18 @@ body {
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.2s;
-    color: #FFFF00;
+    color: var(--text-bright);
 }
 
 .thumbnail-container:hover .delete-btn {
     opacity: 1;
     background: rgba(255, 68, 68, 0.9);
-    color: #FFFF00;
+    color: var(--text-bright);
 }
 
 .thumbnail-container .delete-btn:hover {
     background: #ff4444;
-    color: #FFFF00;
+    color: var(--text-bright);
 }
 
 /* Layout Selection Page */
@@ -931,7 +1028,7 @@ img[draggable="false"] {
     right: 0.5rem;
     padding: 0.5rem;
     background: rgba(0, 0, 0, 0.7);
-    color: white;
+    color: var(--text-bright);
     font-size: 0.8rem;
     text-align: center;
     white-space: nowrap;
@@ -1661,7 +1758,7 @@ body.dragging-active .drag-instruction-overlay {
 
 .delete-panel-image-btn {
     background: #ff4444;
-    color: #FFFF00;
+    color: var(--text-bright);
     border: none;
     padding: 0.8rem;
     border-radius: 5px;
@@ -1681,7 +1778,7 @@ body.dragging-active .drag-instruction-overlay {
 
 .delete-panel-image-btn i {
     font-size: 1rem;
-    color: #FFFF00;
+    color: var(--text-bright);
 }
 
 /* Update zoom group styling */
@@ -1902,6 +1999,19 @@ body.dragging-active .drag-instruction-overlay {
 .danger-btn:disabled {
     background-color: #6c757d;
     cursor: not-allowed;
+}
+
+/* Theme-specific danger button colors (keeping default unchanged) */
+[data-theme="green"] .danger-btn {
+    background: var(--primary-color);  /* Match primary button color */
+}
+
+[data-theme="blue"] .danger-btn {
+    background: var(--primary-color);  /* Match primary button color */
+}
+
+[data-theme="monochrome"] .danger-btn {
+    background: #424242;  /* Keep distinct dark gray for monochrome */
 }
 
 /* Panel Property Sections */
@@ -2239,14 +2349,15 @@ label {
     font-weight: bold;
 }
 
-/* Update other buttons */
+/* Update other buttons - Theme-aware colors and bold fonts */
 .primary-btn, 
 .danger-btn,
 .tool-btn,
 .style-btn,
 .position-btn,
 .reset-zoom-btn {
-    color: #FFFF00 !important;
+    color: var(--button-text-color) !important;
+    font-weight: bold !important;
 }
 
 .primary-btn i, 
@@ -2255,17 +2366,18 @@ label {
 .style-btn i,
 .position-btn i,
 .reset-zoom-btn i {
-    color: #FFFF00 !important;
+    color: var(--button-text-color) !important;
+    font-weight: bold !important;
 }
 
 .delete-btn:hover {
     background: #ff4444;
-    color: #FFFF00;
+    color: var(--text-bright);
 }
 
-/* Ensure thumbnail delete buttons also have yellow text */
+/* Ensure thumbnail delete buttons use theme colors */
 .thumbnail-container .delete-btn {
-    color: #FFFF00;
+    color: var(--text-bright);
 }
 
 /* Text Bubbles */
@@ -4357,6 +4469,153 @@ select.font-family option {
     border-bottom-color: var(--primary-color);
 }
 
+/* Theme Selector Styles */
+.theme-selector-container {
+    margin: 1rem 0;
+    padding: 1rem;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.theme-selector-label {
+    color: var(--text-bright);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.theme-selector {
+    position: relative;
+    width: 100%;
+}
+
+.theme-dropdown-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background-color: var(--input-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.theme-dropdown-btn:hover {
+    border-color: var(--primary-color);
+    background-color: var(--hover-color);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.theme-dropdown-btn.active {
+    border-color: var(--accent-color);
+    background-color: var(--primary-color);
+    color: var(--text-color);
+}
+
+.theme-dropdown-icon {
+    transition: transform 0.3s ease;
+    font-size: 0.8rem;
+}
+
+.theme-dropdown-btn.active .theme-dropdown-icon {
+    transform: rotate(180deg);
+}
+
+.theme-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    z-index: 1000;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.theme-dropdown-menu.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.theme-option {
+    padding: 0.75rem 1rem;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.theme-option:last-child {
+    border-bottom: none;
+}
+
+.theme-option:hover {
+    background-color: var(--hover-color);
+    color: var(--text-bright);
+    transform: translateX(5px);
+}
+
+.theme-option.selected {
+    background-color: var(--primary-color);
+    color: var(--text-color);
+    font-weight: 600;
+}
+
+.theme-option.selected:hover {
+    background-color: var(--secondary-color);
+}
+
+.theme-preview-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.theme-preview-dot.default {
+    background: linear-gradient(45deg, #FF3B3B 0%, #FF8A00 50%, #FFD700 100%);
+}
+
+.theme-preview-dot.green {
+    background: linear-gradient(45deg, #4CAF50 0%, #66BB6A 50%, #81C784 100%);
+}
+
+.theme-preview-dot.blue {
+    background: linear-gradient(45deg, #2196F3 0%, #42A5F5 50%, #64B5F6 100%);
+}
+
+.theme-preview-dot.monochrome {
+    background: linear-gradient(45deg, #FFFFFF 0%, #E0E0E0 50%, #BDBDBD 100%);
+}
+
 /* Style the content area within the sidebar */
 /* .sidebar-content {
     /* Add styles if needed to manage content switching, for now it's simple */
@@ -4863,7 +5122,7 @@ body.exporting #comic-canvas {
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.2s;
-    color: #FFFF00;
+    color: var(--text-bright);
     z-index: 5;
 }
 
@@ -4973,6 +5232,48 @@ body.exporting #comic-canvas {
     text-overflow: ellipsis;
     max-width: 100%;
     text-align: center;
+    color: var(--text-bright);
+}
+
+/* Create Folder Button */
+.create-folder-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: var(--card-bg);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 1rem;
+    min-height: 100px;
+    gap: 0.5rem;
+}
+
+.create-folder-btn:hover {
+    border-color: var(--primary-color);
+    background: var(--hover-color);
+    transform: translateY(-2px);
+}
+
+.create-folder-btn i {
+    font-size: 2rem;
+    color: var(--text-bright);
+    margin-bottom: 0.5rem;
+}
+
+.create-folder-btn span {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-bright);
+    text-align: center;
+}
+
+/* Folder Name for Regular Folders */
+.folder-container .folder-name {
+    color: var(--text-bright);
 }
 
 /* Flip horizontal button */

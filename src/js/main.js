@@ -12,6 +12,7 @@ import { LayoutBuilderManager } from './modules/LayoutBuilderManager.js'; // Imp
 import { HistoryManager } from './modules/HistoryManager.js'; // Import HistoryManager
 import { AutoSaveManager } from './modules/AutoSaveManager.js'; // Import AutoSaveManager
 import { ViewportManager } from './modules/ViewportManager.js'; // Import ViewportManager
+import { ThemeManager } from './modules/ThemeManager.js'; // Import ThemeManager
 import config from './config.js';
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
@@ -65,6 +66,7 @@ class ComicCreator {
         this.historyManager = new HistoryManager(this); // Instantiate HistoryManager
         this.autoSaveManager = new AutoSaveManager(this); // Instantiate AutoSaveManager
         this.viewportManager = new ViewportManager(this); // Instantiate ViewportManager
+        this.themeManager = new ThemeManager(this); // Instantiate ThemeManager
         
         this.init();
     }
