@@ -388,7 +388,7 @@ export class ImageLibrary {
                             container.innerHTML = `
                                 <img src="${image.src}" alt="${image.name}">
                                 <div class="image-name">${image.name}</div>
-                                ${grid.closest('.editor-sidebar') ? '' : `<button class="delete-btn" data-image-id="${itemIdStr}">×</button>`}
+                                <button class="delete-btn" data-image-id="${itemIdStr}">×</button>
                             `;
                             
                             // Setup delete button if it exists (initial upload page only)
