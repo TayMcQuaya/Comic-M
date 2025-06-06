@@ -271,6 +271,8 @@ body {
 #upload-page {
     text-align: center;
     padding-bottom: 2rem;
+    overflow-y: visible; /* Remove page-level scrolling to prevent double scrollbars */
+    height: auto; /* Allow natural height instead of 100vh */
 }
 
 #upload-page h1 {
@@ -2363,6 +2365,8 @@ label {
     justify-content: center;
     min-height: 100vh;
     padding: 4rem 2rem;
+    overflow-y: visible; /* Remove page-level scrolling to prevent double scrollbars */
+    height: auto; /* Allow natural height instead of 100vh */
 }
 
 /* Custom Scrollbar Styles - Global */
