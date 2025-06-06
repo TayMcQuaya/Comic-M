@@ -5990,8 +5990,7 @@ body.exporting #comic-canvas {
     /* font-size: inherit !important; */ /* Potentially problematic if specific sizes are set - Commented out */
     /* color: inherit !important; */ /* Commented out */
     /* line-height: inherit !important; */ /* Commented out */
-    text-shadow: none !important; /* Remove editor-only text shadows */
-    -webkit-text-stroke: unset !important; /* Remove editor-only stroke */
+    /* DO NOT remove text-shadow or webkit-text-stroke - these are USER-APPLIED effects, not editor-only */
 }
 
 /* Mobile Restriction Styles */
