@@ -107,21 +107,22 @@ npm start
 
 HOW TO UPDATE CODE:
 frontend:
+
 root directory
 git add .
 git commit -m "your message"
 git push origin production
 npm run build
-
+---------------------------------
 vercel --prod
 
 backend:
+
 cd comic-pro-pdf-service-deploy
 git add .
 git commit -m "your message"
 git push origin main
-
-
+---------------------------------
 ssh root@IP_DROPLET
 type in password
 cd Comic-M-Backend
