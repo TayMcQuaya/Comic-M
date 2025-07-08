@@ -128,3 +128,6 @@ type in password
 cd Comic-M-Backend
 git pull
 pm2 restart all
+
+place where nginx file is stored on backend: 
+/etc/nginx/sites-available/comic-pro-pdf 
