@@ -380,7 +380,7 @@ export class UIManager {
         });
     }
 
-    showExportProgress(message, percentage, totalPages) {
+    showExportProgress(message, percentage, details = {}) {
         if (!this.exportProgressElement) {
             this.exportProgressElement = document.createElement('div');
             this.exportProgressElement.id = 'export-progress-indicator';
@@ -388,14 +388,16 @@ export class UIManager {
             this.exportProgressElement.className = 'export-progress-indicator'; 
             document.body.appendChild(this.exportProgressElement);
         }
-        this.updateExportProgress(message, percentage, totalPages);
+        // Pass details through to updateExportProgress
+        const totalPages = details.totalPages || 0;
+        this.updateExportProgress(message, percentage, totalPages, false, details.jobStatus, details);
         this.exportProgressElement.style.display = 'block'; // Or add a class to show
         this.exportProgressElement.classList.add('show');
     }
 
-    updateExportProgress(message, percentage, totalPages, isError = false, jobStatus = null) {
+    updateExportProgress(message, percentage, totalPages, isError = false, jobStatus = null, details = {}) {
         if (!this.exportProgressElement) {
-            this.showExportProgress(message, percentage, totalPages); // Create if not exists
+            this.showExportProgress(message, percentage, { totalPages, jobStatus, ...details }); // Create if not exists
             if (isError) { // Ensure error styling is applied if created in this call
                  this.exportProgressElement.classList.add('error');
             }
@@ -419,6 +421,45 @@ export class UIManager {
         
         // Clear previous content
         this.exportProgressElement.innerHTML = '';
+
+        // Add stage indicators if stage is provided
+        if (details.stage && !isError) {
+            const stagesContainer = document.createElement('div');
+            stagesContainer.className = 'export-progress-stages';
+            stagesContainer.style.cssText = 'display: flex; justify-content: space-between; margin-bottom: 1rem; padding: 0.5rem 0;';
+            
+            const stages = [
+                { id: 'prepare', label: '📚 Preparing', active: false },
+                { id: 'rendering', label: '🎨 Rendering', active: false },
+                { id: 'compile', label: '📄 Compiling', active: false },
+                { id: 'complete', label: '✅ Complete', active: false }
+            ];
+            
+            // Set active stage
+            stages.forEach(stage => {
+                if (stage.id === details.stage) {
+                    stage.active = true;
+                }
+            });
+            
+            stages.forEach(stage => {
+                const stageElement = document.createElement('div');
+                stageElement.className = `export-stage ${stage.active ? 'active' : ''}`;
+                stageElement.style.cssText = `
+                    flex: 1;
+                    text-align: center;
+                    font-size: 0.85rem;
+                    padding: 0.25rem;
+                    opacity: ${stage.active ? '1' : '0.4'};
+                    font-weight: ${stage.active ? 'bold' : 'normal'};
+                    transition: all 0.3s;
+                `;
+                stageElement.textContent = stage.label;
+                stagesContainer.appendChild(stageElement);
+            });
+            
+            this.exportProgressElement.appendChild(stagesContainer);
+        }
 
         const textElement = document.createElement('div');
         textElement.className = 'progress-text';
@@ -536,5 +577,108 @@ export class UIManager {
                 }, 300);
             });
         });
+    }
+
+    /**
+     * Shows a modal for choosing export method (client-side vs server-side)
+     * @returns {Promise<string|null>} - Resolves with "client", "server", or null
+     */
+    async showExportMethodModal() {
+        return new Promise((resolve) => {
+            const modalOverlay = document.createElement('div');
+            modalOverlay.className = 'modal-overlay export-method-modal-overlay';
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal export-method-modal';
+            modal.style.maxWidth = '600px';
+            
+            modal.innerHTML = `
+                <h3 style="text-align: center; margin-bottom: 1.5rem;">Choose Export Method</h3>
+                <div class="export-method-options" style="display: flex; gap: 1.5rem; margin-bottom: 1rem;">
+                    <div class="export-option" data-method="client" style="flex: 1; padding: 1.5rem; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #333;">⚡ Fast Export</h4>
+                        <p style="color: #666; margin: 0 0 1rem 0; font-size: 0.9rem;">Process on your device</p>
+                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85rem; color: #555;">
+                            <li style="margin: 0.3rem 0;">✓ Instant start</li>
+                            <li style="margin: 0.3rem 0;">✓ No waiting queue</li>
+                            <li style="margin: 0.3rem 0;">✓ Works offline</li>
+                        </ul>
+                        <button class="primary-btn" style="width: 100%; margin-top: 1rem;">Use Fast Export</button>
+                    </div>
+                    <div class="export-option" data-method="server" style="flex: 1; padding: 1.5rem; border: 2px solid #ddd; border-radius: 8px; cursor: pointer; transition: all 0.3s;">
+                        <h4 style="margin: 0 0 0.5rem 0; color: #333;">🎨 High Quality Export</h4>
+                        <p style="color: #666; margin: 0 0 1rem 0; font-size: 0.9rem;">Process on our servers</p>
+                        <ul style="list-style: none; padding: 0; margin: 0; font-size: 0.85rem; color: #555;">
+                            <li style="margin: 0.3rem 0;">✓ Handles large comics</li>
+                            <li style="margin: 0.3rem 0;">✓ PDF compression</li>
+                            <li style="margin: 0.3rem 0;">✓ Best compatibility</li>
+                        </ul>
+                        <button class="secondary-btn" style="width: 100%; margin-top: 1rem;">Use Server Export</button>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button class="secondary-btn cancel-export-btn">Cancel</button>
+                </div>
+            `;
+            
+            // Add hover effects
+            const exportOptions = modal.querySelectorAll('.export-option');
+            exportOptions.forEach(option => {
+                option.addEventListener('mouseenter', () => {
+                    option.style.borderColor = '#007bff';
+                    option.style.boxShadow = '0 4px 12px rgba(0,123,255,0.15)';
+                });
+                option.addEventListener('mouseleave', () => {
+                    option.style.borderColor = '#ddd';
+                    option.style.boxShadow = 'none';
+                });
+                
+                const button = option.querySelector('button');
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const method = option.dataset.method;
+                    this.closeModal(modal, modalOverlay);
+                    resolve(method);
+                });
+            });
+            
+            // Cancel button
+            const cancelBtn = modal.querySelector('.cancel-export-btn');
+            cancelBtn.addEventListener('click', () => {
+                this.closeModal(modal, modalOverlay);
+                resolve(null);
+            });
+            
+            // Overlay click to cancel
+            modalOverlay.addEventListener('click', () => {
+                this.closeModal(modal, modalOverlay);
+                resolve(null);
+            });
+            
+            // Show modal
+            document.body.appendChild(modalOverlay);
+            document.body.appendChild(modal);
+            
+            setTimeout(() => {
+                modalOverlay.style.display = 'block';
+                modal.style.display = 'block';
+                setTimeout(() => {
+                    modal.classList.add('active');
+                    modalOverlay.classList.add('active');
+                }, 10);
+            }, 0);
+        });
+    }
+    
+    /**
+     * Helper method to close modals with animation
+     */
+    closeModal(modal, overlay) {
+        modal.classList.remove('active');
+        overlay.classList.remove('active');
+        setTimeout(() => {
+            if (modal.parentNode) document.body.removeChild(modal);
+            if (overlay.parentNode) document.body.removeChild(overlay);
+        }, 300);
     }
 } 

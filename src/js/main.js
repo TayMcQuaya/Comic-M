@@ -855,7 +855,8 @@ class ComicCreator {
     }
 
     // Helper for polling export progress (extracted from download listener)
-    pollExportProgress(jobId, totalPages) {
+    pollExportProgress(jobId, totalPages, startTime = null) {
+        const exportStartTime = startTime || Date.now();
         const progressInterval = setInterval(async () => {
                     if (!jobId) {
                         clearInterval(progressInterval);
@@ -881,6 +882,11 @@ class ComicCreator {
                     this.uiManager.updateExportProgress('Compressing PDF... This may take a few minutes. <br>Please be patient.', 100, totalPages, false, 'compressing');
                         } else if (progressData.status === 'complete') {
                             clearInterval(progressInterval);
+                            
+                            // Track successful server export
+                            const duration = Date.now() - exportStartTime;
+                            this.trackExportMetrics('server', totalPages, duration, true);
+                            
                     this.uiManager.updateExportProgress('PDF ready! Preparing download...', 100, totalPages, false, 'complete');
                     window.location.href = config.endpoints.downloadPdf(jobId);
                             setTimeout(() => {
@@ -891,7 +897,12 @@ class ComicCreator {
                     }, 3000);
                         } else if (progressData.status === 'error') {
                             clearInterval(progressInterval);
+                            
+                            // Track failed server export
+                            const duration = Date.now() - exportStartTime;
                             const errorMessage = progressData.error || 'Unknown error during PDF generation.';
+                            this.trackExportMetrics('server', totalPages, duration, false, errorMessage);
+                            
                             this.uiManager.updateExportProgress(`Error: ${errorMessage}`, percentage, totalPages, true);
                             // Restore viewport state on error
                             this.viewportManager.restoreAfterExport();
@@ -930,8 +941,16 @@ class ComicCreator {
         }
         
         // For medium comics (20-50 pages), ask user preference
-        // For now, default to client if suitable, server otherwise
-        return estimate.suitable ? 'client' : 'server';
+        const userChoice = await this.uiManager.showExportMethodModal();
+        
+        // If user cancels or closes modal, default to automatic selection
+        if (!userChoice) {
+            console.log('[selectExportMethod] User cancelled export method selection, using automatic');
+            return estimate.suitable ? 'client' : 'server';
+        }
+        
+        console.log(`[selectExportMethod] User selected: ${userChoice}`);
+        return userChoice;
     }
     
     /**
@@ -939,6 +958,7 @@ class ComicCreator {
      */
     async exportViaClient(filename) {
         console.log('[exportViaClient] Starting client-side export');
+        const startTime = Date.now();
         
         try {
             this.uiManager.showExportProgress('Starting client-side export...', 0);
@@ -952,11 +972,17 @@ class ComicCreator {
             });
             
             if (success) {
+                const duration = Date.now() - startTime;
+                this.trackExportMetrics('client', this.pages.length, duration, true);
+                
                 this.uiManager.hideExportProgress();
                 this.uiManager.showNotification('PDF exported successfully!', 'success');
                 console.log('[exportViaClient] Export completed successfully');
             }
         } catch (error) {
+            const duration = Date.now() - startTime;
+            this.trackExportMetrics('client', this.pages.length, duration, false, error.message);
+            
             console.error('[exportViaClient] Export error:', error);
             this.uiManager.hideExportProgress();
             
@@ -975,6 +1001,7 @@ class ComicCreator {
      */
     async exportViaServer(filename) {
         console.log('[exportViaServer] Starting server-side export');
+        const startTime = Date.now();
         
         const comicName = filename;
         console.log(`[exportViaServer] Filename: ${comicName}. Prompting for compression choice...`);
@@ -1026,12 +1053,68 @@ class ComicCreator {
             }
 
             const jobDetails = await initiateResponse.json();
-            this.pollExportProgress(jobDetails.jobId, jobDetails.totalPages);
+            // Pass startTime to pollExportProgress to track duration
+            this.pollExportProgress(jobDetails.jobId, jobDetails.totalPages, startTime);
         } catch (error) {
+            const duration = Date.now() - startTime;
+            this.trackExportMetrics('server', this.pages.length, duration, false, error.message);
+            
             console.error('[exportViaServer] Error during PDF export initiation:', error);
             this.uiManager.hideExportProgress();
             this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
             this.viewportManager.restoreAfterExport();
+        }
+    }
+
+    /**
+     * Track export metrics for analytics
+     */
+    trackExportMetrics(method, pageCount, duration, success, error = null) {
+        try {
+            // Get or initialize metrics from localStorage
+            const metrics = JSON.parse(localStorage.getItem('exportMetrics') || '[]');
+            
+            // Add new metric
+            const metric = {
+                method,
+                pageCount,
+                duration,
+                success,
+                error: error ? error.toString() : null,
+                timestamp: Date.now(),
+                browserMemory: performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1024 / 1024) : null,
+                userAgent: navigator.userAgent,
+                canvasDimension: this.selectedCanvasDimension
+            };
+            
+            metrics.push(metric);
+            
+            // Keep only last 50 exports
+            if (metrics.length > 50) {
+                metrics.shift();
+            }
+            
+            // Save back to localStorage
+            localStorage.setItem('exportMetrics', JSON.stringify(metrics));
+            
+            // Log to console for debugging
+            console.log('[Export Metrics]', {
+                method,
+                pageCount,
+                duration: `${duration}ms`,
+                success,
+                memoryMB: metric.browserMemory
+            });
+            
+            // Calculate and log aggregate stats
+            const recentMetrics = metrics.slice(-10); // Last 10 exports
+            const successRate = (recentMetrics.filter(m => m.success).length / recentMetrics.length * 100).toFixed(1);
+            const avgDuration = Math.round(recentMetrics.reduce((sum, m) => sum + m.duration, 0) / recentMetrics.length);
+            
+            console.log('[Export Stats] Recent success rate:', successRate + '%', 'Avg duration:', avgDuration + 'ms');
+            
+        } catch (error) {
+            console.error('[Export Metrics] Error tracking metrics:', error);
         }
     }
 
