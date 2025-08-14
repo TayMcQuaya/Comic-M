@@ -13,6 +13,7 @@ import { HistoryManager } from './modules/HistoryManager.js'; // Import HistoryM
 import { AutoSaveManager } from './modules/AutoSaveManager.js'; // Import AutoSaveManager
 import { ViewportManager } from './modules/ViewportManager.js'; // Import ViewportManager
 import { ThemeManager } from './modules/ThemeManager.js'; // Import ThemeManager
+import { ClientExportManager } from './modules/ClientExportManager.js'; // Import ClientExportManager for client-side PDF generation
 import config from './config.js';
 
 // Global helper function globalRgbToHex removed (now in Utils.js)
@@ -67,6 +68,7 @@ class ComicCreator {
         this.autoSaveManager = new AutoSaveManager(this); // Instantiate AutoSaveManager
         this.viewportManager = new ViewportManager(this); // Instantiate ViewportManager
         this.themeManager = new ThemeManager(this); // Instantiate ThemeManager
+        this.clientExportManager = new ClientExportManager(this); // Instantiate ClientExportManager for browser-based PDF generation
         
         this.init();
     }
@@ -748,7 +750,7 @@ class ComicCreator {
         if (downloadBtn) {
             downloadBtn.addEventListener('click', async () => {
                 console.log('[Main] Download button clicked. Prompting for filename...');
-                const filename = await this.promptForFilename("MyComic", ".pdf"); // Default to .pdf, consistent with export
+                const filename = await this.promptForFilename("MyComic", ".pdf");
 
                 if (!filename) { 
                     console.log('[Main] Filename prompt cancelled or no filename entered.');
@@ -756,61 +758,16 @@ class ComicCreator {
                     return;
                 }
                 
-                const comicName = filename; // Use the filename directly
-                console.log(`[Main] Filename confirmed: ${comicName}. Prompting for compression choice...`);
-
-                // New step: Ask about compression
-                const compressionChoice = await this.uiManager.showCompressionChoiceModal();
-
-                if (compressionChoice === "Cancel" || compressionChoice === null) {
-                    console.log('[Main] Compression choice cancelled.');
-                    this.uiManager.showNotification('Export cancelled by user.', 'info');
-                    return;
-                }
-
-                const shouldCompress = compressionChoice === "Yes";
-                console.log(`[Main] Compression choice: ${compressionChoice}, shouldCompress: ${shouldCompress}. Initiating PDF export job...`);
+                // Select export method based on project size
+                const exportMethod = await this.selectExportMethod();
+                console.log(`[Main] Export method selected: ${exportMethod}`);
                 
-                this.uiManager.showExportProgress('Starting PDF export...', 0);
-                
-                // Prepare viewport for export (reset zoom/pan)
-                this.viewportManager.prepareForExport();
-                
-                try {
-                    const projectState = await this.getCurrentProjectState();
-                    if (!projectState) {
-                        this.uiManager.hideExportProgress();
-                        this.uiManager.showNotification('Could not retrieve project state for export.', 'error');
-                        return;
-                    }
-                    projectState.comicName = comicName; // Add filename for backend
-                    projectState.shouldCompress = shouldCompress; // Add compression choice
-
-                    console.log('[Main] About to make PDF export request to:', config.endpoints.exportPdf);
-                    console.log('[Main] Config object:', config);
-                    
-                    const initiateResponse = await fetch(config.endpoints.exportPdf, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(projectState),
-                    });
-
-                    if (initiateResponse.status !== 202) {
-                        let errorMsg = `Error starting PDF export: ${initiateResponse.status}`;
-                        try { const errDetails = await initiateResponse.json(); errorMsg += ` - ${errDetails.message || 'Server error'}`; } catch (e) { /* ignore */ }
-                        this.uiManager.hideExportProgress();
-                        this.uiManager.showNotification(errorMsg, 'error');
-                        return;
-                    }
-
-                    const jobDetails = await initiateResponse.json();
-                    this.pollExportProgress(jobDetails.jobId, jobDetails.totalPages); // Start polling
-                } catch (error) {
-                    console.error('[Main] Error during PDF export initiation:', error);
-                    this.uiManager.hideExportProgress();
-                    this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
-                    // Restore viewport state on error
-                    this.viewportManager.restoreAfterExport();
+                if (exportMethod === 'client') {
+                    // Client-side export - process in browser
+                    await this.exportViaClient(filename);
+                } else {
+                    // Server-side export - existing flow
+                    await this.exportViaServer(filename);
                 }
             });
         } else { console.error("[Main] #download-btn not found"); }
@@ -950,6 +907,134 @@ class ComicCreator {
         }, config.export.progressPollInterval);
     }
     
+    /**
+     * Select the appropriate export method based on project size and capabilities
+     */
+    async selectExportMethod() {
+        const pageCount = this.pages.length;
+        const estimate = this.clientExportManager.getExportEstimate();
+        
+        console.log('[selectExportMethod] Export estimate:', estimate);
+        
+        // Auto-select for small comics
+        if (pageCount <= 20 && estimate.suitable) {
+            console.log('[selectExportMethod] Auto-selecting client export for small comic');
+            return 'client';
+        }
+        
+        // Auto-select server for very large comics
+        if (pageCount > 50 || !estimate.suitable) {
+            console.log('[selectExportMethod] Auto-selecting server export for large comic');
+            this.uiManager.showNotification('Large comic detected - using server export for best results', 'info');
+            return 'server';
+        }
+        
+        // For medium comics (20-50 pages), ask user preference
+        // For now, default to client if suitable, server otherwise
+        return estimate.suitable ? 'client' : 'server';
+    }
+    
+    /**
+     * Export via client-side (browser) processing
+     */
+    async exportViaClient(filename) {
+        console.log('[exportViaClient] Starting client-side export');
+        
+        try {
+            this.uiManager.showExportProgress('Starting client-side export...', 0);
+            
+            const success = await this.clientExportManager.exportToClient({
+                filename: filename + '.pdf',
+                quality: 0.85,
+                progressCallback: (progress) => {
+                    this.uiManager.showExportProgress(progress.message, progress.percentage, { stage: progress.stage });
+                }
+            });
+            
+            if (success) {
+                this.uiManager.hideExportProgress();
+                this.uiManager.showNotification('PDF exported successfully!', 'success');
+                console.log('[exportViaClient] Export completed successfully');
+            }
+        } catch (error) {
+            console.error('[exportViaClient] Export error:', error);
+            this.uiManager.hideExportProgress();
+            
+            // Ask user if they want to try server export
+            const retry = confirm('Client-side export failed. Would you like to try server-side export instead?');
+            if (retry) {
+                await this.exportViaServer(filename);
+            } else {
+                this.uiManager.showNotification('Export cancelled', 'info');
+            }
+        }
+    }
+    
+    /**
+     * Export via server-side processing (existing method)
+     */
+    async exportViaServer(filename) {
+        console.log('[exportViaServer] Starting server-side export');
+        
+        const comicName = filename;
+        console.log(`[exportViaServer] Filename: ${comicName}. Prompting for compression choice...`);
+
+        // Ask about compression
+        const compressionChoice = await this.uiManager.showCompressionChoiceModal();
+
+        if (compressionChoice === "Cancel" || compressionChoice === null) {
+            console.log('[exportViaServer] Compression choice cancelled.');
+            this.uiManager.showNotification('Export cancelled by user.', 'info');
+            return;
+        }
+
+        const shouldCompress = compressionChoice === "Yes";
+        console.log(`[exportViaServer] Compression: ${shouldCompress}. Initiating PDF export job...`);
+        
+        this.uiManager.showExportProgress('Starting server export...', 0);
+        
+        // Prepare viewport for export (reset zoom/pan)
+        this.viewportManager.prepareForExport();
+        
+        try {
+            const projectState = await this.getCurrentProjectState();
+            if (!projectState) {
+                this.uiManager.hideExportProgress();
+                this.uiManager.showNotification('Could not retrieve project state for export.', 'error');
+                return;
+            }
+            projectState.comicName = comicName;
+            projectState.shouldCompress = shouldCompress;
+
+            console.log('[exportViaServer] Making request to:', config.endpoints.exportPdf);
+            
+            const initiateResponse = await fetch(config.endpoints.exportPdf, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(projectState),
+            });
+
+            if (initiateResponse.status !== 202) {
+                let errorMsg = `Error starting PDF export: ${initiateResponse.status}`;
+                try { 
+                    const errDetails = await initiateResponse.json(); 
+                    errorMsg += ` - ${errDetails.message || 'Server error'}`; 
+                } catch (e) { /* ignore */ }
+                this.uiManager.hideExportProgress();
+                this.uiManager.showNotification(errorMsg, 'error');
+                return;
+            }
+
+            const jobDetails = await initiateResponse.json();
+            this.pollExportProgress(jobDetails.jobId, jobDetails.totalPages);
+        } catch (error) {
+            console.error('[exportViaServer] Error during PDF export initiation:', error);
+            this.uiManager.hideExportProgress();
+            this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
+            this.viewportManager.restoreAfterExport();
+        }
+    }
+
     // Helper to process a single layout file (extracted from custom layout listener)
     processSingleLayoutFile(file) {
                     if (file && file.type === 'application/json') {
@@ -1746,6 +1831,39 @@ class ComicCreator {
         }
     }
 
+    // Helper method to get only images that are actually used in the comic
+    getUsedImageIds() {
+        const usedIds = new Set();
+        
+        this.pages.forEach(page => {
+            // Panel images
+            if (page.panelStates) {
+                page.panelStates.forEach(panel => {
+                    if (panel.imageId) {
+                        usedIds.add(panel.imageId);
+                    }
+                });
+            }
+            
+            // Background images
+            if (page.backgroundState && page.backgroundState.imageId) {
+                usedIds.add(page.backgroundState.imageId);
+            }
+            
+            // Sticker images
+            if (page.stickerStates) {
+                page.stickerStates.forEach(sticker => {
+                    if (sticker.imageId) {
+                        usedIds.add(sticker.imageId);
+                    }
+                });
+            }
+        });
+        
+        console.log(`[getUsedImageIds] Found ${usedIds.size} used images out of ${this.imageLibrary.getImages().length} total library images`);
+        return usedIds;
+    }
+
     async getCurrentProjectState() {
         console.log("[getCurrentProjectState] Getting current project state for export...");
         // Force save current page state before exporting (including any new text elements)
@@ -1776,8 +1894,14 @@ class ComicCreator {
             }
         });
         
-        // --- Convert all blob: images to data URLs for export ---
-        const imageProcessingPromises = this.imageLibrary.getImages().map(async (img) => {
+        // --- OPTIMIZATION: Only include images that are actually used in the comic ---
+        const usedImageIds = this.getUsedImageIds();
+        const imagesToProcess = this.imageLibrary.getImages().filter(img => usedImageIds.has(img.id));
+        
+        console.log(`[getCurrentProjectState] Filtering images: ${imagesToProcess.length} used out of ${this.imageLibrary.getImages().length} total`);
+        
+        // --- Convert used blob: images to data URLs for export ---
+        const imageProcessingPromises = imagesToProcess.map(async (img) => {
             if (img.isObjectURL && img.src && img.src.startsWith('blob:')) {
                 try {
                     const response = await fetch(img.src);
