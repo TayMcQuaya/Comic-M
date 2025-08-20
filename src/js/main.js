@@ -1923,27 +1923,32 @@ class ComicCreator {
             if (page.panelStates) {
                 page.panelStates.forEach(panel => {
                     if (panel.imageId) {
-                        usedIds.add(panel.imageId);
+                        // Convert to string to ensure consistent type comparison
+                        usedIds.add(String(panel.imageId));
                     }
                 });
             }
             
             // Background images
             if (page.backgroundState && page.backgroundState.imageId) {
-                usedIds.add(page.backgroundState.imageId);
+                // Convert to string to ensure consistent type comparison
+                usedIds.add(String(page.backgroundState.imageId));
             }
             
             // Sticker images
             if (page.stickerStates) {
                 page.stickerStates.forEach(sticker => {
                     if (sticker.imageId) {
-                        usedIds.add(sticker.imageId);
+                        // Convert to string to ensure consistent type comparison
+                        usedIds.add(String(sticker.imageId));
                     }
                 });
             }
         });
         
         console.log(`[getUsedImageIds] Found ${usedIds.size} used images out of ${this.imageLibrary.getImages().length} total library images`);
+        // Debug: Log the actual IDs being tracked
+        console.log(`[getUsedImageIds] Used IDs:`, Array.from(usedIds));
         return usedIds;
     }
 
@@ -1979,9 +1984,16 @@ class ComicCreator {
         
         // --- OPTIMIZATION: Only include images that are actually used in the comic ---
         const usedImageIds = this.getUsedImageIds();
-        const imagesToProcess = this.imageLibrary.getImages().filter(img => usedImageIds.has(img.id));
+        // Convert img.id to string for consistent comparison with the Set
+        const imagesToProcess = this.imageLibrary.getImages().filter(img => usedImageIds.has(String(img.id)));
         
         console.log(`[getCurrentProjectState] Filtering images: ${imagesToProcess.length} used out of ${this.imageLibrary.getImages().length} total`);
+        
+        // Debug: Log which images are being filtered out
+        const filteredOut = this.imageLibrary.getImages().filter(img => !usedImageIds.has(String(img.id)));
+        if (filteredOut.length > 0) {
+            console.log(`[getCurrentProjectState] Images filtered out:`, filteredOut.map(img => ({ id: img.id, name: img.name })));
+        }
         
         // --- Convert used blob: images to data URLs for export ---
         const imageProcessingPromises = imagesToProcess.map(async (img) => {
@@ -2006,6 +2018,18 @@ class ComicCreator {
         });
 
         const imagesToSave = await Promise.all(imageProcessingPromises);
+
+        // Debug: Log the state of each page before export
+        this.pages.forEach((page, idx) => {
+            console.log(`[getCurrentProjectState] Page ${idx} content summary:`, {
+                hasBackground: !!page.backgroundState?.imageId,
+                backgroundId: page.backgroundState?.imageId,
+                panelCount: page.panelStates?.length || 0,
+                panelsWithImages: page.panelStates?.filter(p => p.imageId).length || 0,
+                textElements: page.canvasTextElements?.length || 0,
+                stickers: page.stickerStates?.length || 0
+            });
+        });
 
         const projectState = {
             version: '1.4-dimensions', // New version marker for dimension awareness

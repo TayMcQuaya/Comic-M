@@ -187,6 +187,7 @@ export class ClientExportManager {
 
         // Process text bubbles - apply CSS variables as inline styles
         const textBubbles = document.querySelectorAll('#comic-canvas .text-bubble');
+        console.log(`[ClientExportManager] Found ${textBubbles.length} text bubbles to preprocess for export`);
         textBubbles.forEach(bubble => {
             const computedStyle = window.getComputedStyle(bubble);
             
@@ -222,6 +223,14 @@ export class ClientExportManager {
             }
         });
 
+        // Check for background images
+        const bgImages = document.querySelectorAll('#comic-canvas .canvas-background-image');
+        console.log(`[ClientExportManager] Found ${bgImages.length} background images in canvas`);
+        
+        // Check for panel images
+        const panelImages = document.querySelectorAll('#comic-canvas .comic-panel img');
+        console.log(`[ClientExportManager] Found ${panelImages.length} panel images in canvas`);
+        
         // Ensure canvas is visible and at correct size
         const canvas = document.getElementById('comic-canvas');
         if (canvas) {
