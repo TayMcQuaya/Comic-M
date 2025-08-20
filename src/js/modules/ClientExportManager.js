@@ -64,7 +64,7 @@ export class ClientExportManager {
 
                 // Load page
                 console.log(`[ClientExport] Loading page ${i + 1}`);
-                await this.comicCreator.loadPageData(this.comicCreator.pages[i], i);
+                await this.comicCreator.loadPageState(i);
                 
                 // Wait for page to fully render
                 await this.waitForPageRender();
@@ -92,7 +92,7 @@ export class ClientExportManager {
             }
 
             // Restore original page
-            await this.comicCreator.loadPageData(this.comicCreator.pages[originalPageIndex], originalPageIndex);
+            await this.comicCreator.loadPageState(originalPageIndex);
 
             // Update progress
             this.updateProgress('complete', 100, 'Export complete!');
