@@ -56,6 +56,10 @@ export class ClientExportManager {
 
             // Save current page index to restore later
             const originalPageIndex = this.comicCreator.currentPageIndex;
+            
+            // Prepare viewport for export (reset zoom/pan)
+            console.log('[ClientExport] Preparing viewport for export');
+            this.comicCreator.viewportManager.prepareForExport();
 
             for (let i = 0; i < totalPages; i++) {
                 // Update progress
@@ -93,6 +97,10 @@ export class ClientExportManager {
 
             // Restore original page
             await this.comicCreator.loadPageState(originalPageIndex);
+            
+            // Restore viewport state after export
+            console.log('[ClientExport] Restoring viewport after export');
+            this.comicCreator.viewportManager.restoreAfterExport();
 
             // Update progress
             this.updateProgress('complete', 100, 'Export complete!');
@@ -135,14 +143,32 @@ export class ClientExportManager {
             backgroundColor: '#ffffff',
             logging: false,
             imageTimeout: 15000,
+            ignoreElements: (element) => {
+                // Ignore external stylesheets that might fail to load
+                if (element.tagName === 'LINK' && element.rel === 'stylesheet') {
+                    // Allow critical styles but ignore Vite-generated ones that might 403
+                    return element.href && element.href.includes('/assets/');
+                }
+                return false;
+            },
             onclone: (clonedDoc) => {
                 // Additional processing on cloned document if needed
                 const clonedCanvas = clonedDoc.getElementById('comic-canvas');
                 if (clonedCanvas) {
-                    // Ensure visibility
+                    // Ensure visibility and proper positioning
                     clonedCanvas.style.display = 'block';
                     clonedCanvas.style.opacity = '1';
                     clonedCanvas.style.visibility = 'visible';
+                    clonedCanvas.style.position = 'relative';
+                    clonedCanvas.style.transform = 'none';
+                    clonedCanvas.style.left = '0';
+                    clonedCanvas.style.top = '0';
+                }
+                
+                // Ensure transform container is reset in clone too
+                const clonedTransform = clonedDoc.querySelector('.canvas-transform-container');
+                if (clonedTransform) {
+                    clonedTransform.style.transform = 'none';
                 }
             }
         };
@@ -173,9 +199,17 @@ export class ClientExportManager {
         });
 
         await Promise.all(imagePromises);
-
-        // Additional wait for rendering
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Wait for text elements to be properly positioned
+        const textElements = document.querySelectorAll('#comic-canvas .text-bubble');
+        if (textElements.length > 0) {
+            console.log(`[ClientExport] Waiting for ${textElements.length} text elements to position`);
+            // Give text elements more time to render and position correctly
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        } else {
+            // Standard wait for other content
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
     }
 
     /**
@@ -237,6 +271,14 @@ export class ClientExportManager {
             canvas.style.transform = 'none';
             canvas.style.transition = 'none';
         }
+        
+        // Reset viewport transform container (critical for proper positioning)
+        const transformContainer = document.querySelector('.canvas-transform-container');
+        if (transformContainer) {
+            console.log('[ClientExportManager] Resetting transform container for export');
+            transformContainer.style.transform = 'none';
+            transformContainer.style.transition = 'none';
+        }
     }
 
     /**
@@ -269,6 +311,21 @@ export class ClientExportManager {
                 delete sticker.dataset.originalOutline;
             }
         });
+        
+        // Restore transform container
+        const transformContainer = document.querySelector('.canvas-transform-container');
+        if (transformContainer) {
+            console.log('[ClientExportManager] Restoring transform container after export');
+            transformContainer.style.transform = '';
+            transformContainer.style.transition = '';
+        }
+        
+        // Restore canvas transform
+        const canvas = document.getElementById('comic-canvas');
+        if (canvas) {
+            canvas.style.transform = '';
+            canvas.style.transition = '';
+        }
     }
 
     /**
