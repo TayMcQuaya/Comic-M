@@ -52,6 +52,7 @@ class ComicCreator {
         };
         this.currentFolderId = 'root';
         this.isSavingProject = false; // Add this line
+        this.isExporting = false; // Flag to prevent auto-save during export
         
         // Instantiate the Managers
         // Remove exportManager instantiation
@@ -894,6 +895,9 @@ class ComicCreator {
                                 this.uiManager.showNotification('PDF download initiated!', 'success');
                                 // Restore viewport state after export
                                 this.viewportManager.restoreAfterExport();
+                                // CRITICAL: Re-enable auto-save after successful export
+                                this.isExporting = false;
+                                console.log('[pollExportProgress] Export completed, auto-save re-enabled');
                     }, 3000);
                         } else if (progressData.status === 'error') {
                             clearInterval(progressInterval);
@@ -906,6 +910,9 @@ class ComicCreator {
                             this.uiManager.updateExportProgress(`Error: ${errorMessage}`, percentage, totalPages, true);
                             // Restore viewport state on error
                             this.viewportManager.restoreAfterExport();
+                            // CRITICAL: Re-enable auto-save after export error
+                            this.isExporting = false;
+                            console.log('[pollExportProgress] Export error, auto-save re-enabled');
                         }
                     } catch (pollError) {
                 console.error('[Main] Error polling for PDF export progress:', pollError);
@@ -914,6 +921,9 @@ class ComicCreator {
                         this.uiManager.hideExportProgress();
                         // Restore viewport state on polling error
                         this.viewportManager.restoreAfterExport();
+                        // CRITICAL: Re-enable auto-save after polling error
+                        this.isExporting = false;
+                        console.log('[pollExportProgress] Polling error, auto-save re-enabled');
                     }
         }, config.export.progressPollInterval);
     }
@@ -1003,6 +1013,10 @@ class ComicCreator {
         console.log('[exportViaServer] Starting server-side export');
         const startTime = Date.now();
         
+        // CRITICAL: Set flag to prevent auto-save during export
+        this.isExporting = true;
+        console.log('[exportViaServer] Auto-save disabled during export to prevent page corruption');
+        
         const comicName = filename;
         console.log(`[exportViaServer] Filename: ${comicName}. Prompting for compression choice...`);
 
@@ -1012,6 +1026,8 @@ class ComicCreator {
         if (compressionChoice === "Cancel" || compressionChoice === null) {
             console.log('[exportViaServer] Compression choice cancelled.');
             this.uiManager.showNotification('Export cancelled by user.', 'info');
+            this.isExporting = false; // Re-enable auto-save
+            console.log('[exportViaServer] Export cancelled, auto-save re-enabled');
             return;
         }
 
@@ -1063,6 +1079,10 @@ class ComicCreator {
             this.uiManager.hideExportProgress();
             this.uiManager.showNotification(`PDF Export failed: ${error.message}`, 'error');
             this.viewportManager.restoreAfterExport();
+            
+            // CRITICAL: Re-enable auto-save after export error
+            this.isExporting = false;
+            console.log('[exportViaServer] Export failed, auto-save re-enabled');
         }
     }
 
@@ -1745,12 +1765,15 @@ class ComicCreator {
         // --- End Sticker Restoration ---
 
         // --- Auto-save calls after successfully loading page state to editor ---
-        if (this.autoSaveManager) {
+        // CRITICAL: Skip auto-save during export to prevent page corruption
+        if (!this.isExporting && this.autoSaveManager) {
             console.log("[ComicCreator.loadPageState] Calling performInitialSaveOnEditorEntry and startPeriodicAutoSave.");
             // It might be good to perform an initial save of the just-loaded state.
             // This ensures the auto-save is up-to-date with what the user is now seeing.
             this.autoSaveManager.performInitialSaveOnEditorEntry(); 
             this.autoSaveManager.startPeriodicAutoSave();
+        } else if (this.isExporting) {
+            console.log("[ComicCreator.loadPageState] Skipping auto-save during export");
         } else {
             console.warn("[ComicCreator.loadPageState] AutoSaveManager not available.");
         }

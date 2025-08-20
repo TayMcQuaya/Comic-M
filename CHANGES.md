@@ -1,3 +1,40 @@
+# CRITICAL FIX: Export Page Corruption Issue
+
+## Date: 2025-08-20
+## Issue: Export process was corrupting pages by triggering auto-save with wrong page indices
+
+### Problem Description
+When exporting a comic (especially large ones like 30 pages), the export process was corrupting pages. This occurred because:
+1. ClientExportManager loads each page sequentially for rendering
+2. Each `loadPageState()` call triggered `performInitialSaveOnEditorEntry()`
+3. Auto-save would save the current content to the wrong page index
+4. This resulted in panels, text, and backgrounds being misaligned or destroyed
+
+### Solution Implemented
+Added an `isExporting` flag to prevent auto-save during export operations:
+
+#### Files Modified:
+1. **src/js/main.js**
+   - Added `this.isExporting = false` flag in constructor (line 55)
+   - Modified `loadPageState()` to check flag before auto-saving (lines 1750-1760)
+   - Added flag management in `exportViaServer()` method
+   - Added flag reset in `pollExportProgress()` for all completion states
+
+2. **src/js/modules/ClientExportManager.js**
+   - Set `comicCreator.isExporting = true` at export start (line 38)
+   - Reset flag in finally block to ensure cleanup (lines 128-131)
+
+3. **src/js/modules/AutoSaveManager.js**
+   - Added safety check in `performAutoSave()` to skip if exporting (lines 211-214)
+
+### Impact
+- Prevents page corruption during export
+- Maintains data integrity for large comics
+- Auto-save resumes normally after export completes
+- Fixes critical issue affecting 30+ page comics
+
+---
+
 # Text Box Positioning and Content Preservation Changes
 
 ## Overview

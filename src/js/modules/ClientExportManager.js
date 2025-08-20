@@ -34,7 +34,10 @@ export class ClientExportManager {
         this.progressCallback = progressCallback;
         this.currentExportId = `client_${Date.now()}`;
         
+        // CRITICAL: Set flag to prevent auto-save during export
+        this.comicCreator.isExporting = true;
         console.log('[ClientExport] Starting client-side export with options:', options);
+        console.log('[ClientExport] Auto-save disabled during export to prevent page corruption');
 
         try {
             // Get canvas dimensions
@@ -121,8 +124,11 @@ export class ClientExportManager {
             this.updateProgress('error', 0, `Export failed: ${error.message}`);
             throw error;
         } finally {
+            // CRITICAL: Always reset export flag to re-enable auto-save
+            this.comicCreator.isExporting = false;
             this.isExporting = false;
             this.currentExportId = null;
+            console.log('[ClientExport] Export finished, auto-save re-enabled');
         }
     }
 

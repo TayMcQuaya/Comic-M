@@ -207,6 +207,12 @@ export class AutoSaveManager {
      * @returns {Promise<void>}
      */
     async performAutoSave() {
+        // CRITICAL: Skip auto-save during export to prevent page corruption
+        if (this.comicCreator.isExporting) {
+            console.log("[AutoSave] Export in progress. Skipping auto-save to prevent page corruption.");
+            return;
+        }
+        
         if (this.isSaving) {
             console.log("[AutoSave] Auto-save already in progress, queuing next save.");
             this.saveQueued = true;
