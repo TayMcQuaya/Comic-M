@@ -73,15 +73,32 @@ export class ClientExportManager {
                 console.log(`[ClientExport] Loading page ${i + 1}`);
                 await this.comicCreator.loadPageState(i);
                 
+                // Verify page content loaded correctly
+                const verificationResult = await this.verifyPageContent(i);
+                if (!verificationResult.success) {
+                    console.warn(`[ClientExport] Page ${i + 1} verification failed, attempting retry...`);
+                    // Retry loading once
+                    await this.comicCreator.loadPageState(i);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
+                
                 // Wait for page to fully render
                 await this.waitForPageRender();
 
                 // Prepare elements for export
                 this.preprocessForExport();
 
-                // Capture canvas
+                // Capture canvas with retry logic
                 console.log(`[ClientExport] Capturing page ${i + 1}`);
-                const canvas = await this.captureCanvas(quality);
+                let canvas = await this.captureCanvas(quality);
+                
+                // Verify captured content
+                const captureVerification = this.verifyCapturedCanvas(canvas);
+                if (!captureVerification.valid) {
+                    console.warn(`[ClientExport] Page ${i + 1} capture seems incomplete, retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    canvas = await this.captureCanvas(quality);
+                }
 
                 // Add page to PDF
                 if (i > 0) {
@@ -189,51 +206,159 @@ export class ClientExportManager {
     }
 
     /**
-     * Wait for page to fully render
+     * Wait for page to fully render with enhanced timing and verification
      */
     async waitForPageRender() {
-        // Wait for images to load
-        const images = document.querySelectorAll('#comic-canvas img');
-        const imagePromises = Array.from(images).map(img => {
-            if (img.complete) return Promise.resolve();
-            return new Promise((resolve, reject) => {
-                img.addEventListener('load', resolve, { once: true });
-                img.addEventListener('error', reject, { once: true });
-                // Timeout after 5 seconds
-                setTimeout(() => resolve(), 5000);
+        console.log('[ClientExport] Starting enhanced page render wait...');
+        
+        // Wait for all images to load (panels, backgrounds, stickers)
+        const allImages = document.querySelectorAll('#comic-canvas img');
+        const backgroundImages = document.querySelectorAll('#comic-canvas .canvas-background-image');
+        const panelImages = document.querySelectorAll('#comic-canvas .comic-panel img');
+        const stickerImages = document.querySelectorAll('#comic-canvas .canvas-sticker-image');
+        
+        console.log(`[ClientExport] Waiting for images - Total: ${allImages.length}, Backgrounds: ${backgroundImages.length}, Panels: ${panelImages.length}, Stickers: ${stickerImages.length}`);
+        
+        const imagePromises = Array.from(allImages).map(img => {
+            if (img.complete && img.naturalHeight !== 0) {
+                return Promise.resolve();
+            }
+            return new Promise((resolve) => {
+                const loadHandler = () => {
+                    console.log(`[ClientExport] Image loaded: ${img.src.substring(0, 50)}...`);
+                    resolve();
+                };
+                const errorHandler = () => {
+                    console.warn(`[ClientExport] Image failed to load: ${img.src.substring(0, 50)}...`);
+                    resolve(); // Resolve anyway to not block export
+                };
+                
+                img.addEventListener('load', loadHandler, { once: true });
+                img.addEventListener('error', errorHandler, { once: true });
+                
+                // Timeout after 8 seconds per image
+                setTimeout(() => {
+                    console.log(`[ClientExport] Image load timeout: ${img.src.substring(0, 50)}...`);
+                    resolve();
+                }, 8000);
             });
         });
 
         await Promise.all(imagePromises);
+        console.log('[ClientExport] All images loaded or timed out');
         
-        // Wait for text elements to be properly positioned
+        // Force reflow to ensure layout is calculated
+        const canvas = document.getElementById('comic-canvas');
+        if (canvas) {
+            canvas.offsetHeight; // Force reflow
+        }
+        
+        // Enhanced wait for text elements with positioning verification
         const textElements = document.querySelectorAll('#comic-canvas .text-bubble');
         if (textElements.length > 0) {
-            console.log(`[ClientExport] Waiting for ${textElements.length} text elements to position`);
-            // Give text elements more time to render and position correctly
+            console.log(`[ClientExport] Waiting for ${textElements.length} text elements to stabilize...`);
+            
+            // Wait for text elements to get their computed styles
             await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-            // Standard wait for other content
-            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Verify text elements have proper positioning
+            let unstableElements = 0;
+            textElements.forEach(element => {
+                const rect = element.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) {
+                    unstableElements++;
+                    console.warn('[ClientExport] Text element has zero dimensions:', element);
+                }
+            });
+            
+            if (unstableElements > 0) {
+                console.log(`[ClientExport] ${unstableElements} text elements need more time...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            } else {
+                // Additional wait for text rendering and font loading
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         }
+        
+        // Wait for background images specifically
+        if (backgroundImages.length > 0) {
+            console.log(`[ClientExport] Additional wait for ${backgroundImages.length} background images...`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // Base wait for general rendering completion
+        console.log('[ClientExport] Final rendering stabilization wait...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Force another reflow after all waits
+        if (canvas) {
+            canvas.offsetHeight; // Force reflow
+        }
+        
+        console.log('[ClientExport] Page render wait complete');
     }
 
     /**
-     * Preprocess elements for accurate export
+     * Preprocess elements for accurate export with enhanced transform management
      */
     preprocessForExport() {
+        console.log('[ClientExport] Starting preprocessing for export...');
+        
         // Add export class to body
         document.body.classList.add('exporting');
 
+        // Get canvas and force layout recalculation
+        const canvas = document.getElementById('comic-canvas');
+        const transformContainer = document.querySelector('.canvas-transform-container');
+        
+        // Store original transform values for restoration
+        if (canvas) {
+            canvas.dataset.originalTransform = canvas.style.transform || '';
+            canvas.dataset.originalTransition = canvas.style.transition || '';
+            canvas.dataset.originalPosition = canvas.style.position || '';
+            
+            // Reset canvas transforms and positioning
+            canvas.style.transform = 'none';
+            canvas.style.transition = 'none';
+            canvas.style.position = 'relative';
+            canvas.style.left = '0';
+            canvas.style.top = '0';
+            
+            // Force reflow
+            canvas.offsetHeight;
+        }
+        
+        // Reset viewport transform container (critical for proper positioning)
+        if (transformContainer) {
+            console.log('[ClientExport] Resetting transform container for export');
+            transformContainer.dataset.originalTransform = transformContainer.style.transform || '';
+            transformContainer.dataset.originalTransition = transformContainer.style.transition || '';
+            
+            transformContainer.style.transform = 'none';
+            transformContainer.style.transition = 'none';
+            
+            // Force reflow
+            transformContainer.offsetHeight;
+        }
+        
+        // Wait a moment for transform reset to take effect
+        const forceReflow = () => {
+            if (canvas) canvas.offsetHeight;
+            if (transformContainer) transformContainer.offsetHeight;
+        };
+        forceReflow();
+
         // Process text bubbles - apply CSS variables as inline styles
         const textBubbles = document.querySelectorAll('#comic-canvas .text-bubble');
-        console.log(`[ClientExportManager] Found ${textBubbles.length} text bubbles to preprocess for export`);
-        textBubbles.forEach(bubble => {
+        console.log(`[ClientExport] Processing ${textBubbles.length} text bubbles...`);
+        
+        textBubbles.forEach((bubble, index) => {
             const computedStyle = window.getComputedStyle(bubble);
             
             // Store original values to restore later
-            bubble.dataset.originalBg = bubble.style.backgroundColor;
-            bubble.dataset.originalOpacity = bubble.style.opacity;
+            bubble.dataset.originalBg = bubble.style.backgroundColor || '';
+            bubble.dataset.originalOpacity = bubble.style.opacity || '';
+            bubble.dataset.originalTransform = bubble.style.transform || '';
             
             // Apply CSS variable values as inline styles
             const bgColor = computedStyle.getPropertyValue('--bubble-background-color');
@@ -245,57 +370,125 @@ export class ClientExportManager {
             if (opacity) {
                 bubble.style.opacity = opacity;
             }
+            
+            // Ensure text bubble transforms are preserved but stable
+            const currentTransform = computedStyle.transform;
+            if (currentTransform && currentTransform !== 'none') {
+                bubble.style.transform = currentTransform;
+            }
 
             // Mark for export
             bubble.classList.add('exporting-direct-style');
+            
+            // Log position for debugging
+            const rect = bubble.getBoundingClientRect();
+            console.log(`[ClientExport] Text bubble ${index}: pos(${rect.left}, ${rect.top}), size(${rect.width}x${rect.height})`);
         });
 
-        // Process stickers - ensure outlines are visible
+        // Process stickers - ensure proper positioning and outlines
         const stickers = document.querySelectorAll('#comic-canvas .canvas-sticker-image');
+        console.log(`[ClientExport] Processing ${stickers.length} stickers...`);
+        
         stickers.forEach(sticker => {
+            // Store original values
+            sticker.dataset.originalOutline = sticker.style.outline || '';
+            sticker.dataset.originalTransform = sticker.style.transform || '';
+            
             if (sticker.style.outline) {
-                // Store original outline
-                sticker.dataset.originalOutline = sticker.style.outline;
                 // Convert outline to border for better html2canvas support
                 const outlineValue = sticker.style.outline;
                 sticker.style.border = outlineValue;
                 sticker.style.outline = 'none';
             }
+            
+            // Preserve sticker transforms
+            const computedTransform = window.getComputedStyle(sticker).transform;
+            if (computedTransform && computedTransform !== 'none') {
+                sticker.style.transform = computedTransform;
+            }
         });
 
-        // Check for background images
+        // Process background images - ensure they're properly positioned
         const bgImages = document.querySelectorAll('#comic-canvas .canvas-background-image');
-        console.log(`[ClientExportManager] Found ${bgImages.length} background images in canvas`);
+        console.log(`[ClientExport] Processing ${bgImages.length} background images...`);
         
-        // Check for panel images
+        bgImages.forEach(bgImg => {
+            // Store original values
+            bgImg.dataset.originalPosition = bgImg.style.position || '';
+            bgImg.dataset.originalZIndex = bgImg.style.zIndex || '';
+            
+            // Ensure background is at bottom layer
+            bgImg.style.position = 'absolute';
+            bgImg.style.zIndex = '0';
+            bgImg.style.top = '0';
+            bgImg.style.left = '0';
+            bgImg.style.width = '100%';
+            bgImg.style.height = '100%';
+        });
+        
+        // Process panel images
         const panelImages = document.querySelectorAll('#comic-canvas .comic-panel img');
-        console.log(`[ClientExportManager] Found ${panelImages.length} panel images in canvas`);
+        console.log(`[ClientExport] Processing ${panelImages.length} panel images...`);
         
-        // Ensure canvas is visible and at correct size
-        const canvas = document.getElementById('comic-canvas');
-        if (canvas) {
-            canvas.style.transform = 'none';
-            canvas.style.transition = 'none';
-        }
+        panelImages.forEach(img => {
+            // Ensure panel images are visible
+            img.style.opacity = '1';
+            img.style.visibility = 'visible';
+        });
         
-        // Reset viewport transform container (critical for proper positioning)
-        const transformContainer = document.querySelector('.canvas-transform-container');
-        if (transformContainer) {
-            console.log('[ClientExportManager] Resetting transform container for export');
-            transformContainer.style.transform = 'none';
-            transformContainer.style.transition = 'none';
-        }
+        // Final forced reflow after all changes
+        forceReflow();
+        
+        console.log('[ClientExport] Preprocessing complete');
     }
 
     /**
-     * Clean up after export preprocessing
+     * Clean up after export preprocessing with complete restoration
      */
     cleanupAfterExport() {
+        console.log('[ClientExport] Starting cleanup after export...');
+        
         // Remove export class
         document.body.classList.remove('exporting');
 
+        // Restore canvas transforms and positioning
+        const canvas = document.getElementById('comic-canvas');
+        if (canvas) {
+            if (canvas.dataset.originalTransform !== undefined) {
+                canvas.style.transform = canvas.dataset.originalTransform;
+                delete canvas.dataset.originalTransform;
+            }
+            if (canvas.dataset.originalTransition !== undefined) {
+                canvas.style.transition = canvas.dataset.originalTransition;
+                delete canvas.dataset.originalTransition;
+            }
+            if (canvas.dataset.originalPosition !== undefined) {
+                canvas.style.position = canvas.dataset.originalPosition;
+                delete canvas.dataset.originalPosition;
+            }
+            // Reset positioning if it was changed
+            if (canvas.style.left === '0px') canvas.style.left = '';
+            if (canvas.style.top === '0px') canvas.style.top = '';
+        }
+        
+        // Restore transform container
+        const transformContainer = document.querySelector('.canvas-transform-container');
+        if (transformContainer) {
+            console.log('[ClientExport] Restoring transform container...');
+            if (transformContainer.dataset.originalTransform !== undefined) {
+                transformContainer.style.transform = transformContainer.dataset.originalTransform;
+                delete transformContainer.dataset.originalTransform;
+            }
+            if (transformContainer.dataset.originalTransition !== undefined) {
+                transformContainer.style.transition = transformContainer.dataset.originalTransition;
+                delete transformContainer.dataset.originalTransition;
+            }
+        }
+
         // Restore text bubbles
         const textBubbles = document.querySelectorAll('#comic-canvas .text-bubble.exporting-direct-style');
+        console.log(`[ClientExport] Restoring ${textBubbles.length} text bubbles...`);
+        
         textBubbles.forEach(bubble => {
             if (bubble.dataset.originalBg !== undefined) {
                 bubble.style.backgroundColor = bubble.dataset.originalBg;
@@ -305,33 +498,133 @@ export class ClientExportManager {
                 bubble.style.opacity = bubble.dataset.originalOpacity;
                 delete bubble.dataset.originalOpacity;
             }
+            if (bubble.dataset.originalTransform !== undefined) {
+                bubble.style.transform = bubble.dataset.originalTransform;
+                delete bubble.dataset.originalTransform;
+            }
             bubble.classList.remove('exporting-direct-style');
         });
 
         // Restore stickers
         const stickers = document.querySelectorAll('#comic-canvas .canvas-sticker-image');
+        console.log(`[ClientExport] Restoring ${stickers.length} stickers...`);
+        
         stickers.forEach(sticker => {
-            if (sticker.dataset.originalOutline) {
+            if (sticker.dataset.originalOutline !== undefined) {
                 sticker.style.outline = sticker.dataset.originalOutline;
                 sticker.style.border = '';
                 delete sticker.dataset.originalOutline;
             }
+            if (sticker.dataset.originalTransform !== undefined) {
+                sticker.style.transform = sticker.dataset.originalTransform;
+                delete sticker.dataset.originalTransform;
+            }
         });
         
-        // Restore transform container
-        const transformContainer = document.querySelector('.canvas-transform-container');
-        if (transformContainer) {
-            console.log('[ClientExportManager] Restoring transform container after export');
-            transformContainer.style.transform = '';
-            transformContainer.style.transition = '';
+        // Restore background images
+        const bgImages = document.querySelectorAll('#comic-canvas .canvas-background-image');
+        console.log(`[ClientExport] Restoring ${bgImages.length} background images...`);
+        
+        bgImages.forEach(bgImg => {
+            if (bgImg.dataset.originalPosition !== undefined) {
+                bgImg.style.position = bgImg.dataset.originalPosition;
+                delete bgImg.dataset.originalPosition;
+            }
+            if (bgImg.dataset.originalZIndex !== undefined) {
+                bgImg.style.zIndex = bgImg.dataset.originalZIndex;
+                delete bgImg.dataset.originalZIndex;
+            }
+        });
+        
+        console.log('[ClientExport] Cleanup complete');
+    }
+
+    /**
+     * Verify page content loaded correctly
+     */
+    async verifyPageContent(pageIndex) {
+        const page = this.comicCreator.pages[pageIndex];
+        if (!page) {
+            return { success: false, reason: 'Page data not found' };
+        }
+
+        const canvas = document.getElementById('comic-canvas');
+        if (!canvas) {
+            return { success: false, reason: 'Canvas not found' };
+        }
+
+        // Count expected vs actual elements
+        const expectedPanels = page.panelStates ? page.panelStates.filter(p => p.imageId).length : 0;
+        const actualPanels = canvas.querySelectorAll('.comic-panel img').length;
+        
+        const expectedText = page.canvasTextElements ? page.canvasTextElements.length : 0;
+        const actualText = canvas.querySelectorAll('.text-bubble').length;
+        
+        const expectedStickers = page.stickerStates ? page.stickerStates.length : 0;
+        const actualStickers = canvas.querySelectorAll('.canvas-sticker-image').length;
+        
+        const hasBackground = page.backgroundState && page.backgroundState.imageId;
+        const actualBackground = canvas.querySelector('.canvas-background-image');
+        
+        console.log(`[ClientExport] Page ${pageIndex + 1} verification:
+            Panels: expected=${expectedPanels}, actual=${actualPanels}
+            Text: expected=${expectedText}, actual=${actualText}
+            Stickers: expected=${expectedStickers}, actual=${actualStickers}
+            Background: expected=${hasBackground}, actual=${!!actualBackground}`);
+        
+        // Check for major discrepancies
+        if (actualPanels < expectedPanels || actualText < expectedText) {
+            return { 
+                success: false, 
+                reason: `Missing elements: panels(${actualPanels}/${expectedPanels}), text(${actualText}/${expectedText})` 
+            };
         }
         
-        // Restore canvas transform
-        const canvas = document.getElementById('comic-canvas');
-        if (canvas) {
-            canvas.style.transform = '';
-            canvas.style.transition = '';
+        // Check if canvas has any content at all
+        const hasContent = actualPanels > 0 || actualText > 0 || actualStickers > 0 || actualBackground;
+        if (!hasContent && (expectedPanels > 0 || expectedText > 0 || expectedStickers > 0 || hasBackground)) {
+            return { success: false, reason: 'Canvas appears empty' };
         }
+        
+        return { success: true };
+    }
+
+    /**
+     * Verify captured canvas has content
+     */
+    verifyCapturedCanvas(canvas) {
+        if (!canvas) {
+            return { valid: false, reason: 'Canvas is null' };
+        }
+        
+        // Check canvas dimensions
+        if (canvas.width === 0 || canvas.height === 0) {
+            return { valid: false, reason: 'Canvas has zero dimensions' };
+        }
+        
+        // Sample some pixels to check if it's not completely blank
+        const ctx = canvas.getContext('2d');
+        const imageData = ctx.getImageData(0, 0, Math.min(100, canvas.width), Math.min(100, canvas.height));
+        const data = imageData.data;
+        
+        let nonWhitePixels = 0;
+        for (let i = 0; i < data.length; i += 4) {
+            // Check if pixel is not white (allowing for slight variations)
+            if (data[i] < 250 || data[i + 1] < 250 || data[i + 2] < 250) {
+                nonWhitePixels++;
+            }
+        }
+        
+        // If less than 1% of sampled pixels are non-white, consider it blank
+        const totalPixels = (imageData.width * imageData.height);
+        const nonWhiteRatio = nonWhitePixels / totalPixels;
+        
+        if (nonWhiteRatio < 0.01) {
+            console.warn(`[ClientExport] Canvas appears mostly blank (${(nonWhiteRatio * 100).toFixed(2)}% non-white)`);
+            return { valid: false, reason: 'Canvas appears blank' };
+        }
+        
+        return { valid: true };
     }
 
     /**

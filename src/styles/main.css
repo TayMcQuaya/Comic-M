@@ -5192,7 +5192,7 @@ input[type="color"] {
     color: var(--text-bright);
 }
 
-/* Export-specific styles */
+/* Export-specific styles - Enhanced for stability */
 .exporting {
     /* Remove any styling that might interfere with clean export */
     outline: none !important;
@@ -5201,13 +5201,26 @@ input[type="color"] {
 body.exporting .comic-canvas-container {
     height: auto !important; /* Allow container to grow with canvas */
     min-height: var(--canvas-height) !important; /* Ensure it's at least as tall as the canvas */
-    align-items: center !important; /* Better for allowing canvas to define its height */
-    padding: 0 !important; /* Remove padding for screenshot accuracy if canvas is directly child */
+    align-items: flex-start !important; /* Align to top to prevent vertical shifting */
+    padding: 0 !important; /* Remove padding for screenshot accuracy */
+    overflow: visible !important; /* Ensure all content is visible */
+}
+
+body.exporting .canvas-transform-container {
+    transform: none !important; /* Reset any viewport transforms */
+    transition: none !important;
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
 }
 
 body.exporting #comic-canvas {
-    margin: 0 auto !important; /* Center the canvas if container is now auto-height and wider */
-                               /* This assumes puppeteer-export.js will still handle top:0, left:0 for final capture */
+    transform: none !important; /* Reset any transforms */
+    transition: none !important;
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    margin: 0 !important; /* Remove centering margin to prevent shifting */
 }
 
 .exporting .comic-panel {
@@ -5235,6 +5248,19 @@ body.exporting #comic-canvas {
     transform-origin: center center !important; /* Ensure rotation happens from center */
 }
 
+.exporting .canvas-background-image {
+    /* Ensure background images are properly positioned */
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    z-index: 0 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 .exporting .text-bubble {
     /* Ensure text bubbles render correctly in exported PDF */
     border: 2px solid #000000 !important; /* Changed from rgba(0,0,0,0.7) to solid black */
@@ -5253,8 +5279,8 @@ body.exporting #comic-canvas {
     box-sizing: border-box !important;
     /* CRITICAL: Prevent any shifting during export */
     position: absolute !important;
-    transform-origin: top left !important;
-    will-change: transform !important;
+    transform-origin: center center !important; /* Changed to center for better rotation */
+    will-change: auto !important; /* Disable will-change during export */
     translate: none !important;
     -webkit-font-smoothing: subpixel-antialiased !important;
 }

@@ -5,7 +5,7 @@
   "main": "index.html",
   "type": "module",
   "scripts": {
-    "start": "vite",
+    "start": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
     "vercel-build": "vite build"
