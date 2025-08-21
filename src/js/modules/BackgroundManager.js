@@ -59,6 +59,7 @@ export class BackgroundManager {
         if (currentPage) {
             currentPage.backgroundState = { imageId: image.id };
             currentPage.canvasBackgroundStyle = null; // Clear style when image is added
+            currentPage.hasExplicitBackground = true; // Mark as explicitly set
             
             // Remove any background style classes from the canvas
             if (this.backgroundClasses) {
@@ -98,6 +99,11 @@ export class BackgroundManager {
             const currentPage = this.comicCreator.pages[this.comicCreator.currentPageIndex];
             if (currentPage) {
                 currentPage.backgroundState = null;
+                // When removing background, check if we should revert to global
+                if (this.useGlobalBackgroundStyle) {
+                    // Remove explicit flag so global can apply again
+                    delete currentPage.hasExplicitBackground;
+                }
             }
             
             if (saveState) {
@@ -144,6 +150,8 @@ export class BackgroundManager {
             this.comicCreator.pages.forEach(page => {
                 page.canvasBackgroundStyle = style;
                 page.backgroundState = null; // Ensure image is cleared for all pages
+                // Remove explicit flag since we're applying global
+                delete page.hasExplicitBackground;
             });
             console.log(`[BackgroundManager.applyBackgroundStyle] Updated all pages with global style: ${style}`);
         } else {
@@ -152,7 +160,9 @@ export class BackgroundManager {
             if (currentPage) {
                 currentPage.canvasBackgroundStyle = style;
                 currentPage.backgroundState = null; // Ensure image is cleared
-                console.log(`[BackgroundManager.applyBackgroundStyle] Updated current page with style: ${style}`);
+                // Mark this page as having explicit background (even if it's white/empty)
+                currentPage.hasExplicitBackground = true;
+                console.log(`[BackgroundManager.applyBackgroundStyle] Updated current page with style: ${style} (marked as explicit)`);
             }
         }
 
@@ -178,15 +188,25 @@ export class BackgroundManager {
             this.globalBackgroundStyle = currentStyle;
             console.log(`[BackgroundManager.toggleGlobalBackground] Global style set to: ${this.globalBackgroundStyle}`);
 
-            // Apply to all pages
+            // Apply to all pages that don't have explicit backgrounds
             this.comicCreator.pages.forEach(page => {
-                page.canvasBackgroundStyle = this.globalBackgroundStyle;
-                page.backgroundState = null; // Clear potential background images
+                // Only apply global style to pages without explicit backgrounds
+                if (!page.hasExplicitBackground) {
+                    page.canvasBackgroundStyle = this.globalBackgroundStyle;
+                    page.backgroundState = null; // Clear potential background images
+                    console.log(`[BackgroundManager.toggleGlobalBackground] Applied global style to page without explicit background`);
+                } else {
+                    console.log(`[BackgroundManager.toggleGlobalBackground] Skipped page with explicit background`);
+                }
             });
         } else {
-            // If disabling global, the current page retains its style,
-            // but other pages are now independent (no change needed immediately)
-            console.log(`[BackgroundManager.toggleGlobalBackground] Global style disabled. Current page retains style.`);
+            // If disabling global, mark current page as having explicit background
+            // so it retains its current style
+            const currentPage = this.comicCreator.pages[this.comicCreator.currentPageIndex];
+            if (currentPage) {
+                currentPage.hasExplicitBackground = true;
+                console.log(`[BackgroundManager.toggleGlobalBackground] Global disabled. Current page marked as explicit.`);
+            }
         }
 
         // Refresh the current page display to reflect potential changes
@@ -346,10 +366,14 @@ export class BackgroundManager {
         let styleToApply = 'classic-white'; // Default
         let imageToApply = null;
 
-        if (this.useGlobalBackgroundStyle) {
+        // Check if this page has an explicit background set (even if it's white/empty)
+        // If so, don't apply global background
+        if (this.useGlobalBackgroundStyle && !page.hasExplicitBackground) {
+            // Only apply global style if page doesn't have explicit background
             styleToApply = this.globalBackgroundStyle;
-            console.log(`[BackgroundManager.loadCurrentPageBackground] Applying global style: ${styleToApply}`);
+            console.log(`[BackgroundManager.loadCurrentPageBackground] Applying global style: ${styleToApply} (page has no explicit background)`);
         } else {
+            // Page has explicit background or global is disabled
             if (page.backgroundState?.imageId) {
                 imageToApply = this.comicCreator.imageLibrary.getImageById(String(page.backgroundState.imageId));
                 if (imageToApply) {
@@ -361,7 +385,10 @@ export class BackgroundManager {
                 }
             } else if (page.canvasBackgroundStyle && this.backgroundClasses.includes(page.canvasBackgroundStyle)) {
                 styleToApply = page.canvasBackgroundStyle;
-                console.log(`[BackgroundManager.loadCurrentPageBackground] Applying page style: ${styleToApply}`);
+                console.log(`[BackgroundManager.loadCurrentPageBackground] Applying page style: ${styleToApply} (explicit)`);
+            } else if (page.hasExplicitBackground) {
+                // Page was explicitly set but has no style - keep default white
+                console.log(`[BackgroundManager.loadCurrentPageBackground] Keeping default white (page has explicit background flag)`);
             }
         }
 

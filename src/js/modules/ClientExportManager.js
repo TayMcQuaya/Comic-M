@@ -57,6 +57,11 @@ export class ClientExportManager {
             const totalPages = this.comicCreator.pages.length;
             console.log(`[ClientExport] Processing ${totalPages} pages`);
 
+            // CRITICAL: Save the current page state before export starts
+            // This prevents corruption of the page we're currently viewing
+            console.log('[ClientExport] Saving current page state before export');
+            this.comicCreator.saveCurrentPageState();
+            
             // Save current page index to restore later
             const originalPageIndex = this.comicCreator.currentPageIndex;
             
@@ -115,8 +120,24 @@ export class ClientExportManager {
                 console.log(`[ClientExport] Page ${i + 1} added to PDF`);
             }
 
-            // Restore original page
+            // Restore original page with extra care for backgrounds
+            console.log('[ClientExport] Restoring original page:', originalPageIndex);
             await this.comicCreator.loadPageState(originalPageIndex);
+            
+            // Additional wait to ensure background images are loaded
+            const backgroundCheck = document.querySelector('#comic-canvas .canvas-background-image');
+            if (this.comicCreator.pages[originalPageIndex].backgroundState?.imageId && !backgroundCheck) {
+                console.log('[ClientExport] Background missing after restore, waiting for reload...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Force background reload if still missing
+                const bgStillMissing = !document.querySelector('#comic-canvas .canvas-background-image');
+                if (bgStillMissing) {
+                    console.log('[ClientExport] Forcing background reload...');
+                    this.comicCreator.backgroundManager.loadCurrentPageBackground();
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+            }
             
             // Restore viewport state after export
             console.log('[ClientExport] Restoring viewport after export');
@@ -380,6 +401,40 @@ export class ClientExportManager {
             // Mark for export
             bubble.classList.add('exporting-direct-style');
             
+            // Process text content inside bubble (CRITICAL - match Puppeteer export)
+            const textContent = bubble.querySelector('.text-content');
+            if (textContent) {
+                // Handle text shadows - same as Puppeteer does
+                if (textContent.getAttribute('data-has-shadow') === 'true') {
+                    const shadowX = textContent.getAttribute('data-shadow-x') || '2';
+                    const shadowY = textContent.getAttribute('data-shadow-y') || '2';
+                    const shadowBlur = textContent.getAttribute('data-shadow-blur') || '2';
+                    const shadowColor = textContent.getAttribute('data-shadow-color') || '#666666';
+                    
+                    const shadowValue = `${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor}`;
+                    textContent.style.setProperty('--export-text-shadow', shadowValue);
+                    textContent.style.textShadow = shadowValue;
+                    
+                    // Store original for restoration
+                    textContent.dataset.originalShadow = textContent.style.textShadow || '';
+                }
+                
+                // Handle text outlines
+                if (textContent.getAttribute('data-has-outline') === 'true') {
+                    const outlineColor = textContent.getAttribute('data-outline-color') || '#000000';
+                    const outlineThickness = textContent.getAttribute('data-outline-thickness') || '1';
+                    
+                    textContent.style.setProperty('--stroke-width', `${outlineThickness}px`);
+                    textContent.style.setProperty('--stroke-color', outlineColor);
+                    textContent.style.webkitTextStrokeWidth = `${outlineThickness}px`;
+                    textContent.style.webkitTextStrokeColor = outlineColor;
+                    
+                    // Store originals
+                    textContent.dataset.originalStrokeWidth = textContent.style.webkitTextStrokeWidth || '';
+                    textContent.dataset.originalStrokeColor = textContent.style.webkitTextStrokeColor || '';
+                }
+            }
+            
             // Log position for debugging
             const rect = bubble.getBoundingClientRect();
             console.log(`[ClientExport] Text bubble ${index}: pos(${rect.left}, ${rect.top}), size(${rect.width}x${rect.height})`);
@@ -502,6 +557,30 @@ export class ClientExportManager {
                 bubble.style.transform = bubble.dataset.originalTransform;
                 delete bubble.dataset.originalTransform;
             }
+            
+            // Restore text content properties
+            const textContent = bubble.querySelector('.text-content');
+            if (textContent) {
+                // Restore shadow
+                if (textContent.dataset.originalShadow !== undefined) {
+                    textContent.style.textShadow = textContent.dataset.originalShadow;
+                    textContent.style.removeProperty('--export-text-shadow');
+                    delete textContent.dataset.originalShadow;
+                }
+                
+                // Restore outline
+                if (textContent.dataset.originalStrokeWidth !== undefined) {
+                    textContent.style.webkitTextStrokeWidth = textContent.dataset.originalStrokeWidth;
+                    delete textContent.dataset.originalStrokeWidth;
+                }
+                if (textContent.dataset.originalStrokeColor !== undefined) {
+                    textContent.style.webkitTextStrokeColor = textContent.dataset.originalStrokeColor;
+                    delete textContent.dataset.originalStrokeColor;
+                }
+                textContent.style.removeProperty('--stroke-width');
+                textContent.style.removeProperty('--stroke-color');
+            }
+            
             bubble.classList.remove('exporting-direct-style');
         });
 

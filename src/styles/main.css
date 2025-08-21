@@ -5816,51 +5816,40 @@ body.exporting #comic-canvas {
 
 /* Fix text content positioning in exported PDFs */
 .exporting .text-bubble .text-content {
-    /* CRITICAL: DO NOT modify or adjust anything during export - EXACT MATCH to web preview */
-    /* NO SCALING OR TRANSFORMATIONS - preserve exactly as in preview */
+    /* Use minimal overrides - let normal styles apply where possible */
+    /* Only override what's absolutely necessary for export */
+    
+    /* Critical positioning fixes */
     transform: none !important;
-    transform-origin: top left !important;
-    zoom: normal !important;
-    translate: none !important;
-    scale: 1 !important;
+    position: relative !important;
     
-    /* Prevent browser font adjustments */
-    -webkit-text-size-adjust: none !important;
-    text-size-adjust: none !important;
+    /* Match the exact padding from normal view (line 2654) */
+    padding: 0.5px 2px 4.5px 2px !important;
     
-    /* Prevent the PDF generator from adjusting text */
-    letter-spacing: normal !important;
-    word-spacing: normal !important;
-    text-rendering: optimizeLegibility !important;
-    /* Preserve original styling */
-    
-    /* EXACT preservation of line spacing - force exact match to preview */
-    /* line-height: 1.2 !important; */ /* REMOVED - Will be set by JS from textState or inherit if not explicitly set by JS */ 
-    white-space: pre-wrap !important;
-    vertical-align: top !important; /* Changed from baseline to top */
-    word-break: normal !important;
-    word-spacing: normal !important;
-    
-    /* Prevent any CSS text adjustments that browsers might apply */
-    -webkit-font-feature-settings: normal !important;
-    font-feature-settings: normal !important;
-    text-indent: 0 !important;
-    text-align-last: auto !important;
-    
-    /* Preserve EXACT padding from the preview */
-    padding: inherit !important; /* Use the computed value from the preview */
+    /* Ensure no margin shifts */
     margin: 0 !important;
     
-    /* Layout control */
-    display: inline-block !important;
-    height: auto !important; 
-    min-height: 0 !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    
-    /* Force hardware acceleration for better text rendering */
-    will-change: contents !important;
-    -webkit-font-smoothing: subpixel-antialiased !important;
+    /* Keep text properly aligned - don't override display/vertical-align */
+    /* Let TextManagerUtils inline styles (display: inline-block) remain */
+}
+
+/* Special handling for thought bubbles during export - match line 2678 */
+.exporting .thought-bubble .text-content {
+    padding: 12px !important;
+}
+
+/* Text content with outline during export - match Puppeteer export */
+.exporting .text-content[data-has-outline="true"] {
+    -webkit-text-stroke-width: var(--stroke-width, 1px) !important;
+    -webkit-text-stroke-color: var(--stroke-color, #000000) !important;
+    -webkit-text-fill-color: currentColor !important;
+    -webkit-font-smoothing: antialiased !important;
+    text-rendering: optimizeLegibility !important;
+}
+
+/* Text content with shadow during export - match Puppeteer export */
+.exporting .text-content[data-has-shadow="true"] {
+    text-shadow: var(--export-text-shadow) !important;
 }
 
 /* Ensure no-bubble text elements don't show speech/thought bubble tails or other decorative elements */

@@ -454,7 +454,27 @@ export class AutoSaveManager {
             this.comicCreator.backgroundManager.useGlobalBackgroundStyle = projectState.useGlobalBackgroundStyle;
             this.comicCreator.backgroundManager.globalBackgroundStyle = projectState.globalBackgroundStyle;
 
+            // Load pages with migration for hasExplicitBackground flag
             this.comicCreator.pages = projectState.pages;
+            
+            // Migrate legacy projects: Add hasExplicitBackground flag if missing
+            this.comicCreator.pages.forEach(page => {
+                // If the flag doesn't exist, infer it from the page state
+                if (page.hasExplicitBackground === undefined) {
+                    // Page has explicit background if:
+                    // 1. It has a background image
+                    // 2. It has a specific background style set
+                    if (page.backgroundState?.imageId || page.canvasBackgroundStyle) {
+                        page.hasExplicitBackground = true;
+                        console.log('[AutoSave Migration] Page marked as having explicit background (image or style present)');
+                    } else {
+                        // No explicit background set - will use global if enabled
+                        page.hasExplicitBackground = false;
+                        console.log('[AutoSave Migration] Page marked as using global background (no specific background)');
+                    }
+                }
+            });
+            
             this.comicCreator.currentPageIndex = projectState.currentPageIndex;
             this.comicCreator.folderStructure = projectState.folderStructure;
             this.comicCreator.currentFolderId = projectState.currentFolderId;

@@ -2304,8 +2304,27 @@ class ComicCreator {
                 throw new Error('Failed to load project due to folder structure integrity error');
             }
             
-            // Load pages
+            // Load pages with migration for hasExplicitBackground flag
             this.pages = projectState.pages;
+            
+            // Migrate legacy projects: Add hasExplicitBackground flag if missing
+            this.pages.forEach(page => {
+                // If the flag doesn't exist, infer it from the page state
+                if (page.hasExplicitBackground === undefined) {
+                    // Page has explicit background if:
+                    // 1. It has a background image
+                    // 2. It has a specific background style set
+                    if (page.backgroundState?.imageId || page.canvasBackgroundStyle) {
+                        page.hasExplicitBackground = true;
+                        console.log('[Migration] Page marked as having explicit background (image or style present)');
+                    } else {
+                        // No explicit background set - will use global if enabled
+                        page.hasExplicitBackground = false;
+                        console.log('[Migration] Page marked as using global background (no specific background)');
+                    }
+                }
+            });
+            
             this.currentPageIndex = projectState.currentPageIndex;
             
             // Ensure the currentFolderId actually exists in the structure
@@ -3063,7 +3082,27 @@ class ComicCreator {
                 });
             }
             
+            // Load pages with migration for hasExplicitBackground flag
             this.pages = projectState.pages;
+            
+            // Migrate legacy projects: Add hasExplicitBackground flag if missing
+            this.pages.forEach(page => {
+                // If the flag doesn't exist, infer it from the page state
+                if (page.hasExplicitBackground === undefined) {
+                    // Page has explicit background if:
+                    // 1. It has a background image
+                    // 2. It has a specific background style set
+                    if (page.backgroundState?.imageId || page.canvasBackgroundStyle) {
+                        page.hasExplicitBackground = true;
+                        console.log('[Migration] Page marked as having explicit background (image or style present)');
+                    } else {
+                        // No explicit background set - will use global if enabled
+                        page.hasExplicitBackground = false;
+                        console.log('[Migration] Page marked as using global background (no specific background)');
+                    }
+                }
+            });
+            
             this.currentPageIndex = projectState.currentPageIndex || 0;
 
             if (!this.folderStructure[this.currentFolderId]) {

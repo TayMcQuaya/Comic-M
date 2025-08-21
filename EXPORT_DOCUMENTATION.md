@@ -21,6 +21,40 @@ User → Frontend UI → Backend API → Puppeteer → PDF Generation → Compre
 
 ## Frontend Export System
 
+### Client-Side Text Preprocessing
+
+**Key Principle**: Preserve exact text positioning from editor view by using minimal CSS overrides.
+
+#### Text Position Preservation Strategy
+
+1. **Minimal CSS Overrides** (`main.css:5817-5834`)
+   - Only override what's necessary (transforms, padding, margins)
+   - Don't override display or vertical-align properties
+   - Let JavaScript-applied inline styles remain
+
+2. **JavaScript Inline Styles** (`TextManagerUtils.js:241-246`)
+   ```javascript
+   // These styles are applied directly to text elements
+   textContent.style.margin = '0';
+   textContent.style.padding = '0';
+   textContent.style.lineHeight = textState.style.lineHeight || 'normal';
+   textContent.style.display = 'inline-block';  // CRITICAL: Don't override in export CSS
+   textContent.style.whiteSpace = 'pre-wrap';
+   textContent.style.textRendering = 'geometricPrecision';
+   ```
+
+3. **Export CSS Rules**
+   ```css
+   .exporting .text-bubble .text-content {
+       /* Minimal overrides only */
+       transform: none !important;
+       position: relative !important;
+       padding: 0.5px 2px 4.5px 2px !important;
+       margin: 0 !important;
+       /* Don't override display or vertical-align */
+   }
+   ```
+
 ### 1. Export Initiation (`src/js/main.js:749-816`)
 
 **Download Button Handler**
@@ -106,7 +140,51 @@ async getCurrentProjectState() {
 }
 ```
 
-### 3. Progress Polling (`src/js/main.js:900-951`)
+### 3. Client-Side Manual Export (`ClientExportManager.js`)
+
+**Manual Export Process** (when backend is unavailable)
+
+#### Text Element Preprocessing
+
+```javascript
+preprocessForExport() {
+    const textBubbles = document.querySelectorAll('#comic-canvas .text-bubble');
+    
+    textBubbles.forEach(bubble => {
+        const textContent = bubble.querySelector('.text-content');
+        if (textContent) {
+            // Handle text shadows
+            if (textContent.getAttribute('data-has-shadow') === 'true') {
+                const shadowX = textContent.getAttribute('data-shadow-x') || '2';
+                const shadowY = textContent.getAttribute('data-shadow-y') || '2';
+                const shadowBlur = textContent.getAttribute('data-shadow-blur') || '2';
+                const shadowColor = textContent.getAttribute('data-shadow-color') || '#666666';
+                
+                const shadowValue = `${shadowX}px ${shadowY}px ${shadowBlur}px ${shadowColor}`;
+                textContent.style.setProperty('--export-text-shadow', shadowValue);
+                textContent.style.textShadow = shadowValue;
+            }
+            
+            // Handle text outlines
+            if (textContent.getAttribute('data-has-outline') === 'true') {
+                const outlineColor = textContent.getAttribute('data-outline-color') || '#000000';
+                const outlineThickness = textContent.getAttribute('data-outline-thickness') || '1';
+                
+                textContent.style.webkitTextStrokeWidth = `${outlineThickness}px`;
+                textContent.style.webkitTextStrokeColor = outlineColor;
+            }
+        }
+    });
+}
+```
+
+#### Key Points:
+- **Preserve inline styles**: Don't override `display: inline-block` set by TextManagerUtils
+- **Minimal CSS overrides**: Only reset transforms and ensure consistent padding
+- **Data attributes**: Use data-* attributes to store and apply text effects
+- **Cleanup after export**: Restore original styles to prevent editor corruption
+
+### 4. Progress Polling (`src/js/main.js:900-951`)
 
 **pollExportProgress() Method**
 ```javascript
@@ -454,7 +532,9 @@ async function capturePageAsImage(comicCreatorUrl, outputDirectory, projectState
 
 ## Visual Element Preservation
 
-### Export-Specific CSS (`puppeteer-export.js:332-393`)
+### Export-Specific CSS
+
+**Key Principle**: Use minimal overrides to preserve exact positioning from editor view.
 
 ```css
 /* Canvas positioning */
@@ -473,6 +553,21 @@ body.exporting .text-bubble,
     transition: none !important;
     opacity: 1 !important;
     visibility: visible !important;
+}
+
+/* Text content positioning (main.css lines 5817-5834) */
+.exporting .text-bubble .text-content {
+    /* Minimal overrides - let normal styles apply */
+    transform: none !important;
+    position: relative !important;
+    
+    /* Match exact padding from normal view */
+    padding: 0.5px 2px 4.5px 2px !important;
+    margin: 0 !important;
+    
+    /* IMPORTANT: Don't override display or vertical-align */
+    /* TextManagerUtils.js sets display: inline-block */
+    /* Let JavaScript-applied inline styles remain */
 }
 
 /* Text content with outline */
@@ -763,6 +858,9 @@ google-chrome --version
    - Ensure fonts are loaded before export
    - Check text shadow/outline data attributes
    - Verify export CSS is applied
+   - **Text Position Issues**: Ensure export CSS doesn't override display/vertical-align
+   - **Conflicting Styles**: Use minimal CSS overrides (only transforms, padding, margins)
+   - **Check Inline Styles**: Preserve JavaScript-applied styles (display: inline-block)
 
 3. **Images Missing**
    - Confirm Object URLs converted to Data URLs
