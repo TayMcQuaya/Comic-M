@@ -199,6 +199,19 @@ No automated tests currently. Manual testing required for:
 - Undo/redo functionality
 - Cross-browser compatibility (Chrome recommended)
 
+## Recent Fixes & Features (2025-08-21)
+
+### Export Improvements
+- **Bubble Tails in Client Export**: CSS pseudo-element tails converted to SVG during export for html2canvas compatibility
+- **Current Page State Preservation**: Fixed corruption of current page during export
+- **Text Position Accuracy**: Minimal CSS overrides preserve exact positioning
+- **Background Preservation**: Global vs explicit backgrounds properly handled
+
+### JSON Loading Enhancements
+- **Custom Dimensions**: Automatically creates custom dimension entries for non-standard sizes
+- **Legacy Migration**: Old JSON files missing modern fields are automatically migrated
+- **hasExplicitBackground Flag**: Tracks intentionally set backgrounds vs global defaults
+
 ## Troubleshooting
 
 ### Text Manager Issues
@@ -208,6 +221,9 @@ If refactored TextManager has problems, revert to old version:
 3. Rename to `TextManager.js`
 
 ### Export Issues
+- **Missing Bubble Tails**: Client-side export now converts CSS tails to SVG automatically
+- **Text Shifting**: Use minimal CSS overrides in export mode (don't override display/vertical-align)
+- **Page Corruption**: Current page state now saved before export begins
 - Check browser console for html2canvas errors
 - Verify fonts are loaded before export
 - Check CORS settings for external resources

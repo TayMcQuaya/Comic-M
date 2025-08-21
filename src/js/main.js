@@ -2113,10 +2113,20 @@ class ComicCreator {
                     this.setCanvasDimension(foundKey);
                     console.log(`[loadProject] Canvas dimension (W/H) matched to existing key: ${foundKey}`);
                 } else {
-                    // If no matching key, create a temporary custom entry for these dimensions if needed
-                    // or default. For now, log a warning and potentially default.
-                    console.warn(`[loadProject] Saved canvas dimensions (${projectState.canvasWidth}x${projectState.canvasHeight}) do not match a predefined key. Using current default.`);
-                    // this.setCanvasDimension(this.selectedCanvasDimension); // Or a fixed default like 'current'
+                    // Create a custom dimension entry for these specific dimensions
+                    console.log(`[loadProject] Creating custom dimension for ${projectState.canvasWidth}x${projectState.canvasHeight}`);
+                    const customKey = `custom_${projectState.canvasWidth}x${projectState.canvasHeight}`;
+                    
+                    // Add the custom dimension to our dimensions object
+                    this.canvasDimensions[customKey] = {
+                        width: projectState.canvasWidth,
+                        height: projectState.canvasHeight,
+                        label: `Custom (${projectState.canvasWidth}×${projectState.canvasHeight})`
+                    };
+                    
+                    // Set this custom dimension as active
+                    this.setCanvasDimension(customKey);
+                    console.log(`[loadProject] Created and set custom dimension: ${customKey}`);
                 }
             } else {
                 console.warn('[loadProject] No canvas dimension information found in project file. Using current default.');
@@ -3026,10 +3036,20 @@ class ComicCreator {
                     this.setCanvasDimension(foundKey);
                     console.log('[_loadProjectFromState] Canvas dimension (W/H) matched to existing key:', foundKey);
                 } else {
-                    console.warn(`[_loadProjectFromState] Saved canvas dimensions (${projectState.canvasWidth}x${projectState.canvasHeight}) do not match a predefined key. Using current default.`);
-                    // Consider if a default should be forced here if a project is restored without dimension info
-                    // Forcing a default might be safer than using whatever the app was last set to.
-                    // this.setCanvasDimension('current'); 
+                    // Create a custom dimension entry for these specific dimensions
+                    console.log(`[_loadProjectFromState] Creating custom dimension for ${projectState.canvasWidth}x${projectState.canvasHeight}`);
+                    const customKey = `custom_${projectState.canvasWidth}x${projectState.canvasHeight}`;
+                    
+                    // Add the custom dimension to our dimensions object
+                    this.canvasDimensions[customKey] = {
+                        width: projectState.canvasWidth,
+                        height: projectState.canvasHeight,
+                        label: `Custom (${projectState.canvasWidth}×${projectState.canvasHeight})`
+                    };
+                    
+                    // Set this custom dimension as active
+                    this.setCanvasDimension(customKey);
+                    console.log(`[_loadProjectFromState] Created and set custom dimension: ${customKey}`);
                 }
             } else {
                 console.warn('[_loadProjectFromState] No canvas dimension information found in project state. Using current default.');

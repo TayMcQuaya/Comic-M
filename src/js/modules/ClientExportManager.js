@@ -381,6 +381,67 @@ export class ClientExportManager {
             bubble.dataset.originalOpacity = bubble.style.opacity || '';
             bubble.dataset.originalTransform = bubble.style.transform || '';
             
+            // Handle bubble tails - convert CSS pseudo-elements to SVG for export
+            const tailPositionClass = Array.from(bubble.classList)
+                .find(cls => cls.startsWith('speech-tail-') || cls.startsWith('thought-tail-'));
+            
+            if (tailPositionClass && !bubble.querySelector('.bubble-tail-svg')) {
+                // Store original tail class for restoration
+                bubble.dataset.originalTailClass = tailPositionClass;
+                
+                // Get tail position from class name
+                const tailPosition = tailPositionClass.replace(/(?:speech|thought)-tail-/, '');
+                
+                // Check if it's a speech or thought bubble
+                const isSpeechBubble = bubble.classList.contains('speech-bubble');
+                const isThoughtBubble = bubble.classList.contains('thought-bubble');
+                
+                if (isSpeechBubble || isThoughtBubble) {
+                    console.log(`[ClientExport] Creating SVG tail for ${isSpeechBubble ? 'speech' : 'thought'} bubble with position: ${tailPosition}`);
+                    
+                    // Simplify position for SVG creation (bottom-left -> bottom, top-right -> top, etc.)
+                    let simplifiedPosition = tailPosition;
+                    if (tailPosition.includes('-')) {
+                        simplifiedPosition = tailPosition.split('-')[0]; // Get first part (bottom, top, left, right)
+                        // Special case for middle positions
+                        if (simplifiedPosition === 'middle') {
+                            simplifiedPosition = tailPosition.includes('left') ? 'left' : 
+                                               tailPosition.includes('right') ? 'right' : 'bottom';
+                        }
+                    }
+                    
+                    // Create SVG tail using TextManager's existing functions
+                    if (this.comicCreator.textManager && this.comicCreator.textManager.styling) {
+                        const settings = {
+                            tailPosition: simplifiedPosition, // Use simplified position for SVG creation
+                            tailColor: computedStyle.getPropertyValue('--bubble-background-color') || '#ffffff',
+                            speechTailLength: 20,
+                            speechTailWidth: 15,
+                            speechTailInset: 50,
+                            speechTailShear: 0,
+                            speechTailOutline: true,
+                            thoughtNumCircles: 3,
+                            thoughtCircleRadius: 5,
+                            thoughtCircleSpacing: 5,
+                            thoughtTailInset: 50,
+                            thoughtTailOffset: 0
+                        };
+                        
+                        if (isSpeechBubble) {
+                            this.comicCreator.textManager.styling.createSpeechBubbleSvgTail(bubble, settings);
+                        } else {
+                            this.comicCreator.textManager.styling.createThoughtBubbleSvgTail(bubble, settings);
+                        }
+                        
+                        // Mark that we created an SVG tail for export
+                        bubble.dataset.exportCreatedSvg = 'true';
+                    }
+                    
+                    // Remove CSS tail class temporarily for export
+                    bubble.classList.remove(tailPositionClass);
+                }
+            }
+            
             // Apply CSS variable values as inline styles
             const bgColor = computedStyle.getPropertyValue('--bubble-background-color');
             const opacity = computedStyle.getPropertyValue('--bubble-opacity');
@@ -556,6 +617,22 @@ export class ClientExportManager {
             if (bubble.dataset.originalTransform !== undefined) {
                 bubble.style.transform = bubble.dataset.originalTransform;
                 delete bubble.dataset.originalTransform;
+            }
+            
+            // Restore bubble tail if we created an SVG for export
+            if (bubble.dataset.exportCreatedSvg === 'true') {
+                // Remove the SVG tail we created for export
+                const svgTail = bubble.querySelector('.bubble-tail-svg');
+                if (svgTail) {
+                    svgTail.remove();
+                }
+                delete bubble.dataset.exportCreatedSvg;
+            }
+            
+            // Restore original CSS tail class if it was removed
+            if (bubble.dataset.originalTailClass) {
+                bubble.classList.add(bubble.dataset.originalTailClass);
+                delete bubble.dataset.originalTailClass;
             }
             
             // Restore text content properties
